@@ -150,7 +150,7 @@ try {
         const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON);
         admin.initializeApp({
             credential: admin.credential.cert(serviceAccount),
-            storageBucket: "agrovetor-v2.firebasestorage.app"
+            storageBucket: "agrosystem-e484e.firebasestorage.app"
         });
         db = admin.firestore();
         bucket = admin.storage().bucket();
@@ -168,7 +168,7 @@ try {
     }
 
     app.get('/', (req, res) => {
-        res.status(200).send('Servidor de relatórios AgroVetor está online e conectado ao Firebase!');
+        res.status(200).send('Servidor de relatórios AgroSystem está online e conectado ao Firebase!');
     });
 
     // ROTA PARA UPLOAD DO LOGO
