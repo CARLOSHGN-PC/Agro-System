@@ -1,5 +1,5 @@
 {
-  "name": "agrovetor-reports-backend",
+  "name": "agrosystem-reports-backend",
   "version": "1.0.0",
   "description": "Servidor para gerar relatórios para o sistema AgroSystem.",
   "main": "server.js",

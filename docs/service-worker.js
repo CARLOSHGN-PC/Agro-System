@@ -1,8 +1,8 @@
 const SW_VERSION = 'v24';
-const CORE_CACHE = `agrovetor-core-${SW_VERSION}`;
-const STATIC_CACHE = `agrovetor-static-${SW_VERSION}`;
-const TILE_CACHE = `agrovetor-tiles-${SW_VERSION}`;
-const SHAPE_CACHE = `agrovetor-shapefiles-${SW_VERSION}`;
+const CORE_CACHE = `agrosystem-core-${SW_VERSION}`;
+const STATIC_CACHE = `agrosystem-static-${SW_VERSION}`;
+const TILE_CACHE = `agrosystem-tiles-${SW_VERSION}`;
+const SHAPE_CACHE = `agrosystem-shapefiles-${SW_VERSION}`;
 const APP_SHELL = './index.html';
 
 const PRECACHE_URLS = [

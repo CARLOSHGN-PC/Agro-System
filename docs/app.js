@@ -5201,7 +5201,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const companyName = company ? company.name : null;
                 const companyHTML = companyName ? `<span class="user-card-role" style="background-color: var(--color-text-light); margin-left: 8px;"><i class="fas fa-building"></i> ${companyName}</span>` : '';
         
-                const buttonsHTML = user.email.toLowerCase() === 'admin@agrovetor.com' ? '' : `
+                const buttonsHTML = user.email.toLowerCase() === 'admin@agrosystem.com' ? '' : `
                     <button class="toggle-btn ${user.active ? 'inactive' : 'active'}" data-action="toggle" data-id="${user.id}">
                         ${user.active ? '<i class="fas fa-ban"></i> Desativar' : '<i class="fas fa-check"></i> Ativar'}
                     </button>

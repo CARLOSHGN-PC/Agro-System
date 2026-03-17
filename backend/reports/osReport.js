@@ -29,7 +29,7 @@ const generateOsPdf = async (req, res, db) => {
              return res.status(404).json({ message: 'OS não encontrada' });
         }
 
-        let companyName = 'AGROVETOR';
+        let companyName = 'AGROSYSTEM';
         try {
             const companyDoc = await db.collection('companies').doc(companyId).get();
             if (companyDoc.exists && companyDoc.data().name) {

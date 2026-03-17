@@ -3,20 +3,17 @@
 const express = require('express');
 const admin = require('firebase-admin');
 const cors = require('cors');
-const PDFDocument = require('pdfkit');
 const { createObjectCsvWriter } = require('csv-writer');
 const path = require('path');
 const os = require('os');
 const axios = require('axios');
 const shp = require('shpjs');
-const pointInPolygon = require('point-in-polygon');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const csv = require('csv-parser');
 const { Readable } = require('stream');
 const xlsx = require('xlsx');
 
 // Import utilities
-const { formatNumber } = require('./utils/pdfGenerator');
 const { getFilteredData } = require('./utils/dataUtils');
 
 // Import new report modules
@@ -54,7 +51,7 @@ const app = express();
 const port = process.env.PORT || 3001;
 
 const corsOptions = {
-    origin: ['https://agrovetor.store', 'https://app.agrovetor.com'],
+    origin: ['https://agrosystem.store', 'https://app.agrosystem.com', 'https://agrovetor.store', 'https://app.agrovetor.com'],
     optionsSuccessStatus: 200
 };
 
