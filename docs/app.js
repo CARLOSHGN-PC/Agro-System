@@ -26,13 +26,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const firebaseConfig = {
-        apiKey: "AIzaSyBFXgXKDIBo9JD9vuGik5VDYZFDb_tbCrY",
-        authDomain: "agrovetor-v2.firebaseapp.com",
-        projectId: "agrovetor-v2",
-        storageBucket: "agrovetor-v2.firebasestorage.app",
-        messagingSenderId: "782518751171",
-        appId: "1:782518751171:web:d501ee31c1db33da4eb776",
-        measurementId: "G-JN4MSW63JR"
+        apiKey: "AIzaSyBvCk2kOBofW1xGoRj4xh3uRbAy99qECwk",
+        authDomain: "agrosystem-e484e.firebaseapp.com",
+        projectId: "agrosystem-e484e",
+        storageBucket: "agrosystem-e484e.firebasestorage.app",
+        messagingSenderId: "281017108690",
+        appId: "1:281017108690:web:77cb5a191813810895850b",
+        measurementId: "G-3HNZHBKN1K"
     };
 
     const firebaseApp = initializeApp(firebaseConfig);
@@ -3237,7 +3237,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 logBootStage('UI: ready', { screen: 'app' });
 
                 // ALTERAÇÃO PONTO 3: Alterar título do cabeçalho
-                App.elements.headerTitle.innerHTML = `<i class="fas fa-leaf"></i> AgroVetor`;
+                App.elements.headerTitle.innerHTML = `<i class="fas fa-leaf"></i> AgroSystem`;
 
                 this.updateDateTime();
                 setInterval(() => this.updateDateTime(), 60000);
