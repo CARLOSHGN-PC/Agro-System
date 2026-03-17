@@ -1,6 +1,6 @@
 {
   "appId": "com.agrovetor.app",
-  "appName": "AgroVetor",
+  "appName": "AgroSystem",
   "webDir": "docs",
   "server": {
     "androidScheme": "https",

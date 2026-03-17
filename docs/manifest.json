@@ -1,6 +1,6 @@
 {
-  "name": "AgroVetor - Inspeção e Planeamento",
-  "short_name": "AgroVetor",
+  "name": "AgroSystem - Inspeção e Planeamento",
+  "short_name": "AgroSystem",
   "description": "Aplicação para inspeção de cana e planeamento de colheita com funcionalidade offline.",
   "start_url": "./index.html",
   "scope": "./",
