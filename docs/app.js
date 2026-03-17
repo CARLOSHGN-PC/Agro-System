@@ -237,6 +237,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const nowIso = () => new Date().toISOString();
+    const getCompanyShapefileURL = (config = {}) => {
+        if (!config || typeof config !== 'object') return '';
+        return config.shapefileURL || config.shapefileUrl || config.shapefile_url || '';
+    };
     const getContourCacheKey = () => `company:${App.state.currentUser?.companyId || 'anon'}:default`;
 
     const isPlainObject = (value) => Object.prototype.toString.call(value) === '[object Object]';
@@ -1216,6 +1220,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 shapefileUploadArea: document.getElementById('shapefileUploadArea'),
                 shapefileInput: document.getElementById('shapefileInput'),
                 btnTestShapefileDebug: document.getElementById('btnTestShapefileDebug'),
+                btnSaveCompanySettings: document.getElementById('btnSaveCompanySettings'),
             },
             dashboard: {
                 selector: document.getElementById('dashboard-selector'),
@@ -3049,11 +3054,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const unsubscribeConfig = onSnapshot(configDocRef, (doc) => {
                         if (doc.exists()) {
                             const configData = doc.data();
-                            App.state.companyConfig = configData; // Carrega todas as configurações da empresa
+                            const shapefileURL = getCompanyShapefileURL(configData);
+                            App.state.companyConfig = { ...configData, shapefileURL }; // Carrega e normaliza chaves essenciais
                             App.state.companyLogo = configData.logoBase64 || null;
 
-                            if (configData.shapefileURL) {
-                                App.mapModule.loadAndCacheShapes(configData.shapefileURL);
+                            if (shapefileURL) {
+                                App.mapModule.loadAndCacheShapes(shapefileURL);
                             }
 
                         } else {
@@ -6893,6 +6899,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (companyConfigEls.removeLogoBtn) companyConfigEls.removeLogoBtn.addEventListener('click', () => App.actions.removeLogo());
                 if (companyConfigEls.shapefileUploadArea) companyConfigEls.shapefileUploadArea.addEventListener('click', () => companyConfigEls.shapefileInput.click());
                 if (companyConfigEls.shapefileInput) companyConfigEls.shapefileInput.addEventListener('change', (e) => App.mapModule.handleShapefileUpload(e));
+                if (companyConfigEls.btnSaveCompanySettings) companyConfigEls.btnSaveCompanySettings.addEventListener('click', () => App.actions.saveCompanySettings());
                 if (companyConfigEls.btnTestShapefileDebug) {
                     companyConfigEls.btnTestShapefileDebug.addEventListener('click', () => App.mapModule.runShapefileDebugTest());
                     const isDebugMode = new URLSearchParams(window.location.search).get('debug') === '1';
@@ -8201,6 +8208,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Patch final: restringe UI e chamadas apenas aos módulos mantidos
     const __allowedTabs = new Set(['estimativaSafra', 'configuracoesEmpresa', 'gerenciarEmpresas', 'gerenciarAtualizacoes']);
+    const __pruneOutOfScopeDom = () => {
+        document.querySelectorAll('.tab-content[id]').forEach((node) => {
+            if (!__allowedTabs.has(node.id)) node.remove();
+        });
+        document.querySelectorAll('[data-module-target], [data-tab-target]').forEach((btn) => {
+            const target = btn.dataset.moduleTarget || btn.dataset.tabTarget;
+            if (target && !__allowedTabs.has(target)) btn.remove();
+        });
+    };
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', __pruneOutOfScopeDom, { once: true });
+    } else {
+        __pruneOutOfScopeDom();
+    }
     const __safeNoop = () => null;
     const __safeAsyncNoop = async () => null;
 
@@ -8467,8 +8488,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
 
-                    if (navigator.onLine && App.state.companyConfig?.shapefileURL) {
-                        await this.loadAndCacheShapes(App.state.companyConfig.shapefileURL);
+                    const shapefileURL = getCompanyShapefileURL(App.state.companyConfig);
+                    if (navigator.onLine && shapefileURL) {
+                        await this.loadAndCacheShapes(shapefileURL);
                         return;
                     }
 
@@ -8570,6 +8592,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const downloadURL = await getDownloadURL(uploadResult.ref);
 
                     await App.data.setDocument('config', companyId, { shapefileURL: downloadURL }, { merge: true });
+                    App.state.companyConfig = { ...(App.state.companyConfig || {}), shapefileURL: downloadURL };
+                    await this.loadAndCacheShapes(downloadURL);
 
                     App.ui.showAlert("Arquivo enviado com sucesso! O mapa será atualizado em breve.", "success");
 
@@ -8758,7 +8782,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
 
             async runShapefileDebugTest() {
-                const url = App.state.companyConfig?.shapefileURL;
+                const url = getCompanyShapefileURL(App.state.companyConfig);
                 if (!url) {
                     App.ui.showAlert('Nenhum shapefile configurado para teste.', 'warning');
                     return;
@@ -8767,7 +8791,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.group('[SHP DEBUG] Testar SHP');
                 const startedAt = performance.now();
                 try {
-                    const buffer = await readShapefileAsArrayBuffer(`${url}?debug=${Date.now()}`, 'debug');
+                    const debugURL = new URL(url, window.location.origin);
+                    debugURL.searchParams.set('debug', String(Date.now()));
+                    const buffer = await readShapefileAsArrayBuffer(debugURL.toString(), 'debug');
                     console.info(`[SHP] bytes shp=${buffer?.byteLength || 0} dbf=0 prj=0`);
                     const { geojson, debug } = await runShapefileWorker(buffer);
                     const bounds = this._getGeoJsonBounds(geojson);
@@ -10323,7 +10349,7 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             async ensureShapesReady() {
                 if (App.state.geoJsonData?.features?.length) return true;
-                const shapefileURL = App.state.companyConfig?.shapefileURL;
+                const shapefileURL = getCompanyShapefileURL(App.state.companyConfig);
                 if (!shapefileURL) {
                     App.ui.showAlert('Configure o SHP da empresa para usar o módulo Estimativa Safra.', 'warning');
                     return false;
@@ -11224,6 +11250,32 @@ Filtro atual: ${App.elements.estimativaSafra?.activeFilters?.textContent || 'sem
             });
         };
     }
+
+    if (typeof actions.saveCompanySettings !== 'function') {
+        actions.saveCompanySettings = async function() {
+            const companyId = App.state.currentUser?.companyId;
+            if (!companyId) {
+                App.ui.showAlert('Empresa não identificada para guardar configurações.', 'error');
+                return;
+            }
+            const payload = {
+                logoBase64: App.state.companyConfig?.logoBase64 || null,
+                shapefileURL: getCompanyShapefileURL(App.state.companyConfig) || null,
+            };
+            App.ui.setLoading(true, 'A guardar configurações da empresa...');
+            try {
+                await App.data.setDocument('config', companyId, payload, { merge: true });
+                App.state.companyConfig = { ...(App.state.companyConfig || {}), ...payload };
+                App.ui.showAlert('Configurações da empresa guardadas com sucesso!', 'success');
+            } catch (error) {
+                console.error('Erro ao guardar configurações da empresa:', error);
+                App.ui.showAlert(`Erro ao guardar configurações: ${error.message || error}`, 'error');
+            } finally {
+                App.ui.setLoading(false);
+            }
+        };
+    }
+
 
     if (typeof actions.createCompany !== 'function') {
         actions.createCompany = async function() {
