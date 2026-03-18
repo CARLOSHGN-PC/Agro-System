@@ -21,5 +21,5 @@ export const processShapefileToGeoJSON = async (files) => {
   // Parse the zip buffer into GeoJSON using shpjs
   const geojson = await shp(zipBuffer);
 
-  return geojson;
+  return { geojson, zipBuffer };
 };

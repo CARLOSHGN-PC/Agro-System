@@ -24,6 +24,7 @@ import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Badge } from "./components/ui/badge";
 import CompanyConfig from "./components/CompanyConfig";
+import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
 
 const palette = {
   bg: "#050505",
@@ -348,6 +349,7 @@ function PostLoginScreen({ onLogout }) {
   const [scope, setScope] = useState("talhao");
   const [selectedTalhao, setSelectedTalhao] = useState("103");
   const [activeModule, setActiveModule] = useState("estimativa"); // "estimativa" | "configuracao"
+  const [geoJsonData, setGeoJsonData] = useState(null);
 
   const talhoes = [
     { id: "101", nome: "Talhão 101", corte: "1º corte", area: "15,4 ha", variedade: "CTC 20", status: "Estimado", fazenda: "12 - Santa Rita", bg: "rgba(255,225,25,0.88)", color: "#111111", style: { left: "8%", top: "19%", width: "21%", height: "15%" } },
@@ -595,12 +597,25 @@ function PostLoginScreen({ onLogout }) {
         <div className="relative flex-1 min-h-[calc(100vh-64px)] overflow-hidden">
           {activeModule === "estimativa" ? (
             <>
-              <iframe
-                title="Mapa Estimativa de Safra"
-                className="absolute inset-0 w-full h-full"
-                src={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12.html?title=false&zoomwheel=true&access_token=${MAPBOX_TOKEN}#8.4/-18.25/-49.35`}
-                style={{ border: "none", filter: "saturate(0.95) contrast(1.02) brightness(0.88)" }}
-              />
+              <div className="absolute inset-0 w-full h-full" style={{ filter: "saturate(0.95) contrast(1.02) brightness(0.88)" }}>
+                <MapContainer center={[-18.25, -49.35]} zoom={8.4} style={{ height: "100%", width: "100%" }} zoomControl={false}>
+                  <TileLayer
+                    url={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`}
+                    attribution='Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery &copy; <a href="https://www.mapbox.com/">Mapbox</a>'
+                  />
+                  {geoJsonData && (
+                    <GeoJSON
+                      data={geoJsonData}
+                      style={() => ({
+                        color: palette.gold,
+                        weight: 2,
+                        fillColor: palette.goldLight,
+                        fillOpacity: 0.3,
+                      })}
+                    />
+                  )}
+                </MapContainer>
+              </div>
               <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(5,5,5,0.14), rgba(5,5,5,0.08) 20%, rgba(5,5,5,0.18) 100%)" }} />
 
               {/* Balões/cards flutuantes de talhões fictícios removidos.
