@@ -21,7 +21,7 @@ export const fetchLatestGeoJson = async (companyId = "empresa_default") => {
     const listRef = ref(storage, `${companyId}/mapas/processados/`);
     const res = await listAll(listRef);
 
-    if (res.items.length === 0) return null;
+    if (res.items.length === 0) return { data: null, error: null };
 
     // Get the most recently uploaded file based on timestamp in filename (geojson_TIMESTAMP.json)
     const items = res.items.map(item => {
@@ -37,10 +37,18 @@ export const fetchLatestGeoJson = async (companyId = "empresa_default") => {
 
     const url = await getDownloadURL(latestRef);
     const response = await fetch(url);
-    if (!response.ok) throw new Error("Failed to fetch GeoJSON");
-    return await response.json();
+    if (!response.ok) throw new Error("Failed to fetch GeoJSON via URL");
+    const json = await response.json();
+    return { data: json, error: null };
   } catch (error) {
     console.error("Error fetching latest GeoJSON:", error);
-    return null;
+    let errorMessage = "Erro ao carregar o mapa do Storage.";
+
+    // Most likely cause: missing Storage Rules
+    if (error.code === 'storage/unauthorized' || (error.message && error.message.includes('403'))) {
+      errorMessage = "Erro de permissão no Firebase Storage. Vá ao Console do Firebase > Storage > Rules e ajuste para: allow read, write: if true;";
+    }
+
+    return { data: null, error: errorMessage };
   }
 };
