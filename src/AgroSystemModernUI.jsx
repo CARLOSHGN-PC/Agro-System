@@ -24,7 +24,8 @@ import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Badge } from "./components/ui/badge";
 import CompanyConfig from "./components/CompanyConfig";
-import { MapContainer, TileLayer, GeoJSON } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
+import L from "leaflet";
 
 const palette = {
   bg: "#050505",
@@ -61,6 +62,23 @@ function PremiumBadge({ children }) {
       {children}
     </span>
   );
+}
+
+function MapUpdater({ geoJsonData }) {
+  const map = useMap();
+  React.useEffect(() => {
+    if (geoJsonData) {
+      try {
+        const bounds = L.geoJSON(geoJsonData).getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [20, 20] });
+        }
+      } catch (err) {
+        console.error("Error calculating bounds from geoJsonData:", err);
+      }
+    }
+  }, [geoJsonData, map]);
+  return null;
 }
 
 function AnimatedBackground() {
@@ -599,12 +617,14 @@ function PostLoginScreen({ onLogout }) {
             <>
               <div className="absolute inset-0 w-full h-full" style={{ filter: "saturate(0.95) contrast(1.02) brightness(0.88)" }}>
                 <MapContainer center={[-18.25, -49.35]} zoom={8.4} style={{ height: "100%", width: "100%" }} zoomControl={false}>
+                  <MapUpdater geoJsonData={geoJsonData} />
                   <TileLayer
                     url={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12/tiles/256/{z}/{x}/{y}@2x?access_token=${MAPBOX_TOKEN}`}
                     attribution='Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery &copy; <a href="https://www.mapbox.com/">Mapbox</a>'
                   />
                   {geoJsonData && (
                     <GeoJSON
+                      key={JSON.stringify(geoJsonData).slice(0, 100)} // Force re-render when data changes
                       data={geoJsonData}
                       style={() => ({
                         color: palette.gold,
@@ -612,6 +632,35 @@ function PostLoginScreen({ onLogout }) {
                         fillColor: palette.goldLight,
                         fillOpacity: 0.3,
                       })}
+                      onEachFeature={(feature, layer) => {
+                        if (feature.properties) {
+                          const { COD, FUNDO_AGR, FAZENDA, CATEGORIA, TALHAO, AREA, VARIEDADE, ECORTE, PROP } = feature.properties;
+                          let popupContent = `<div style="font-family: sans-serif; min-width: 180px;">`;
+                          popupContent += `<div style="font-weight: bold; border-bottom: 1px solid #ccc; padding-bottom: 4px; margin-bottom: 8px;">Detalhes do Talhão</div>`;
+
+                          const addProp = (label, value) => {
+                            if (value !== undefined && value !== null && value !== "") {
+                              popupContent += `<div style="display: flex; justify-content: space-between; margin-bottom: 4px; font-size: 13px;">
+                                                <span style="font-weight: 600; color: #555;">${label}:</span>
+                                                <span style="color: #111; text-align: right; margin-left: 8px;">${value}</span>
+                                               </div>`;
+                            }
+                          };
+
+                          addProp('COD', COD);
+                          addProp('FUNDO_AGR', FUNDO_AGR);
+                          addProp('FAZENDA', FAZENDA);
+                          addProp('CATEGORIA', CATEGORIA);
+                          addProp('TALHAO', TALHAO);
+                          addProp('AREA', AREA ? `${AREA} ha` : null);
+                          addProp('VARIEDADE', VARIEDADE);
+                          addProp('ECORTE', ECORTE);
+                          addProp('PROP', PROP);
+
+                          popupContent += `</div>`;
+                          layer.bindPopup(popupContent);
+                        }
+                      }}
                     />
                   )}
                 </MapContainer>
@@ -680,7 +729,10 @@ function PostLoginScreen({ onLogout }) {
             </>
           ) : (
             <div className="absolute inset-0 z-10 overflow-auto bg-black/20 pb-16">
-              <CompanyConfig />
+              <CompanyConfig onUploadSuccess={(data) => {
+                setGeoJsonData(data);
+                setActiveModule("estimativa");
+              }} />
             </div>
           )}
         </div>

@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { UploadCloud, CheckCircle2, AlertCircle, File, Loader2, Map } from "lucide-react";
 import { importShapefile, validateShapefileSet } from "../services/shpImport";
 
-export default function CompanyConfig() {
+export default function CompanyConfig({ onUploadSuccess }) {
   const [files, setFiles] = useState([]);
   const [status, setStatus] = useState("idle"); // idle, processing, success, error
   const [errorMessage, setErrorMessage] = useState("");
@@ -52,6 +52,9 @@ export default function CompanyConfig() {
       const result = await importShapefile(files);
       if (result.success) {
         setStatus("success");
+        if (onUploadSuccess) {
+          onUploadSuccess(result.geoJson);
+        }
       } else {
         setStatus("error");
         setErrorMessage(result.error);
