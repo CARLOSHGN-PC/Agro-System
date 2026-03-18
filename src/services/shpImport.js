@@ -34,17 +34,15 @@ export const importShapefile = async (files, companyId = "empresa_default") => {
     validateShapefileSet(files);
 
     // 2. Process to GeoJSON locally
-    const geoJson = await processShapefileToGeoJSON(files);
+    const { geojson: geoJson, zipBuffer } = await processShapefileToGeoJSON(files);
 
-    // 3. Upload Original Files to Firebase Storage
     const timestamp = Date.now();
-    const basePath = `${companyId}/mapas/shapefiles/${timestamp}`;
 
-    const originalUploadPromises = files.map((file) =>
-      uploadFile(`${basePath}/${file.name}`, file)
-    );
-
-    await Promise.all(originalUploadPromises);
+    // 3. Upload Zipped Original Files to Firebase Storage
+    const zipPath = `${companyId}/mapas/shapefiles/${timestamp}/shapefile.zip`;
+    // Create a Blob from the ArrayBuffer
+    const zipBlob = new Blob([zipBuffer], { type: "application/zip" });
+    const zipUrl = await uploadFile(zipPath, zipBlob);
 
     // 4. Upload Processed GeoJSON to Firebase Storage
     const processedPath = `${companyId}/mapas/processados/geojson_${timestamp}.json`;
@@ -54,6 +52,7 @@ export const importShapefile = async (files, companyId = "empresa_default") => {
       success: true,
       geoJson,
       geoJsonUrl,
+      zipUrl,
       message: "Shapefile processado e armazenado com sucesso.",
     };
   } catch (error) {
