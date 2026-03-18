@@ -49,7 +49,7 @@ export const saveEstimate = async (companyId, safra, talhaoId, estimateData) => 
     return { success: true, version };
   } catch (error) {
     console.error("Error saving estimate:", error);
-    return { success: false, error: error.message };
+    throw error; // Let the UI catch and display the exact permission error
   }
 };
 
