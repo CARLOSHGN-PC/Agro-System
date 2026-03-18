@@ -32,6 +32,7 @@ import Map, { Source, Layer, Popup } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import * as turf from "@turf/turf"; // To calculate bounds
 import { saveEstimate, getEstimate, getEstimateHistory } from "./services/estimativa";
+import { fetchLatestGeoJson } from "./services/storage";
 
 const palette = {
   bg: "#050505",
@@ -375,6 +376,17 @@ function PostLoginScreen({ onLogout }) {
   const currentCompanyId = "empresa_default";
   const currentSafra = "2026/2027";
 
+  // Fetch GeoJSON on load
+  React.useEffect(() => {
+    async function loadData() {
+      const data = await fetchLatestGeoJson(currentCompanyId);
+      if (data) {
+        setGeoJsonData(data);
+      }
+    }
+    loadData();
+  }, []);
+
   // Filters state
   const [filters, setFilters] = useState({
     fazenda: "",
@@ -519,7 +531,11 @@ function PostLoginScreen({ onLogout }) {
       }
 
     } catch (err) {
-      alert("Erro ao salvar estimativa.");
+      if (err.message && (err.message.includes("permission") || err.message.includes("Missing or insufficient permissions"))) {
+        alert("Erro de permissão no Firebase. Por favor, vá ao Console do Firebase > Firestore > Rules e configure para: allow read, write: if true;");
+      } else {
+        alert("Erro ao salvar estimativa: " + err.message);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -930,7 +946,8 @@ function PostLoginScreen({ onLogout }) {
                     zoom: 8.4
                   }}
                   style={{ width: "100%", height: "100%" }}
-                  mapStyle="mapbox://styles/mapbox/satellite-streets-v12"
+                  mapStyle="mapbox://styles/mapbox/satellite-v9"
+                  attributionControl={false}
                   onClick={onMapClick}
                   interactiveLayerIds={['talhoes-fill']}
                   onMouseMove={(e) => {
@@ -952,15 +969,30 @@ function PostLoginScreen({ onLogout }) {
                             "case",
                             ["boolean", ["feature-state", "hover"], false],
                             palette.gold,
-                            palette.goldLight
+                            [
+                              "match",
+                              ["get", "ECORTE"],
+                              "1º corte", "#ff2d6f",
+                              "2º corte", "#5ad15a",
+                              "3º corte", "#f5e11c",
+                              "4º corte", "#4a7dff",
+                              "5º corte", "#f58231",
+                              "6º corte", "#a43cf0",
+                              "7º corte", "#42d4f4",
+                              "8º corte", "#e642f4",
+                              "9º corte", "#c4f35a",
+                              "10º corte", "#f4a3c1",
+                              "11º corte", "#6bc5c5",
+                              "#d1d5db" // Default
+                            ]
                           ],
                           "fill-opacity": [
                             "case",
                             ["boolean", ["feature-state", "selected"], false],
                             0.7,
                             ["boolean", ["feature-state", "hover"], false],
-                            0.5,
-                            0.3
+                            0.6,
+                            0.35
                           ]
                         }}
                       />
@@ -968,7 +1000,8 @@ function PostLoginScreen({ onLogout }) {
                         id="talhoes-outline"
                         type="line"
                         paint={{
-                          "line-color": palette.gold,
+                          "line-color": palette.white,
+                          "line-opacity": 0.5,
                           "line-width": [
                             "case",
                             ["boolean", ["feature-state", "selected"], false],
