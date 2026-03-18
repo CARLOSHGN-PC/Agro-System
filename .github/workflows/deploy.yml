@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: true
 
 jobs:
@@ -25,7 +25,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
 
       - name: Install dependencies
         run: npm install
@@ -42,11 +41,11 @@ jobs:
           path: ./dist
 
   deploy:
+    needs: build
+    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
