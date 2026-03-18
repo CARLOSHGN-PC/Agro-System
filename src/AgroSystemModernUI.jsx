@@ -18,10 +18,12 @@ import {
   LineChart,
   Menu,
   Bell,
+  Settings,
 } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
 import { Badge } from "./components/ui/badge";
+import CompanyConfig from "./components/CompanyConfig";
 
 const palette = {
   bg: "#050505",
@@ -345,6 +347,7 @@ function PostLoginScreen({ onLogout }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [scope, setScope] = useState("talhao");
   const [selectedTalhao, setSelectedTalhao] = useState("103");
+  const [activeModule, setActiveModule] = useState("estimativa"); // "estimativa" | "configuracao"
 
   const talhoes = [
     { id: "101", nome: "Talhão 101", corte: "1º corte", area: "15,4 ha", variedade: "CTC 20", status: "Estimado", fazenda: "12 - Santa Rita", bg: "rgba(255,225,25,0.88)", color: "#111111", style: { left: "8%", top: "19%", width: "21%", height: "15%" } },
@@ -374,15 +377,28 @@ function PostLoginScreen({ onLogout }) {
       </div>
       <div className="p-4 space-y-1 overflow-y-auto">
         <button
+          onClick={() => { setActiveModule("estimativa"); setMenuOpen(false); }}
           className="w-full flex items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all"
           style={{
-            background: "rgba(212,175,55,0.12)",
-            border: "1px solid rgba(230,199,107,0.18)",
-            color: palette.white,
+            background: activeModule === "estimativa" ? "rgba(212,175,55,0.12)" : "transparent",
+            border: activeModule === "estimativa" ? "1px solid rgba(230,199,107,0.18)" : "1px solid transparent",
+            color: activeModule === "estimativa" ? palette.white : palette.text2,
           }}
         >
-          <Wheat className="w-5 h-5 shrink-0" style={{ color: palette.gold }} />
+          <Wheat className="w-5 h-5 shrink-0" style={{ color: activeModule === "estimativa" ? palette.gold : palette.text2 }} />
           <span className="text-[15px] font-medium">Estimativa Safra</span>
+        </button>
+        <button
+          onClick={() => { setActiveModule("configuracao"); setMenuOpen(false); }}
+          className="w-full flex items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all"
+          style={{
+            background: activeModule === "configuracao" ? "rgba(212,175,55,0.12)" : "transparent",
+            border: activeModule === "configuracao" ? "1px solid rgba(230,199,107,0.18)" : "1px solid transparent",
+            color: activeModule === "configuracao" ? palette.white : palette.text2,
+          }}
+        >
+          <Settings className="w-5 h-5 shrink-0" style={{ color: activeModule === "configuracao" ? palette.gold : palette.text2 }} />
+          <span className="text-[15px] font-medium">Configuração da Empresa</span>
         </button>
       </div>
     </div>
@@ -577,91 +593,80 @@ function PostLoginScreen({ onLogout }) {
         </div>
 
         <div className="relative flex-1 min-h-[calc(100vh-64px)] overflow-hidden">
-          <iframe
-            title="Mapa Estimativa de Safra"
-            className="absolute inset-0 w-full h-full"
-            src={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12.html?title=false&zoomwheel=true&access_token=${MAPBOX_TOKEN}#8.4/-18.25/-49.35`}
-            style={{ border: "none", filter: "saturate(0.95) contrast(1.02) brightness(0.88)" }}
-          />
-          <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgba(5,5,5,0.14), rgba(5,5,5,0.08) 20%, rgba(5,5,5,0.18) 100%)" }} />
+          {activeModule === "estimativa" ? (
+            <>
+              <iframe
+                title="Mapa Estimativa de Safra"
+                className="absolute inset-0 w-full h-full"
+                src={`https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v12.html?title=false&zoomwheel=true&access_token=${MAPBOX_TOKEN}#8.4/-18.25/-49.35`}
+                style={{ border: "none", filter: "saturate(0.95) contrast(1.02) brightness(0.88)" }}
+              />
+              <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(5,5,5,0.14), rgba(5,5,5,0.08) 20%, rgba(5,5,5,0.18) 100%)" }} />
 
-          {talhoes.map((talhao) => {
-            const isSelected = talhao.id === selectedTalhao;
-            return (
-              <button
-                key={talhao.id}
-                onClick={() => setSelectedTalhao(talhao.id)}
-                className="absolute rounded-[10px] border-2 flex flex-col items-center justify-center text-center font-bold transition-all select-none overflow-hidden"
-                style={{
-                  ...talhao.style,
-                  background: talhao.bg,
-                  color: talhao.color,
-                  borderColor: isSelected ? "#FFFFFF" : "rgba(16,24,40,.7)",
-                  boxShadow: isSelected ? "0 0 0 3px rgba(255,255,255,.22)" : "none",
-                }}
-              >
-                <div className="absolute inset-0 opacity-35" style={{ backgroundImage: "linear-gradient(45deg, rgba(0,0,0,0.28) 25%, transparent 25%, transparent 50%, rgba(0,0,0,0.28) 50%, rgba(0,0,0,0.28) 75%, transparent 75%, transparent)", backgroundSize: "14px 14px" }} />
-                <span className="relative z-10 text-sm">{talhao.nome}</span>
-                <small className="relative z-10 text-[11px] font-semibold opacity-80">{talhao.corte}</small>
-              </button>
-            );
-          })}
+              {/* Balões/cards flutuantes de talhões fictícios removidos.
+                  O mapa está preparado para receber overlays reais em GeoJSON. */}
 
-          <div className="absolute top-4 left-4 w-[400px] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
-            <div className="p-4 flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[18px] font-bold leading-tight">Estimativa<br/>Safra</div>
-                <div className="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.10)", color: "#dbe4ec" }}>Sem filtros</div>
-              </div>
-              <div className="flex gap-2">
-                <button className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setFiltersOpen(true)}><ChevronDown className="w-5 h-5" /></button>
-                <button className="rounded-xl px-4 py-3 font-semibold" style={{ background: `linear-gradient(135deg, ${palette.gold} 0%, ${palette.goldLight} 100%)`, color: palette.bg }}>Centralizar</button>
-              </div>
-            </div>
-          </div>
-
-          {!summaryCollapsed ? (
-            <div className="absolute left-4 bottom-4 w-[420px] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
-              <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-                <div>
-                  <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: "#c6d1dc" }}>Resumo</div>
-                  <div className="text-[17px] font-bold mt-1">2993 talhões • 37894,5 ha</div>
-                </div>
-                <button className="rounded-xl px-3 py-2 text-sm font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setSummaryCollapsed(true)}>Recolher</button>
-              </div>
-              <div className="grid grid-cols-2 gap-3 p-4 pt-2">
-                {[["Talhões", "2993"],["Área filtrada", "37894,5 ha"],["Estimados", "0"],["Pendentes", "2993"],["Toneladas", "0"]].map(([k, v]) => (
-                  <div key={k} className="rounded-[16px] border p-4" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.08)" }}>
-                    <div className="text-[11px] uppercase font-semibold" style={{ color: "#aebccb" }}>{k}</div>
-                    <div className="mt-2 text-[17px] font-bold">{v}</div>
+              <div className="absolute top-4 left-4 w-[400px] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
+                <div className="p-4 flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[18px] font-bold leading-tight">Estimativa<br/>Safra</div>
+                    <div className="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.10)", color: "#dbe4ec" }}>Sem filtros</div>
                   </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <button className="absolute left-4 bottom-4 w-[52px] h-[52px] rounded-full text-[22px] flex items-center justify-center" style={{ background: "rgba(17,24,39,0.92)", border: "1px solid rgba(255,255,255,0.12)" }} onClick={() => setSummaryCollapsed(false)}>📊</button>
-          )}
-
-          {!legendCollapsed ? (
-            <div className="absolute right-4 top-[130px] w-[250px] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
-              <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-                <div className="font-bold text-[15px]">Estágios de corte</div>
-                <div className="flex gap-2">
-                  <button className="rounded-xl px-2 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.08)" }}>Ocultar nomes</button>
-                  <button className="rounded-xl px-2 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setLegendCollapsed(true)}>Recolher</button>
+                  <div className="flex gap-2">
+                    <button className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setFiltersOpen(true)}><ChevronDown className="w-5 h-5" /></button>
+                    <button className="rounded-xl px-4 py-3 font-semibold" style={{ background: `linear-gradient(135deg, ${palette.gold} 0%, ${palette.goldLight} 100%)`, color: palette.bg }}>Centralizar</button>
+                  </div>
                 </div>
               </div>
-              <div className="px-4 pb-4 text-sm space-y-2">
-                {[["#ff2d6f", "1º corte"],["#5ad15a", "2º corte"],["#f5e11c", "3º corte"],["#4a7dff", "4º corte"],["#f58231", "5º corte"],["#a43cf0", "6º corte"],["#42d4f4", "7º corte"],["#e642f4", "8º corte"],["#c4f35a", "9º corte"],["#f4a3c1", "10º corte"],["#6bc5c5", "11º corte"],["#d1d5db", "Sem estágio"]].map(([color, label]) => (
-                  <div key={label} className="grid grid-cols-[16px_1fr] gap-3 items-center">
-                    <span className="w-4 h-4 rounded-md" style={{ background: color }} />
-                    <span>{label}</span>
+
+              {!summaryCollapsed ? (
+                <div className="absolute left-4 bottom-4 w-[420px] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
+                  <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                    <div>
+                      <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: "#c6d1dc" }}>Resumo</div>
+                      <div className="text-[17px] font-bold mt-1">2993 talhões • 37894,5 ha</div>
+                    </div>
+                    <button className="rounded-xl px-3 py-2 text-sm font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setSummaryCollapsed(true)}>Recolher</button>
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div className="grid grid-cols-2 gap-3 p-4 pt-2">
+                    {[["Talhões", "2993"],["Área filtrada", "37894,5 ha"],["Estimados", "0"],["Pendentes", "2993"],["Toneladas", "0"]].map(([k, v]) => (
+                      <div key={k} className="rounded-[16px] border p-4" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.08)" }}>
+                        <div className="text-[11px] uppercase font-semibold" style={{ color: "#aebccb" }}>{k}</div>
+                        <div className="mt-2 text-[17px] font-bold">{v}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <button className="absolute left-4 bottom-4 w-[52px] h-[52px] rounded-full text-[22px] flex items-center justify-center" style={{ background: "rgba(17,24,39,0.92)", border: "1px solid rgba(255,255,255,0.12)" }} onClick={() => setSummaryCollapsed(false)}>📊</button>
+              )}
+
+              {!legendCollapsed ? (
+                <div className="absolute right-4 top-[130px] w-[250px] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
+                  <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                    <div className="font-bold text-[15px]">Estágios de corte</div>
+                    <div className="flex gap-2">
+                      <button className="rounded-xl px-2 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.08)" }}>Ocultar nomes</button>
+                      <button className="rounded-xl px-2 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setLegendCollapsed(true)}>Recolher</button>
+                    </div>
+                  </div>
+                  <div className="px-4 pb-4 text-sm space-y-2">
+                    {[["#ff2d6f", "1º corte"],["#5ad15a", "2º corte"],["#f5e11c", "3º corte"],["#4a7dff", "4º corte"],["#f58231", "5º corte"],["#a43cf0", "6º corte"],["#42d4f4", "7º corte"],["#e642f4", "8º corte"],["#c4f35a", "9º corte"],["#f4a3c1", "10º corte"],["#6bc5c5", "11º corte"],["#d1d5db", "Sem estágio"]].map(([color, label]) => (
+                      <div key={label} className="grid grid-cols-[16px_1fr] gap-3 items-center">
+                        <span className="w-4 h-4 rounded-md" style={{ background: color }} />
+                        <span>{label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <button className="absolute right-4 top-[130px] w-[52px] h-[52px] rounded-full text-[22px] flex items-center justify-center" style={{ background: "rgba(17,24,39,0.92)", border: "1px solid rgba(255,255,255,0.12)" }} onClick={() => setLegendCollapsed(false)}>🎨</button>
+              )}
+            </>
           ) : (
-            <button className="absolute right-4 top-[130px] w-[52px] h-[52px] rounded-full text-[22px] flex items-center justify-center" style={{ background: "rgba(17,24,39,0.92)", border: "1px solid rgba(255,255,255,0.12)" }} onClick={() => setLegendCollapsed(false)}>🎨</button>
+            <div className="absolute inset-0 z-10 overflow-auto bg-black/20 pb-16">
+              <CompanyConfig />
+            </div>
           )}
         </div>
       </div>
