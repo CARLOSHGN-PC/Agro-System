@@ -444,16 +444,33 @@ function PostLoginScreen({ onLogout }) {
       return true;
     });
 
+    // Helper to normalize "1 Corte", "1º Corte", "1CORTE", etc. to "1º corte"
+    const normalizeCorte = (val) => {
+      if (!val) return "Sem estágio";
+      const str = String(val).toLowerCase().trim();
+      const match = str.match(/(\d+)/); // Find the number
+      if (match) {
+        return `${match[1]}º corte`;
+      }
+      return "Sem estágio";
+    };
+
     return {
       ...geoJsonData,
-      features: filteredFeatures.map((feature, index) => ({
-        ...feature,
-        id: index,
-        properties: {
-          ...feature.properties,
-          featureId: index
-        }
-      }))
+      features: filteredFeatures.map((feature, index) => {
+        const normalizedCorte = normalizeCorte(feature.properties?.ECORTE);
+        return {
+          ...feature,
+          id: index,
+          properties: {
+            ...feature.properties,
+            featureId: index,
+            // Add a normalized property just for mapbox styling match,
+            // without modifying the original ECORTE so the popup still shows the original
+            _normalized_ecorte: normalizedCorte
+          }
+        };
+      })
     };
   }, [geoJsonData, appliedFilters]);
 
@@ -971,7 +988,7 @@ function PostLoginScreen({ onLogout }) {
                             palette.gold,
                             [
                               "match",
-                              ["get", "ECORTE"],
+                              ["get", "_normalized_ecorte"],
                               "1º corte", "#ff2d6f",
                               "2º corte", "#5ad15a",
                               "3º corte", "#f5e11c",
@@ -983,7 +1000,7 @@ function PostLoginScreen({ onLogout }) {
                               "9º corte", "#c4f35a",
                               "10º corte", "#f4a3c1",
                               "11º corte", "#6bc5c5",
-                              "#d1d5db" // Default
+                              "#d1d5db" // Default (Sem estágio)
                             ]
                           ],
                           "fill-opacity": [
