@@ -529,11 +529,20 @@ function PostLoginScreen({ onLogout }) {
       // Save for all selected talhões concurrently
       await Promise.all(talhoesToSave.map(async (feat) => {
         const talhaoId = feat.properties.TALHAO || `mock_${feat.id}`;
-        // we use the same form data for all if multiple are selected, in a real app this might be distributed
+
+        // Calculate the relative area vs the form area if multiple talhoes are selected.
+        // If single, use the form directly.
+        // For multiple, since form shows total, we might need a sophisticated split or assume per-talhão input.
+        // But for this demo, calculating proportional could be complex, so we will recalculate TCH * featureArea.
+        const featureAreaStr = feat.properties.AREA ? String(feat.properties.AREA).replace(',', '.') : "0";
+        const areaToUse = talhoesToSave.length === 1 ? parseFloat(String(formEstimativa.area).replace(',', '.') || 0) : parseFloat(featureAreaStr);
+        const tchToUse = parseFloat(String(formEstimativa.tch).replace(',', '.') || 0);
+        const toneladasCalc = (areaToUse * tchToUse).toFixed(2);
+
         const res = await saveEstimate(currentCompanyId, currentSafra, talhaoId, {
-          area: formEstimativa.area,
+          area: talhoesToSave.length === 1 ? formEstimativa.area : String(areaToUse),
           tch: formEstimativa.tch,
-          toneladas: formEstimativa.toneladas,
+          toneladas: talhoesToSave.length === 1 ? formEstimativa.toneladas : toneladasCalc,
           responsavel: "Carlos"
         });
         if (res.success) successCount++;
@@ -557,6 +566,46 @@ function PostLoginScreen({ onLogout }) {
       setIsSaving(false);
     }
   };
+
+  // Recalculate toneladas whenever tch or area change
+  React.useEffect(() => {
+    const area = parseFloat(String(formEstimativa.area).replace(',', '.')) || 0;
+    const tch = parseFloat(String(formEstimativa.tch).replace(',', '.')) || 0;
+    const toneladas = (area * tch).toFixed(2);
+    if (formEstimativa.toneladas !== toneladas && area > 0 && tch > 0) {
+      setFormEstimativa(prev => ({ ...prev, toneladas }));
+    }
+  }, [formEstimativa.area, formEstimativa.tch]);
+
+  // Recalculate totals when scope changes
+  React.useEffect(() => {
+    if (!estimateOpen) return;
+
+    let totalArea = 0;
+
+    if (scope === "talhao" && selectedTalhao) {
+      totalArea = parseFloat(String(selectedTalhao.properties?.AREA || 0).replace(',', '.'));
+    } else if (scope === "selecionados") {
+      selectedTalhoes.forEach(id => {
+        const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+        if (feat) {
+          totalArea += parseFloat(String(feat.properties?.AREA || 0).replace(',', '.'));
+        }
+      });
+    } else if (scope === "filtro" && enhancedGeoJson) {
+      enhancedGeoJson.features.forEach(feat => {
+        totalArea += parseFloat(String(feat.properties?.AREA || 0).replace(',', '.'));
+      });
+    } else if (scope === "fazenda" && geoJsonData) {
+      geoJsonData.features.forEach(feat => {
+        totalArea += parseFloat(String(feat.properties?.AREA || 0).replace(',', '.'));
+      });
+    }
+
+    setFormEstimativa(prev => ({ ...prev, area: totalArea ? totalArea.toFixed(2) : "" }));
+  }, [scope, selectedTalhao, selectedTalhoes, enhancedGeoJson, geoJsonData, estimateOpen]);
+
+  const [showLabels, setShowLabels] = useState(true);
 
   const openHistory = async () => {
     if (!selectedTalhao) return;
@@ -1006,10 +1055,10 @@ function PostLoginScreen({ onLogout }) {
                           "fill-opacity": [
                             "case",
                             ["boolean", ["feature-state", "selected"], false],
-                            0.7,
+                            0.9,
                             ["boolean", ["feature-state", "hover"], false],
-                            0.6,
-                            0.35
+                            0.8,
+                            0.55
                           ]
                         }}
                       />
@@ -1027,6 +1076,24 @@ function PostLoginScreen({ onLogout }) {
                           ]
                         }}
                       />
+                      {showLabels && (
+                        <Layer
+                          id="talhoes-labels"
+                          type="symbol"
+                          layout={{
+                            "text-field": ["get", "TALHAO"],
+                            "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+                            "text-size": 12,
+                            "text-anchor": "center",
+                            "text-allow-overlap": false
+                          }}
+                          paint={{
+                            "text-color": "#ffffff",
+                            "text-halo-color": "#000000",
+                            "text-halo-width": 1.5
+                          }}
+                        />
+                      )}
                     </Source>
                   )}
                 </Map>
@@ -1156,7 +1223,7 @@ function PostLoginScreen({ onLogout }) {
                   <div className="px-4 pt-4 pb-2 flex items-center justify-between">
                     <div className="font-bold text-[15px]">Estágios de corte</div>
                     <div className="flex gap-2">
-                      <button className="rounded-xl px-2 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.08)" }}>Ocultar nomes</button>
+                      <button className="rounded-xl px-2 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setShowLabels(!showLabels)}>{showLabels ? "Ocultar nomes" : "Exibir nomes"}</button>
                       <button className="rounded-xl px-2 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setLegendCollapsed(true)}>Recolher</button>
                     </div>
                   </div>

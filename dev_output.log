@@ -1,0 +1,11 @@
+
+> agrosystem-react-pages@1.0.0 dev
+> vite
+
+
+  VITE v5.4.21  ready in 858 ms
+
+  ➜  Local:   http://localhost:5173/Agro-System/
+  ➜  Network: use --host to expose
+7:37:03 PM [vite] hmr update /src/AgroSystemModernUI.jsx, /src/index.css
+7:37:10 PM [vite] hmr update /src/AgroSystemModernUI.jsx, /src/index.css
