@@ -379,9 +379,14 @@ function PostLoginScreen({ onLogout }) {
   // Fetch GeoJSON on load
   React.useEffect(() => {
     async function loadData() {
-      const data = await fetchLatestGeoJson(currentCompanyId);
-      if (data) {
-        setGeoJsonData(data);
+      const res = await fetchLatestGeoJson(currentCompanyId);
+      if (res.error) {
+        alert(res.error);
+      } else if (res.data) {
+        setGeoJsonData(res.data);
+      } else {
+        // No maps found in Storage
+        setActiveModule("configuracao");
       }
     }
     loadData();
@@ -1055,10 +1060,10 @@ function PostLoginScreen({ onLogout }) {
                           "fill-opacity": [
                             "case",
                             ["boolean", ["feature-state", "selected"], false],
-                            0.9,
+                            1.0,
                             ["boolean", ["feature-state", "hover"], false],
-                            0.8,
-                            0.55
+                            0.95,
+                            0.85
                           ]
                         }}
                       />
