@@ -57,9 +57,16 @@ export const importShapefile = async (files, companyId = "empresa_default") => {
       message: "Shapefile processado e armazenado com sucesso.",
     };
   } catch (error) {
+    let errorMessage = error.message || "Erro desconhecido ao processar shapefile.";
+
+    // Check for Firebase Storage permission errors
+    if (error.code === 'storage/unauthorized' || errorMessage.includes('permission to access') || errorMessage.includes('403')) {
+      errorMessage = "Acesso Negado (403): O Firebase Storage bloqueou o envio. Vá ao Console do Firebase > Storage > Rules e altere temporariamente para: 'allow read, write: if true;' ou configure a autenticação.";
+    }
+
     return {
       success: false,
-      error: error.message || "Erro desconhecido ao processar shapefile.",
+      error: errorMessage,
     };
   }
 };
