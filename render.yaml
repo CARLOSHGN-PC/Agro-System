@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: agrosystem
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
