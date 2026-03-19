@@ -768,18 +768,29 @@ function PostLoginScreen({ onLogout }) {
         const uniqueTalhaoId = getUniqueTalhaoId(feat);
 
         // Calculate the relative area vs the form area if multiple talhoes are selected.
-        // If single, use the form directly.
-        // For multiple, since form shows total, we might need a sophisticated split or assume per-talhão input.
-        // But for this demo, calculating proportional could be complex, so we will recalculate TCH * featureArea.
+        // If single, use the form directly because the user might have manually edited the total area.
+        // For multiple, we MUST use the individual feature's original area and calculate tonnes per talhão,
+        // ignoring the form's total area.
+
         const featureAreaStr = feat.properties.AREA ? String(feat.properties.AREA).replace(/\./g, '').replace(',', '.') : "0";
-        const formAreaStr = String(formEstimativa.area).replace(/\./g, '').replace(',', '.');
         const formTchStr = String(formEstimativa.tch).replace(/\./g, '').replace(',', '.');
 
-        const areaToUse = talhoesToSave.length === 1 ? (parseFloat(formAreaStr) || 0) : parseFloat(featureAreaStr);
-        const tchToUse = parseFloat(formTchStr) || 0;
-        const toneladasCalcVal = areaToUse * tchToUse;
-        const toneladasCalc = toneladasCalcVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        const areaToSave = talhoesToSave.length === 1 ? formEstimativa.area : areaToUse.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        let areaToSave;
+        let toneladasToSave;
+
+        if (talhoesToSave.length === 1) {
+          // Single selection: user edits are trusted.
+          areaToSave = formEstimativa.area;
+          toneladasToSave = formEstimativa.toneladas;
+        } else {
+          // Multiple selection: calculate for this specific feature using its own area.
+          const indvArea = parseFloat(featureAreaStr) || 0;
+          const tchToUse = parseFloat(formTchStr) || 0;
+          const indvToneladas = indvArea * tchToUse;
+
+          areaToSave = indvArea.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          toneladasToSave = indvToneladas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
 
         const res = await saveEstimate(currentCompanyId, currentSafra, uniqueTalhaoId, {
           fundo_agricola: feat.properties.FUNDO_AGR || "N/A",
@@ -787,7 +798,7 @@ function PostLoginScreen({ onLogout }) {
           variedade: feat.properties.VARIEDADE || "N/A",
           area: areaToSave,
           tch: formEstimativa.tch,
-          toneladas: talhoesToSave.length === 1 ? formEstimativa.toneladas : toneladasCalc,
+          toneladas: toneladasToSave,
           responsavel: "Carlos"
         });
         if (res.success) successCount++;
