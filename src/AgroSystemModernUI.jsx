@@ -389,6 +389,40 @@ function PostLoginScreen({ onLogout }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [legendCollapsed, setLegendCollapsed] = useState(false);
   const [summaryCollapsed, setSummaryCollapsed] = useState(false);
+  const [summaryData, setSummaryData] = useState({
+    talhoes: 0,
+    area: 0,
+    estimados: 0,
+    pendentes: 0,
+    toneladas: 0,
+  });
+
+  // Effect to calculate summary data based on the enhancedGeoJson (which responds to filters)
+  React.useEffect(() => {
+    if (!enhancedGeoJson || !enhancedGeoJson.features) return;
+
+    let totalArea = 0;
+    const totalTalhoes = enhancedGeoJson.features.length;
+
+    enhancedGeoJson.features.forEach(f => {
+      const p = f.properties || {};
+      const area = parseFloat(String(p.AREA || 0).replace(',', '.'));
+      if (!isNaN(area)) {
+        totalArea += area;
+      }
+    });
+
+    // In a real scenario, we'd need to query Firestore to know how many of *these specific*
+    // talhões are estimated, and sum their estimated tons.
+    // For now, we will reflect the loaded filters structure.
+    setSummaryData({
+      talhoes: totalTalhoes,
+      area: totalArea,
+      estimados: 0, // Mock, pending integration
+      pendentes: totalTalhoes, // Mock, pending integration
+      toneladas: 0, // Mock, pending integration
+    });
+  }, [enhancedGeoJson]);
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -396,7 +430,7 @@ function PostLoginScreen({ onLogout }) {
   const [scope, setScope] = useState("talhao");
   const [selectedTalhao, setSelectedTalhao] = useState(null);
   const [selectedTalhoes, setSelectedTalhoes] = useState([]);
-  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(true);
   const [activeModule, setActiveModule] = useState("estimativa"); // "estimativa" | "configuracao"
   const [geoJsonData, setGeoJsonData] = useState(null);
   const [hoveredTalhao, setHoveredTalhao] = useState(null);
@@ -592,8 +626,8 @@ function PostLoginScreen({ onLogout }) {
     // Default form values
     setFormEstimativa({
       area: feature.properties.AREA ? String(feature.properties.AREA) : "",
-      tch: "82.50",
-      toneladas: "0"
+      tch: "",
+      toneladas: ""
     });
 
     try {
@@ -602,8 +636,8 @@ function PostLoginScreen({ onLogout }) {
         setCurrentEstimate(res.data);
         setFormEstimativa({
           area: res.data.area || feature.properties.AREA || "",
-          tch: res.data.tch || "82.50",
-          toneladas: res.data.toneladas || "0"
+          tch: res.data.tch || "",
+          toneladas: res.data.toneladas || ""
         });
       }
     } catch (err) {
@@ -642,16 +676,21 @@ function PostLoginScreen({ onLogout }) {
         // If single, use the form directly.
         // For multiple, since form shows total, we might need a sophisticated split or assume per-talhão input.
         // But for this demo, calculating proportional could be complex, so we will recalculate TCH * featureArea.
-        const featureAreaStr = feat.properties.AREA ? String(feat.properties.AREA).replace(',', '.') : "0";
-        const areaToUse = talhoesToSave.length === 1 ? parseFloat(String(formEstimativa.area).replace(',', '.') || 0) : parseFloat(featureAreaStr);
-        const tchToUse = parseFloat(String(formEstimativa.tch).replace(',', '.') || 0);
-        const toneladasCalc = (areaToUse * tchToUse).toFixed(2);
+        const featureAreaStr = feat.properties.AREA ? String(feat.properties.AREA).replace(/\./g, '').replace(',', '.') : "0";
+        const formAreaStr = String(formEstimativa.area).replace(/\./g, '').replace(',', '.');
+        const formTchStr = String(formEstimativa.tch).replace(/\./g, '').replace(',', '.');
+
+        const areaToUse = talhoesToSave.length === 1 ? (parseFloat(formAreaStr) || 0) : parseFloat(featureAreaStr);
+        const tchToUse = parseFloat(formTchStr) || 0;
+        const toneladasCalcVal = areaToUse * tchToUse;
+        const toneladasCalc = toneladasCalcVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const areaToSave = talhoesToSave.length === 1 ? formEstimativa.area : areaToUse.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
         const res = await saveEstimate(currentCompanyId, currentSafra, talhaoId, {
           fundo_agricola: feat.properties.FUNDO_AGR || "N/A",
           fazenda: feat.properties.FAZENDA || "N/A",
           variedade: feat.properties.VARIEDADE || "N/A",
-          area: talhoesToSave.length === 1 ? formEstimativa.area : String(areaToUse),
+          area: areaToSave,
           tch: formEstimativa.tch,
           toneladas: talhoesToSave.length === 1 ? formEstimativa.toneladas : toneladasCalc,
           responsavel: "Carlos"
@@ -680,11 +719,21 @@ function PostLoginScreen({ onLogout }) {
 
   // Recalculate toneladas whenever tch or area change
   React.useEffect(() => {
-    const area = parseFloat(String(formEstimativa.area).replace(',', '.')) || 0;
-    const tch = parseFloat(String(formEstimativa.tch).replace(',', '.')) || 0;
-    const toneladas = (area * tch).toFixed(2);
-    if (formEstimativa.toneladas !== toneladas && area > 0 && tch > 0) {
-      setFormEstimativa(prev => ({ ...prev, toneladas }));
+    const areaStr = String(formEstimativa.area || "").replace(/\./g, '').replace(',', '.');
+    const tchStr = String(formEstimativa.tch || "").replace(/\./g, '').replace(',', '.');
+
+    const area = parseFloat(areaStr) || 0;
+    const tch = parseFloat(tchStr) || 0;
+
+    if (area > 0 && tch > 0) {
+      const toneladasVal = area * tch;
+      const toneladasFormatted = toneladasVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      if (formEstimativa.toneladas !== toneladasFormatted) {
+        setFormEstimativa(prev => ({ ...prev, toneladas: toneladasFormatted }));
+      }
+    } else if (formEstimativa.toneladas !== "") {
+      setFormEstimativa(prev => ({ ...prev, toneladas: "" }));
     }
   }, [formEstimativa.area, formEstimativa.tch]);
 
@@ -713,7 +762,7 @@ function PostLoginScreen({ onLogout }) {
       });
     }
 
-    setFormEstimativa(prev => ({ ...prev, area: totalArea ? totalArea.toFixed(2) : "" }));
+    setFormEstimativa(prev => ({ ...prev, area: totalArea ? totalArea.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "" }));
   }, [scope, selectedTalhao, selectedTalhoes, enhancedGeoJson, geoJsonData, estimateOpen]);
 
   const [showLabels, setShowLabels] = useState(true);
@@ -732,21 +781,32 @@ function PostLoginScreen({ onLogout }) {
     const feature = e.features && e.features[0];
     if (feature && feature.properties) {
       const featureId = feature.properties.featureId;
-      if (isMultiSelectMode) {
-        setSelectedTalhoes(prev =>
-          prev.includes(featureId) ? prev.filter(id => id !== featureId) : [...prev, featureId]
-        );
-      } else {
-        setSelectedTalhao(feature);
-        setHoveredTalhao(null);
-        // Load estimate for this talhao
-        loadEstimateData(feature);
-      }
+
+      setSelectedTalhoes(prev => {
+        const newSelection = prev.includes(featureId) ? prev.filter(id => id !== featureId) : [...prev, featureId];
+
+        // Se após clicar, a seleção tiver apenas 1 item, carregue seus dados de estimativa
+        if (newSelection.length === 1) {
+          const singleFeature = enhancedGeoJson.features.find(f => f.id === newSelection[0]);
+          if (singleFeature) {
+            setSelectedTalhao(singleFeature);
+            loadEstimateData(singleFeature);
+          }
+        } else if (newSelection.length === 0) {
+          setSelectedTalhao(null);
+        } else {
+          // Quando houver mais de um selecionado, exibimos informações do último clicado apenas no contexto de painel, ou de múltiplos.
+          setSelectedTalhao(feature);
+          loadEstimateData(feature); // Carrega do ultimo por enquanto
+        }
+
+        return newSelection;
+      });
+      setHoveredTalhao(null);
     } else {
       // Clicked outside any feature
-      if (!isMultiSelectMode) {
-        setSelectedTalhao(null);
-      }
+      setSelectedTalhoes([]);
+      setSelectedTalhao(null);
     }
   };
 
@@ -796,9 +856,9 @@ function PostLoginScreen({ onLogout }) {
   );
 
   React.useEffect(() => {
-    if (geoJsonData && mapRef.current) {
+    if (enhancedGeoJson && enhancedGeoJson.features.length > 0 && mapRef.current) {
       try {
-        const [minLng, minLat, maxLng, maxLat] = turf.bbox(geoJsonData);
+        const [minLng, minLat, maxLng, maxLat] = turf.bbox(enhancedGeoJson);
         mapRef.current.fitBounds(
           [
             [minLng, minLat],
@@ -807,10 +867,10 @@ function PostLoginScreen({ onLogout }) {
           { padding: 40, duration: 1000 }
         );
       } catch (err) {
-        console.error("Error calculating bounds from geoJsonData:", err);
+        console.error("Error calculating bounds from enhancedGeoJson:", err);
       }
     }
-  }, [geoJsonData]);
+  }, [enhancedGeoJson]);
 
   // Handle mapbox feature state for hover/selection
   React.useEffect(() => {
@@ -880,7 +940,7 @@ function PostLoginScreen({ onLogout }) {
             <div className="p-5 max-h-[70vh] overflow-auto space-y-4">
               <div className="grid md:grid-cols-4 gap-3">
                 {[
-                  ["Fundo agrícola / Fazenda", selectedTalhao?.properties?.FAZENDA || "N/A"],
+                  ["Fundo agrícola / Fazenda", scope === "talhao" ? ((selectedTalhao?.properties?.FUNDO_AGR && selectedTalhao?.properties?.FAZENDA) ? `${selectedTalhao.properties.FUNDO_AGR} - ${selectedTalhao.properties.FAZENDA}` : selectedTalhao?.properties?.FAZENDA || selectedTalhao?.properties?.FUNDO_AGR || "N/A") : (scope === "selecionados" && selectedTalhoes.length > 0 ? ((enhancedGeoJson.features.find(f => f.id === selectedTalhoes[0])?.properties?.FUNDO_AGR && enhancedGeoJson.features.find(f => f.id === selectedTalhoes[0])?.properties?.FAZENDA) ? `${enhancedGeoJson.features.find(f => f.id === selectedTalhoes[0]).properties.FUNDO_AGR} - ${enhancedGeoJson.features.find(f => f.id === selectedTalhoes[0]).properties.FAZENDA}` : "Múltiplos/Variados") : "Várias")],
                   ["Talhão", scope === "talhao" ? (selectedTalhao?.properties?.TALHAO || "N/A") : (scope === "selecionados" ? `${selectedTalhoes.length} selecionados` : "Múltiplos")],
                   ["Variedade", scope === "talhao" ? (selectedTalhao?.properties?.VARIEDADE || "N/A") : "Várias"],
                   ["Corte / Estágio", scope === "talhao" ? (selectedTalhao?.properties?.ECORTE || "N/A") : "Vários"]
@@ -948,7 +1008,7 @@ function PostLoginScreen({ onLogout }) {
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-xs" style={{ color: palette.text2 }}>Observação</label>
-                <textarea defaultValue="Ao salvar, cada reestimativa gera uma nova versão por safra sem apagar o histórico anterior." className="rounded-2xl border px-4 py-3 min-h-[110px] outline-none" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
+                <textarea placeholder="Ao salvar, cada reestimativa gera uma nova versão por safra sem apagar o histórico anterior." className="rounded-2xl border px-4 py-3 min-h-[110px] outline-none" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
               </div>
             </div>
             <div className="flex justify-end gap-3 px-5 pb-5">
@@ -1271,21 +1331,6 @@ function PostLoginScreen({ onLogout }) {
                     <div className="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.10)", color: "#dbe4ec" }}>Sem filtros</div>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      className="w-11 h-11 rounded-xl flex items-center justify-center transition-colors"
-                      style={{
-                        background: isMultiSelectMode ? "rgba(212,175,55,0.2)" : "rgba(255,255,255,0.08)",
-                        border: isMultiSelectMode ? `1px solid ${palette.gold}` : "1px solid transparent",
-                        color: isMultiSelectMode ? palette.gold : "white"
-                      }}
-                      onClick={() => {
-                        setIsMultiSelectMode(!isMultiSelectMode);
-                        if (isMultiSelectMode) setSelectedTalhoes([]);
-                      }}
-                      title="Seleção múltipla"
-                    >
-                      <MousePointerSquareDashed className="w-5 h-5" />
-                    </button>
                     <button className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setFiltersOpen(true)}>
                       <ChevronDown className="w-5 h-5" />
                     </button>
@@ -1294,16 +1339,16 @@ function PostLoginScreen({ onLogout }) {
               </div>
 
               {/* Tap Info Panel */}
-              {selectedTalhao && !isMultiSelectMode && (
+              {selectedTalhoes.length > 0 && (
                 <div className="absolute right-4 top-4 w-[340px] rounded-3xl border overflow-hidden z-20 shadow-2xl flex flex-col" style={{ background: "rgba(23, 29, 43, 0.95)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)" }}>
                   <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
                     <div>
-                      <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: palette.text2 }}>TALHÃO</div>
-                      <div className="text-[20px] font-bold mt-1 text-white">{selectedTalhao.properties.TALHAO || "N/A"}</div>
+                      <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: palette.text2 }}>{selectedTalhoes.length > 1 ? "TALHÕES" : "TALHÃO"}</div>
+                      <div className="text-[20px] font-bold mt-1 text-white">{selectedTalhoes.length > 1 ? `${selectedTalhoes.length} Selecionados` : (selectedTalhao?.properties?.TALHAO || "N/A")}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="px-3 py-1.5 rounded-full text-xs font-medium border" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.12)", color: palette.text2 }} onClick={() => setSelectedTalhao(null)}>Recolher</button>
-                      <button onClick={() => setSelectedTalhao(null)} className="p-1.5 rounded-full hover:bg-white/10 transition-colors">
+                      <button className="px-3 py-1.5 rounded-full text-xs font-medium border" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.12)", color: palette.text2 }} onClick={() => setSelectedTalhoes([])}>Limpar</button>
+                      <button onClick={() => setSelectedTalhoes([])} className="p-1.5 rounded-full hover:bg-white/10 transition-colors">
                         <X className="w-4 h-4 text-white/60" />
                       </button>
                     </div>
@@ -1311,12 +1356,22 @@ function PostLoginScreen({ onLogout }) {
 
                   <div className="p-4 grid grid-cols-2 gap-3 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)" }}>
                     {[
-                      { label: "Fazenda", value: selectedTalhao.properties.FAZENDA || "N/A" },
-                      { label: "Variedade", value: selectedTalhao.properties.VARIEDADE || "N/A" },
-                      { label: "Estágio", value: selectedTalhao.properties.ECORTE || "N/A" },
-                      { label: "Área", value: selectedTalhao.properties.AREA ? `${selectedTalhao.properties.AREA} ha` : "N/A" },
-                      { label: "Status", value: isLoadingEstimate ? "Carregando..." : (currentEstimate ? "Estimado" : "Pendente") },
-                      { label: "Última estimativa", value: isLoadingEstimate ? "..." : (currentEstimate ? `${currentEstimate.toneladas} ton` : "Não estimado") },
+                      { label: "Fazenda", value: selectedTalhoes.length > 1 ? "Múltiplas" : (selectedTalhao?.properties?.FAZENDA || "N/A") },
+                      { label: "Variedade", value: selectedTalhoes.length > 1 ? "Múltiplas" : (selectedTalhao?.properties?.VARIEDADE || "N/A") },
+                      { label: "Estágio", value: selectedTalhoes.length > 1 ? "Múltiplos" : (selectedTalhao?.properties?.ECORTE || "N/A") },
+                      { label: "Área Total", value: (() => {
+                          let totalArea = 0;
+                          selectedTalhoes.forEach(id => {
+                            const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+                            if (feat) {
+                              totalArea += parseFloat(String(feat.properties?.AREA || 0).replace(',', '.'));
+                            }
+                          });
+                          return `${totalArea.toFixed(2).replace('.', ',')} ha`;
+                        })()
+                      },
+                      { label: "Status", value: selectedTalhoes.length > 1 ? "-" : (isLoadingEstimate ? "Carregando..." : (currentEstimate ? "Estimado" : "Pendente")) },
+                      { label: "Última estimativa", value: selectedTalhoes.length > 1 ? "-" : (isLoadingEstimate ? "..." : (currentEstimate ? `${currentEstimate.toneladas} ton` : "Não estimado")) },
                     ].map((item, idx) => (
                       <div key={idx} className="rounded-2xl p-3 flex flex-col justify-center" style={{ background: "rgba(31, 38, 53, 0.7)" }}>
                         <span className="text-xs mb-1" style={{ color: palette.text2 }}>{item.label}</span>
@@ -1329,16 +1384,21 @@ function PostLoginScreen({ onLogout }) {
                         className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02]"
                         style={{ background: "#22c55e", color: "#ffffff" }}
                         onClick={() => {
-                          setScope("talhao");
+                          if (selectedTalhoes.length > 1) {
+                            setScope("selecionados");
+                          } else {
+                            setScope("talhao");
+                          }
                           setEstimateOpen(true);
                         }}
                       >
                         <Pencil className="w-4 h-4" />
-                        {currentEstimate ? "Reestimar" : "Estimar"}
+                        Estimar
                       </button>
                       <button
                         onClick={openHistory}
-                        className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] border"
+                        disabled={selectedTalhoes.length > 1}
+                        className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] border disabled:opacity-50"
                         style={{ background: "rgba(31, 38, 53, 0.7)", borderColor: "rgba(255,255,255,0.08)", color: "#ffffff" }}
                       >
                         <History className="w-4 h-4" />
@@ -1350,7 +1410,7 @@ function PostLoginScreen({ onLogout }) {
                       <button
                         className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] border transition-colors hover:bg-white/5"
                         style={{ background: "transparent", borderColor: "rgba(255,255,255,0.12)", color: "#ffffff" }}
-                        onClick={() => setSelectedTalhao(null)}
+                        onClick={() => { setSelectedTalhao(null); setSelectedTalhoes([]); }}
                       >
                         <X className="w-4 h-4" />
                         Limpar seleção
@@ -1390,12 +1450,18 @@ function PostLoginScreen({ onLogout }) {
                     <div className="px-4 pt-4 pb-2 flex items-center justify-between">
                       <div>
                         <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: "#c6d1dc" }}>Resumo</div>
-                        <div className="text-[17px] font-bold mt-1">2993 talhões • 37894,5 ha</div>
+                        <div className="text-[17px] font-bold mt-1">{summaryData.talhoes} talhões • {summaryData.area.toFixed(2).replace('.', ',')} ha</div>
                       </div>
                       <button className="rounded-xl px-3 py-2 text-sm font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setSummaryCollapsed(true)}>Recolher</button>
                     </div>
                     <div className="grid grid-cols-2 gap-3 p-4 pt-2">
-                      {[["Talhões", "2993"],["Área filtrada", "37894,5 ha"],["Estimados", "0"],["Pendentes", "2993"],["Toneladas", "0"]].map(([k, v]) => (
+                      {[
+                        ["Talhões", String(summaryData.talhoes)],
+                        ["Área filtrada", `${summaryData.area.toFixed(2).replace('.', ',')} ha`],
+                        ["Estimados", String(summaryData.estimados)],
+                        ["Pendentes", String(summaryData.pendentes)],
+                        ["Toneladas", String(summaryData.toneladas)]
+                      ].map(([k, v]) => (
                         <div key={k} className="rounded-[16px] border p-4" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.08)" }}>
                           <div className="text-[11px] uppercase font-semibold" style={{ color: "#aebccb" }}>{k}</div>
                           <div className="mt-2 text-[17px] font-bold">{v}</div>
