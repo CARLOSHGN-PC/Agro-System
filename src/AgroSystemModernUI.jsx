@@ -477,9 +477,10 @@ function PostLoginScreen({ onLogout }) {
       let matchesVariedade = true;
       let matchesCorte = true;
 
-      if (filters.fazenda && fazendaName !== filters.fazenda) matchesFazenda = false;
-      if (filters.variedade && variedade !== filters.variedade) matchesVariedade = false;
-      if (filters.corte && corte !== filters.corte) matchesCorte = false;
+      // Match current temporary filter checks
+      if (filters.fazenda && filters.fazenda !== "all" && fazendaName !== filters.fazenda) matchesFazenda = false;
+      if (filters.variedade && filters.variedade !== "all" && variedade !== filters.variedade) matchesVariedade = false;
+      if (filters.corte && filters.corte !== "all" && corte !== filters.corte) matchesCorte = false;
 
       // Populate Fazendas (independent)
       if (fazendaName) fazendasSet.add(fazendaName);
@@ -1070,32 +1071,16 @@ function PostLoginScreen({ onLogout }) {
             </div>
             <div className="p-5 grid sm:grid-cols-2 gap-3">
               <div className="flex flex-col gap-2">
-                <label className="text-xs" style={{ color: palette.text2 }}>Talhão</label>
+                <label className="text-xs" style={{ color: palette.text2 }}>Fundo agrícola / Fazenda</label>
                 <div className="relative">
                   <select
-                    value={filters.talhao}
-                    onChange={(e) => setFilters({...filters, talhao: e.target.value})}
+                    value={filters.fazenda}
+                    onChange={(e) => setFilters({...filters, fazenda: e.target.value, variedade: "", corte: "", talhao: ""})}
                     className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none"
                     style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }}
                   >
-                    <option value="" style={{ color: "black" }}>Todos os Talhões</option>
-                    {filterOptions.talhoes.map(t => <option key={t} value={t} style={{ color: "black" }}>{t}</option>)}
-                  </select>
-                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: palette.text2 }} />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-xs" style={{ color: palette.text2 }}>Corte / Estágio</label>
-                <div className="relative">
-                  <select
-                    value={filters.corte}
-                    onChange={(e) => setFilters({...filters, corte: e.target.value, talhao: ""})}
-                    className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none"
-                    style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }}
-                  >
-                    <option value="" style={{ color: "black" }}>Todos os Cortes</option>
-                    {filterOptions.cortes.map(c => <option key={c} value={c} style={{ color: "black" }}>{c}</option>)}
+                    <option value="" style={{ color: "black" }}>Todas as Fazendas</option>
+                    {filterOptions.fazendas.map(f => <option key={f} value={f} style={{ color: "black" }}>{f}</option>)}
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: palette.text2 }} />
                 </div>
@@ -1118,16 +1103,32 @@ function PostLoginScreen({ onLogout }) {
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-xs" style={{ color: palette.text2 }}>Fundo agrícola / Fazenda</label>
+                <label className="text-xs" style={{ color: palette.text2 }}>Corte / Estágio</label>
                 <div className="relative">
                   <select
-                    value={filters.fazenda}
-                    onChange={(e) => setFilters({...filters, fazenda: e.target.value, variedade: "", corte: "", talhao: ""})}
+                    value={filters.corte}
+                    onChange={(e) => setFilters({...filters, corte: e.target.value, talhao: ""})}
                     className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none"
                     style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }}
                   >
-                    <option value="" style={{ color: "black" }}>Todas as Fazendas</option>
-                    {filterOptions.fazendas.map(f => <option key={f} value={f} style={{ color: "black" }}>{f}</option>)}
+                    <option value="" style={{ color: "black" }}>Todos os Cortes</option>
+                    {filterOptions.cortes.map(c => <option key={c} value={c} style={{ color: "black" }}>{c}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: palette.text2 }} />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs" style={{ color: palette.text2 }}>Talhão</label>
+                <div className="relative">
+                  <select
+                    value={filters.talhao}
+                    onChange={(e) => setFilters({...filters, talhao: e.target.value})}
+                    className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none"
+                    style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }}
+                  >
+                    <option value="" style={{ color: "black" }}>Todos os Talhões</option>
+                    {filterOptions.talhoes.map(t => <option key={t} value={t} style={{ color: "black" }}>{t}</option>)}
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: palette.text2 }} />
                 </div>
