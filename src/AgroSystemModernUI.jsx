@@ -456,46 +456,6 @@ function PostLoginScreen({ onLogout }) {
     talhao: ""
   });
 
-  // Calculate dynamic legend items based on current view's present and estimated features
-  const legendItems = React.useMemo(() => {
-    if (!enhancedGeoJson || !enhancedGeoJson.features) return [];
-
-    const colors = {
-      "1º corte": "#ff2d6f",
-      "2º corte": "#5ad15a",
-      "3º corte": "#f5e11c",
-      "4º corte": "#4a7dff",
-      "5º corte": "#f58231",
-      "6º corte": "#a43cf0",
-      "7º corte": "#42d4f4",
-      "8º corte": "#e642f4",
-      "9º corte": "#c4f35a",
-      "10º corte": "#f4a3c1",
-      "11º corte": "#6bc5c5",
-      "Sem estágio": "#d1d5db"
-    };
-
-    const presentStages = new Set();
-    enhancedGeoJson.features.forEach(f => {
-      // Only show legend for estimated features because those are the only ones getting colored!
-      if (f.properties._is_estimated) {
-        presentStages.add(f.properties._normalized_ecorte);
-      }
-    });
-
-    const items = [];
-    Array.from(presentStages).forEach(stage => {
-      items.push([colors[stage] || "#d1d5db", stage]);
-    });
-
-    // Helper to extract numbers for sorting
-    const naturalSort = (a, b) => {
-      return a[1].localeCompare(b[1], undefined, { numeric: true, sensitivity: 'base' });
-    };
-
-    return items.sort(naturalSort);
-  }, [enhancedGeoJson]);
-
 
   // Derived filter options based on geoJsonData
   const filterOptions = React.useMemo(() => {
@@ -646,6 +606,47 @@ function PostLoginScreen({ onLogout }) {
       })
     };
   }, [geoJsonData, appliedFilters, allEstimates]);
+
+  // Calculate dynamic legend items based on current view's present and estimated features
+  const legendItems = React.useMemo(() => {
+    if (!enhancedGeoJson || !enhancedGeoJson.features) return [];
+
+    const colors = {
+      "1º corte": "#ff2d6f",
+      "2º corte": "#5ad15a",
+      "3º corte": "#f5e11c",
+      "4º corte": "#4a7dff",
+      "5º corte": "#f58231",
+      "6º corte": "#a43cf0",
+      "7º corte": "#42d4f4",
+      "8º corte": "#e642f4",
+      "9º corte": "#c4f35a",
+      "10º corte": "#f4a3c1",
+      "11º corte": "#6bc5c5",
+      "Sem estágio": "#d1d5db"
+    };
+
+    const presentStages = new Set();
+    enhancedGeoJson.features.forEach(f => {
+      // Only show legend for estimated features because those are the only ones getting colored!
+      if (f.properties._is_estimated) {
+        presentStages.add(f.properties._normalized_ecorte);
+      }
+    });
+
+    const items = [];
+    Array.from(presentStages).forEach(stage => {
+      items.push([colors[stage] || "#d1d5db", stage]);
+    });
+
+    // Helper to extract numbers for sorting
+    const naturalSort = (a, b) => {
+      return a[1].localeCompare(b[1], undefined, { numeric: true, sensitivity: 'base' });
+    };
+
+    return items.sort(naturalSort);
+  }, [enhancedGeoJson]);
+
 
   // Effect to calculate summary data based on the enhancedGeoJson (which responds to filters)
   React.useEffect(() => {
