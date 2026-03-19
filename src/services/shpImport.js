@@ -2,6 +2,10 @@ import { uploadFile, uploadJson } from "./storage";
 import { processShapefileToGeoJSON } from "../utils/geo";
 
 export const validateShapefileSet = (files) => {
+  if (files.length === 1 && files[0].name.toLowerCase().endsWith(".zip")) {
+    return true; // We accept a single zip file
+  }
+
   const extensions = files.map((f) => {
     const parts = f.name.split(".");
     return parts.length > 1 ? parts.pop().toLowerCase() : "";
@@ -11,10 +15,10 @@ export const validateShapefileSet = (files) => {
   const missing = requiredExts.filter((ext) => !extensions.includes(ext));
 
   if (missing.length > 0) {
-    throw new Error(`Arquivos obrigatórios ausentes: ${missing.map(e => "." + e).join(", ")}`);
+    throw new Error(`Se enviar arquivos soltos, certifique-se de incluir: ${missing.map(e => "." + e).join(", ")}`);
   }
 
-  // Basic check to ensure they share the same base name
+  // Basic check to ensure they share the same base name (excluding zip files)
   const baseNames = new Set(files.map((f) => {
     const parts = f.name.split(".");
     parts.pop();
@@ -22,7 +26,7 @@ export const validateShapefileSet = (files) => {
   }));
 
   if (baseNames.size > 1) {
-    throw new Error("Todos os arquivos do shapefile devem ter o mesmo nome base.");
+    throw new Error("Todos os arquivos soltos do shapefile devem ter o mesmo nome base.");
   }
 
   return true;
