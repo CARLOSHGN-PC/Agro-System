@@ -33,7 +33,7 @@ import CompanyConfig from "./components/CompanyConfig";
 import Map, { Source, Layer, Popup } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import * as turf from "@turf/turf"; // To calculate bounds
-import { saveEstimate, getEstimate, getEstimateHistory } from "./services/estimativa";
+import { saveEstimate, getEstimate, getEstimateHistory, getAllEstimates } from "./services/estimativa";
 import { fetchLatestGeoJson } from "./services/storage";
 import { showSuccess, showError, showConfirm } from "./utils/alert";
 import { auth } from "./services/firebase";
@@ -387,8 +387,8 @@ function PostLoginScreen({ onLogout }) {
   const MAPBOX_TOKEN = "pk.eyJ1IjoiY2FybG9zaGduIiwiYSI6ImNtZDk0bXVxeTA0MTcyam9sb2h1dDhxaG8ifQ.uf0av4a0WQ9sxM1RcFYT2w";
   const mapRef = React.useRef(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [legendCollapsed, setLegendCollapsed] = useState(false);
-  const [summaryCollapsed, setSummaryCollapsed] = useState(false);
+  const [legendCollapsed, setLegendCollapsed] = useState(true);
+  const [summaryCollapsed, setSummaryCollapsed] = useState(true);
   const [summaryData, setSummaryData] = useState({
     talhoes: 0,
     area: 0,
@@ -414,6 +414,7 @@ function PostLoginScreen({ onLogout }) {
   // Estimativa state
   const [currentEstimate, setCurrentEstimate] = useState(null);
   const [estimateHistory, setEstimateHistory] = useState([]);
+  const [allEstimates, setAllEstimates] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [formEstimativa, setFormEstimativa] = useState({ area: "", tch: "", toneladas: "" });
   const [isSaving, setIsSaving] = useState(false);
@@ -423,7 +424,14 @@ function PostLoginScreen({ onLogout }) {
   const currentCompanyId = "empresa_default";
   const currentSafra = "2026/2027";
 
-  // Fetch GeoJSON on load
+  // Fetch GeoJSON and all estimates on load
+  const fetchEstimates = async () => {
+    const res = await getAllEstimates(currentCompanyId, currentSafra);
+    if (res.success) {
+      setAllEstimates(res.data);
+    }
+  };
+
   React.useEffect(() => {
     async function loadData() {
       const res = await fetchLatestGeoJson(currentCompanyId);
@@ -435,6 +443,7 @@ function PostLoginScreen({ onLogout }) {
         // No maps found in Storage
         setActiveModule("configuracao");
       }
+      await fetchEstimates();
     }
     loadData();
   }, []);
@@ -446,6 +455,46 @@ function PostLoginScreen({ onLogout }) {
     corte: "",
     talhao: ""
   });
+
+  // Calculate dynamic legend items based on current view's present and estimated features
+  const legendItems = React.useMemo(() => {
+    if (!enhancedGeoJson || !enhancedGeoJson.features) return [];
+
+    const colors = {
+      "1º corte": "#ff2d6f",
+      "2º corte": "#5ad15a",
+      "3º corte": "#f5e11c",
+      "4º corte": "#4a7dff",
+      "5º corte": "#f58231",
+      "6º corte": "#a43cf0",
+      "7º corte": "#42d4f4",
+      "8º corte": "#e642f4",
+      "9º corte": "#c4f35a",
+      "10º corte": "#f4a3c1",
+      "11º corte": "#6bc5c5",
+      "Sem estágio": "#d1d5db"
+    };
+
+    const presentStages = new Set();
+    enhancedGeoJson.features.forEach(f => {
+      // Only show legend for estimated features because those are the only ones getting colored!
+      if (f.properties._is_estimated) {
+        presentStages.add(f.properties._normalized_ecorte);
+      }
+    });
+
+    const items = [];
+    Array.from(presentStages).forEach(stage => {
+      items.push([colors[stage] || "#d1d5db", stage]);
+    });
+
+    // Helper to extract numbers for sorting
+    const naturalSort = (a, b) => {
+      return a[1].localeCompare(b[1], undefined, { numeric: true, sensitivity: 'base' });
+    };
+
+    return items.sort(naturalSort);
+  }, [enhancedGeoJson]);
 
 
   // Derived filter options based on geoJsonData
@@ -579,6 +628,9 @@ function PostLoginScreen({ onLogout }) {
       ...geoJsonData,
       features: filteredFeatures.map((feature, index) => {
         const normalizedCorte = normalizeCorte(feature.properties?.ECORTE);
+        const talhaoId = feature.properties?.TALHAO || `mock_${index}`;
+        const isEstimated = allEstimates.some(est => est.talhaoId === talhaoId);
+
         return {
           ...feature,
           id: index,
@@ -587,18 +639,22 @@ function PostLoginScreen({ onLogout }) {
             featureId: index,
             // Add a normalized property just for mapbox styling match,
             // without modifying the original ECORTE so the popup still shows the original
-            _normalized_ecorte: normalizedCorte
+            _normalized_ecorte: normalizedCorte,
+            _is_estimated: isEstimated
           }
         };
       })
     };
-  }, [geoJsonData, appliedFilters]);
+  }, [geoJsonData, appliedFilters, allEstimates]);
 
   // Effect to calculate summary data based on the enhancedGeoJson (which responds to filters)
   React.useEffect(() => {
     if (!enhancedGeoJson || !enhancedGeoJson.features) return;
 
     let totalArea = 0;
+    let estimadosCount = 0;
+    let pendentesCount = 0;
+    let totalToneladas = 0;
     const totalTalhoes = enhancedGeoJson.features.length;
 
     enhancedGeoJson.features.forEach(f => {
@@ -607,19 +663,28 @@ function PostLoginScreen({ onLogout }) {
       if (!isNaN(area)) {
         totalArea += area;
       }
+
+      if (p._is_estimated) {
+        estimadosCount++;
+        const talhaoId = p.TALHAO || `mock_${f.id}`;
+        const est = allEstimates.find(e => e.talhaoId === talhaoId);
+        if (est && est.toneladas) {
+          const tons = parseFloat(String(est.toneladas).replace(/\./g, '').replace(',', '.'));
+          if (!isNaN(tons)) totalToneladas += tons;
+        }
+      } else {
+        pendentesCount++;
+      }
     });
 
-    // In a real scenario, we'd need to query Firestore to know how many of *these specific*
-    // talhões are estimated, and sum their estimated tons.
-    // For now, we will reflect the loaded filters structure.
     setSummaryData({
       talhoes: totalTalhoes,
       area: totalArea,
-      estimados: 0, // Mock, pending integration
-      pendentes: totalTalhoes, // Mock, pending integration
-      toneladas: 0, // Mock, pending integration
+      estimados: estimadosCount,
+      pendentes: pendentesCount,
+      toneladas: totalToneladas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
     });
-  }, [enhancedGeoJson]);
+  }, [enhancedGeoJson, allEstimates]);
 
   const loadEstimateData = async (feature) => {
     if (!feature || !feature.properties) return;
@@ -710,6 +775,9 @@ function PostLoginScreen({ onLogout }) {
       if (selectedTalhao && scope === "talhao") {
         loadEstimateData(selectedTalhao);
       }
+
+      // Refresh all estimates
+      await fetchEstimates();
 
     } catch (err) {
       if (err.message && (err.message.includes("permission") || err.message.includes("Missing or insufficient permissions"))) {
@@ -1264,6 +1332,7 @@ function PostLoginScreen({ onLogout }) {
                             "case",
                             ["boolean", ["feature-state", "hover"], false],
                             palette.gold,
+                            ["boolean", ["get", "_is_estimated"], false],
                             [
                               "match",
                               ["get", "_normalized_ecorte"],
@@ -1279,7 +1348,8 @@ function PostLoginScreen({ onLogout }) {
                               "10º corte", "#f4a3c1",
                               "11º corte", "#6bc5c5",
                               "#d1d5db" // Default (Sem estágio)
-                            ]
+                            ],
+                            "transparent" // Unestimated polygons have no fill color
                           ],
                           "fill-opacity": [
                             "case",
@@ -1287,7 +1357,9 @@ function PostLoginScreen({ onLogout }) {
                             1.0,
                             ["boolean", ["feature-state", "hover"], false],
                             0.95,
-                            0.85
+                            ["boolean", ["get", "_is_estimated"], false],
+                            0.85,
+                            0 // Transparent if not estimated and not selected/hovered
                           ]
                         }}
                       />
@@ -1435,13 +1507,19 @@ function PostLoginScreen({ onLogout }) {
                         <button className="rounded-xl px-2 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setLegendCollapsed(true)}>Recolher</button>
                       </div>
                     </div>
-                    <div className="px-4 pb-4 text-sm space-y-2">
-                      {[["#ff2d6f", "1º corte"],["#5ad15a", "2º corte"],["#f5e11c", "3º corte"],["#4a7dff", "4º corte"],["#f58231", "5º corte"],["#a43cf0", "6º corte"],["#42d4f4", "7º corte"],["#e642f4", "8º corte"],["#c4f35a", "9º corte"],["#f4a3c1", "10º corte"],["#6bc5c5", "11º corte"],["#d1d5db", "Sem estágio"]].map(([color, label]) => (
-                        <div key={label} className="grid grid-cols-[16px_1fr] gap-3 items-center">
-                          <span className="w-4 h-4 rounded-md" style={{ background: color }} />
-                          <span>{label}</span>
+                    <div className="px-4 pb-4 text-sm space-y-2 max-h-[40vh] overflow-y-auto">
+                      {legendItems.length > 0 ? (
+                        legendItems.map(([color, label]) => (
+                          <div key={label} className="grid grid-cols-[16px_1fr] gap-3 items-center">
+                            <span className="w-4 h-4 rounded-md" style={{ background: color }} />
+                            <span>{label}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-xs" style={{ color: palette.text2 }}>
+                          Nenhum talhão estimado na visualização atual.
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
                 ) : (

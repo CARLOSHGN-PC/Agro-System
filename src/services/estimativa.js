@@ -54,6 +54,28 @@ export const saveEstimate = async (companyId, safra, talhaoId, estimateData) => 
 };
 
 /**
+ * Gets all estimates for a specific company and harvest.
+ */
+export const getAllEstimates = async (companyId, safra) => {
+  try {
+    const q = query(
+      collection(firestore, COLLECTION_ESTIMATIVAS),
+      where("companyId", "==", companyId),
+      where("safra", "==", safra)
+    );
+    const querySnapshot = await getDocs(q);
+    const estimates = [];
+    querySnapshot.forEach((doc) => {
+      estimates.push({ id: doc.id, ...doc.data() });
+    });
+    return { success: true, data: estimates };
+  } catch (error) {
+    console.error("Error getting all estimates:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
  * Gets the current estimate for a specific talhão and harvest.
  */
 export const getEstimate = async (companyId, safra, talhaoId) => {
