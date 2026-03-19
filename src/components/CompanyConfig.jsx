@@ -92,7 +92,7 @@ export default function CompanyConfig({ onUploadSuccess }) {
         <div className="p-6 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
           <h2 className="text-xl font-medium">Importação de Contornos (Shapefile)</h2>
           <p className="text-sm mt-1" style={{ color: palette.text2 }}>
-            Faça upload do conjunto completo do shapefile (.shp, .shx, .dbf, .prj).
+            Faça upload do arquivo .ZIP contendo o shapefile ou selecione os arquivos soltos (.shp, .shx, .dbf, .prj, etc).
           </p>
         </div>
 
@@ -107,9 +107,9 @@ export default function CompanyConfig({ onUploadSuccess }) {
             onDrop={handleDrop}
           >
             <UploadCloud className="w-12 h-12 mx-auto mb-4" style={{ color: palette.goldLight }} />
-            <h3 className="text-lg font-medium mb-2">Arraste seus arquivos aqui</h3>
+            <h3 className="text-lg font-medium mb-2">Arraste seu arquivo .ZIP ou arquivos soltos aqui</h3>
             <p className="text-sm mb-4" style={{ color: palette.text2 }}>
-              ou clique para selecionar do seu computador
+              ou clique para procurar no seu computador
             </p>
             <input
               type="file"
@@ -117,7 +117,7 @@ export default function CompanyConfig({ onUploadSuccess }) {
               className="hidden"
               ref={fileInputRef}
               onChange={handleFileChange}
-              accept=".shp,.shx,.dbf,.prj"
+              accept=".zip,.shp,.shx,.dbf,.prj,.cpg,.qmd"
             />
             <button
               onClick={() => fileInputRef.current.click()}
