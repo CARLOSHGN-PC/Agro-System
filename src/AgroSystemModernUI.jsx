@@ -465,6 +465,23 @@ function PostLoginScreen({ onLogout }) {
     talhao: ""
   });
 
+  // Robust parser for numbers that handles both "1.500,45" and "1500.45" correctly
+  const parseBrazilianFloat = (val) => {
+    if (val === undefined || val === null || val === "") return 0;
+    if (typeof val === 'number') return val;
+    let str = String(val).trim();
+    // If it contains both dot and comma (e.g. 1.500,45)
+    if (str.includes('.') && str.includes(',')) {
+      str = str.replace(/\./g, '').replace(',', '.');
+    }
+    // If it only contains comma (e.g. 1500,45)
+    else if (str.includes(',')) {
+      str = str.replace(',', '.');
+    }
+    // If it only contains dot, it's already a valid float string (e.g. 1500.45)
+    return parseFloat(str) || 0;
+  };
+
 
   // Helper to generate a truly unique talhao ID for Firestore
   const getUniqueTalhaoId = (feature) => {
@@ -684,7 +701,7 @@ function PostLoginScreen({ onLogout }) {
 
     enhancedGeoJson.features.forEach(f => {
       const p = f.properties || {};
-      const area = parseFloat(String(p.AREA || 0).replace(',', '.'));
+      const area = parseBrazilianFloat(p.AREA);
       if (!isNaN(area)) {
         totalArea += area;
       }
@@ -694,7 +711,7 @@ function PostLoginScreen({ onLogout }) {
         const uniqueTalhaoId = getUniqueTalhaoId(f);
         const est = allEstimates.find(e => e.talhaoId === uniqueTalhaoId);
         if (est && est.toneladas) {
-          const tons = parseFloat(String(est.toneladas).replace(/\./g, '').replace(',', '.'));
+          const tons = parseBrazilianFloat(est.toneladas);
           if (!isNaN(tons)) totalToneladas += tons;
         }
       } else {
@@ -772,9 +789,6 @@ function PostLoginScreen({ onLogout }) {
         // For multiple, we MUST use the individual feature's original area and calculate tonnes per talhão,
         // ignoring the form's total area.
 
-        const featureAreaStr = feat.properties.AREA ? String(feat.properties.AREA).replace(/\./g, '').replace(',', '.') : "0";
-        const formTchStr = String(formEstimativa.tch).replace(/\./g, '').replace(',', '.');
-
         let areaToSave;
         let toneladasToSave;
 
@@ -784,8 +798,8 @@ function PostLoginScreen({ onLogout }) {
           toneladasToSave = formEstimativa.toneladas;
         } else {
           // Multiple selection: calculate for this specific feature using its own area.
-          const indvArea = parseFloat(featureAreaStr) || 0;
-          const tchToUse = parseFloat(formTchStr) || 0;
+          const indvArea = parseBrazilianFloat(feat.properties.AREA);
+          const tchToUse = parseBrazilianFloat(formEstimativa.tch);
           const indvToneladas = indvArea * tchToUse;
 
           areaToSave = indvArea.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -834,11 +848,8 @@ function PostLoginScreen({ onLogout }) {
 
   // Recalculate toneladas whenever tch or area change
   React.useEffect(() => {
-    const areaStr = String(formEstimativa.area || "").replace(/\./g, '').replace(',', '.');
-    const tchStr = String(formEstimativa.tch || "").replace(/\./g, '').replace(',', '.');
-
-    const area = parseFloat(areaStr) || 0;
-    const tch = parseFloat(tchStr) || 0;
+    const area = parseBrazilianFloat(formEstimativa.area);
+    const tch = parseBrazilianFloat(formEstimativa.tch);
 
     if (area > 0 && tch > 0) {
       const toneladasVal = area * tch;
@@ -859,21 +870,21 @@ function PostLoginScreen({ onLogout }) {
     let totalArea = 0;
 
     if (scope === "talhao" && selectedTalhao) {
-      totalArea = parseFloat(String(selectedTalhao.properties?.AREA || 0).replace(',', '.'));
+      totalArea = parseBrazilianFloat(selectedTalhao.properties?.AREA);
     } else if (scope === "selecionados") {
       selectedTalhoes.forEach(id => {
         const feat = enhancedGeoJson?.features?.find(f => f.id === id);
         if (feat) {
-          totalArea += parseFloat(String(feat.properties?.AREA || 0).replace(',', '.'));
+          totalArea += parseBrazilianFloat(feat.properties?.AREA);
         }
       });
     } else if (scope === "filtro" && enhancedGeoJson) {
       enhancedGeoJson.features.forEach(feat => {
-        totalArea += parseFloat(String(feat.properties?.AREA || 0).replace(',', '.'));
+        totalArea += parseBrazilianFloat(feat.properties?.AREA);
       });
     } else if (scope === "fazenda" && geoJsonData) {
       geoJsonData.features.forEach(feat => {
-        totalArea += parseFloat(String(feat.properties?.AREA || 0).replace(',', '.'));
+        totalArea += parseBrazilianFloat(feat.properties?.AREA);
       });
     }
 
@@ -1495,7 +1506,7 @@ function PostLoginScreen({ onLogout }) {
                           selectedTalhoes.forEach(id => {
                             const feat = enhancedGeoJson?.features?.find(f => f.id === id);
                             if (feat) {
-                              totalArea += parseFloat(String(feat.properties?.AREA || 0).replace(',', '.'));
+                              totalArea += parseBrazilianFloat(feat.properties?.AREA);
                             }
                           });
                           return `${totalArea.toFixed(2).replace('.', ',')} ha`;
