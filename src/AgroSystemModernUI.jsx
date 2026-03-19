@@ -22,7 +22,9 @@ import {
   MousePointerSquareDashed,
   Pencil,
   History,
-  X
+  X,
+  PieChart,
+  Palette
 } from "lucide-react";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
@@ -435,6 +437,65 @@ function PostLoginScreen({ onLogout }) {
     talhao: ""
   });
 
+  // Derived filter options based on geoJsonData
+  const filterOptions = React.useMemo(() => {
+    if (!geoJsonData || !geoJsonData.features) return { fazendas: [], variedades: [], cortes: [], talhoes: [] };
+
+    const fazendasSet = new Set();
+    const variedadesSet = new Set();
+    const cortesSet = new Set();
+    const talhoesSet = new Set();
+
+    geoJsonData.features.forEach(f => {
+      const p = f.properties || {};
+
+      // Calculate Fazenda concatenated string
+      const f_agr = p.FUNDO_AGR ? String(p.FUNDO_AGR).trim() : "";
+      const faz = p.FAZENDA ? String(p.FAZENDA).trim() : "";
+      let fazendaName = "";
+      if (f_agr && faz) fazendaName = `${f_agr} - ${faz}`;
+      else if (faz) fazendaName = faz;
+      else if (f_agr) fazendaName = f_agr;
+
+      const variedade = p.VARIEDADE ? String(p.VARIEDADE).trim() : "";
+      const corte = p.ECORTE ? String(p.ECORTE).trim() : "";
+      const talhao = p.TALHAO ? String(p.TALHAO).trim() : "";
+
+      // Only add to options if it matches current higher-level filters
+      let matchesFazenda = true;
+      let matchesVariedade = true;
+      let matchesCorte = true;
+
+      if (filters.fazenda && fazendaName !== filters.fazenda) matchesFazenda = false;
+      if (filters.variedade && variedade !== filters.variedade) matchesVariedade = false;
+      if (filters.corte && corte !== filters.corte) matchesCorte = false;
+
+      // Populate Fazendas (independent)
+      if (fazendaName) fazendasSet.add(fazendaName);
+
+      // Populate Variedades (depends on Fazenda)
+      if (variedade && matchesFazenda) variedadesSet.add(variedade);
+
+      // Populate Cortes (depends on Fazenda and Variedade)
+      if (corte && matchesFazenda && matchesVariedade) cortesSet.add(corte);
+
+      // Populate Talhoes (depends on all above)
+      if (talhao && matchesFazenda && matchesVariedade && matchesCorte) talhoesSet.add(talhao);
+    });
+
+    // Helper to extract numbers for better sorting
+    const naturalSort = (a, b) => {
+      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+    };
+
+    return {
+      fazendas: Array.from(fazendasSet).sort(naturalSort),
+      variedades: Array.from(variedadesSet).sort(naturalSort),
+      cortes: Array.from(cortesSet).sort(naturalSort),
+      talhoes: Array.from(talhoesSet).sort(naturalSort),
+    };
+  }, [geoJsonData, filters.fazenda, filters.variedade, filters.corte]);
+
   // Applied filters state (to trigger map updates)
   const [appliedFilters, setAppliedFilters] = useState({
     fazenda: "",
@@ -468,16 +529,23 @@ function PostLoginScreen({ onLogout }) {
     const filteredFeatures = geoJsonData.features.filter(feature => {
       const p = feature.properties || {};
 
-      if (appliedFilters.fazenda && (!p.FAZENDA || !p.FAZENDA.toLowerCase().includes(appliedFilters.fazenda.toLowerCase()))) {
+      const f_agr = p.FUNDO_AGR ? String(p.FUNDO_AGR).trim() : "";
+      const faz = p.FAZENDA ? String(p.FAZENDA).trim() : "";
+      let fazendaName = "";
+      if (f_agr && faz) fazendaName = `${f_agr} - ${faz}`;
+      else if (faz) fazendaName = faz;
+      else if (f_agr) fazendaName = f_agr;
+
+      if (appliedFilters.fazenda && fazendaName !== appliedFilters.fazenda) {
         return false;
       }
-      if (appliedFilters.variedade && (!p.VARIEDADE || !p.VARIEDADE.toLowerCase().includes(appliedFilters.variedade.toLowerCase()))) {
+      if (appliedFilters.variedade && (!p.VARIEDADE || String(p.VARIEDADE).trim() !== appliedFilters.variedade)) {
         return false;
       }
-      if (appliedFilters.corte && (!p.ECORTE || !p.ECORTE.toLowerCase().includes(appliedFilters.corte.toLowerCase()))) {
+      if (appliedFilters.corte && (!p.ECORTE || String(p.ECORTE).trim() !== appliedFilters.corte)) {
         return false;
       }
-      if (appliedFilters.talhao && (!p.TALHAO || !p.TALHAO.toLowerCase().includes(appliedFilters.talhao.toLowerCase()))) {
+      if (appliedFilters.talhao && (!p.TALHAO || String(p.TALHAO).trim() !== appliedFilters.talhao)) {
         return false;
       }
 
@@ -938,20 +1006,67 @@ function PostLoginScreen({ onLogout }) {
             </div>
             <div className="p-5 grid sm:grid-cols-2 gap-3">
               <div className="flex flex-col gap-2">
-                <label className="text-xs" style={{ color: palette.text2 }}>Fundo agrícola / Fazenda</label>
-                <input value={filters.fazenda} onChange={(e) => setFilters({...filters, fazenda: e.target.value})} placeholder="Nome da Fazenda" className="rounded-2xl border px-4 py-3 outline-none" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
+                <label className="text-xs" style={{ color: palette.text2 }}>Talhão</label>
+                <div className="relative">
+                  <select
+                    value={filters.talhao}
+                    onChange={(e) => setFilters({...filters, talhao: e.target.value})}
+                    className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none"
+                    style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }}
+                  >
+                    <option value="" style={{ color: "black" }}>Todos os Talhões</option>
+                    {filterOptions.talhoes.map(t => <option key={t} value={t} style={{ color: "black" }}>{t}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: palette.text2 }} />
+                </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs" style={{ color: palette.text2 }}>Variedade</label>
-                <input value={filters.variedade} onChange={(e) => setFilters({...filters, variedade: e.target.value})} placeholder="Ex: CTC9007" className="rounded-2xl border px-4 py-3 outline-none" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
-              </div>
+
               <div className="flex flex-col gap-2">
                 <label className="text-xs" style={{ color: palette.text2 }}>Corte / Estágio</label>
-                <input value={filters.corte} onChange={(e) => setFilters({...filters, corte: e.target.value})} placeholder="Ex: 2º Corte" className="rounded-2xl border px-4 py-3 outline-none" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
+                <div className="relative">
+                  <select
+                    value={filters.corte}
+                    onChange={(e) => setFilters({...filters, corte: e.target.value, talhao: ""})}
+                    className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none"
+                    style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }}
+                  >
+                    <option value="" style={{ color: "black" }}>Todos os Cortes</option>
+                    {filterOptions.cortes.map(c => <option key={c} value={c} style={{ color: "black" }}>{c}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: palette.text2 }} />
+                </div>
               </div>
+
               <div className="flex flex-col gap-2">
-                <label className="text-xs" style={{ color: palette.text2 }}>Talhão</label>
-                <input value={filters.talhao} onChange={(e) => setFilters({...filters, talhao: e.target.value})} placeholder="Nome/Número do Talhão" className="rounded-2xl border px-4 py-3 outline-none" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
+                <label className="text-xs" style={{ color: palette.text2 }}>Variedade</label>
+                <div className="relative">
+                  <select
+                    value={filters.variedade}
+                    onChange={(e) => setFilters({...filters, variedade: e.target.value, corte: "", talhao: ""})}
+                    className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none"
+                    style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }}
+                  >
+                    <option value="" style={{ color: "black" }}>Todas as Variedades</option>
+                    {filterOptions.variedades.map(v => <option key={v} value={v} style={{ color: "black" }}>{v}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: palette.text2 }} />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs" style={{ color: palette.text2 }}>Fundo agrícola / Fazenda</label>
+                <div className="relative">
+                  <select
+                    value={filters.fazenda}
+                    onChange={(e) => setFilters({...filters, fazenda: e.target.value, variedade: "", corte: "", talhao: ""})}
+                    className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none"
+                    style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }}
+                  >
+                    <option value="" style={{ color: "black" }}>Todas as Fazendas</option>
+                    {filterOptions.fazendas.map(f => <option key={f} value={f} style={{ color: "black" }}>{f}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: palette.text2 }} />
+                </div>
               </div>
             </div>
             <div className="flex justify-end gap-3 px-5 pb-5">
@@ -1245,49 +1360,55 @@ function PostLoginScreen({ onLogout }) {
                 </div>
               )}
 
-              {!summaryCollapsed ? (
-                <div className="absolute left-4 bottom-4 w-[420px] rounded-[22px] border overflow-hidden z-10" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
-                  <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-                    <div>
-                      <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: "#c6d1dc" }}>Resumo</div>
-                      <div className="text-[17px] font-bold mt-1">2993 talhões • 37894,5 ha</div>
-                    </div>
-                    <button className="rounded-xl px-3 py-2 text-sm font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setSummaryCollapsed(true)}>Recolher</button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 p-4 pt-2">
-                    {[["Talhões", "2993"],["Área filtrada", "37894,5 ha"],["Estimados", "0"],["Pendentes", "2993"],["Toneladas", "0"]].map(([k, v]) => (
-                      <div key={k} className="rounded-[16px] border p-4" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.08)" }}>
-                        <div className="text-[11px] uppercase font-semibold" style={{ color: "#aebccb" }}>{k}</div>
-                        <div className="mt-2 text-[17px] font-bold">{v}</div>
+              <div className="absolute left-4 bottom-4 z-20 flex flex-col gap-3">
+                {!legendCollapsed ? (
+                  <div className="w-[250px] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
+                    <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                      <div className="font-bold text-[15px]">Estágios de corte</div>
+                      <div className="flex gap-2">
+                        <button className="rounded-xl px-2 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setShowLabels(!showLabels)}>{showLabels ? "Ocultar nomes" : "Exibir nomes"}</button>
+                        <button className="rounded-xl px-2 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setLegendCollapsed(true)}>Recolher</button>
                       </div>
-                    ))}
+                    </div>
+                    <div className="px-4 pb-4 text-sm space-y-2">
+                      {[["#ff2d6f", "1º corte"],["#5ad15a", "2º corte"],["#f5e11c", "3º corte"],["#4a7dff", "4º corte"],["#f58231", "5º corte"],["#a43cf0", "6º corte"],["#42d4f4", "7º corte"],["#e642f4", "8º corte"],["#c4f35a", "9º corte"],["#f4a3c1", "10º corte"],["#6bc5c5", "11º corte"],["#d1d5db", "Sem estágio"]].map(([color, label]) => (
+                        <div key={label} className="grid grid-cols-[16px_1fr] gap-3 items-center">
+                          <span className="w-4 h-4 rounded-md" style={{ background: color }} />
+                          <span>{label}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <button className="absolute left-4 bottom-4 w-[52px] h-[52px] rounded-full text-[22px] flex items-center justify-center" style={{ background: "rgba(17,24,39,0.92)", border: "1px solid rgba(255,255,255,0.12)" }} onClick={() => setSummaryCollapsed(false)}>📊</button>
-              )}
+                ) : (
+                  <button className="w-[52px] h-[52px] rounded-full flex items-center justify-center transition-transform hover:scale-105" style={{ background: "#0c1527", border: "1px solid rgba(255,255,255,0.12)", color: palette.white, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }} onClick={() => setLegendCollapsed(false)}>
+                    <Palette className="w-6 h-6 opacity-90" />
+                  </button>
+                )}
 
-              {!legendCollapsed ? (
-                <div className="absolute right-4 top-[130px] w-[250px] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
-                  <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-                    <div className="font-bold text-[15px]">Estágios de corte</div>
-                    <div className="flex gap-2">
-                      <button className="rounded-xl px-2 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setShowLabels(!showLabels)}>{showLabels ? "Ocultar nomes" : "Exibir nomes"}</button>
-                      <button className="rounded-xl px-2 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setLegendCollapsed(true)}>Recolher</button>
+                {!summaryCollapsed ? (
+                  <div className="w-[420px] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
+                    <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                      <div>
+                        <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: "#c6d1dc" }}>Resumo</div>
+                        <div className="text-[17px] font-bold mt-1">2993 talhões • 37894,5 ha</div>
+                      </div>
+                      <button className="rounded-xl px-3 py-2 text-sm font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setSummaryCollapsed(true)}>Recolher</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 p-4 pt-2">
+                      {[["Talhões", "2993"],["Área filtrada", "37894,5 ha"],["Estimados", "0"],["Pendentes", "2993"],["Toneladas", "0"]].map(([k, v]) => (
+                        <div key={k} className="rounded-[16px] border p-4" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.08)" }}>
+                          <div className="text-[11px] uppercase font-semibold" style={{ color: "#aebccb" }}>{k}</div>
+                          <div className="mt-2 text-[17px] font-bold">{v}</div>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="px-4 pb-4 text-sm space-y-2">
-                    {[["#ff2d6f", "1º corte"],["#5ad15a", "2º corte"],["#f5e11c", "3º corte"],["#4a7dff", "4º corte"],["#f58231", "5º corte"],["#a43cf0", "6º corte"],["#42d4f4", "7º corte"],["#e642f4", "8º corte"],["#c4f35a", "9º corte"],["#f4a3c1", "10º corte"],["#6bc5c5", "11º corte"],["#d1d5db", "Sem estágio"]].map(([color, label]) => (
-                      <div key={label} className="grid grid-cols-[16px_1fr] gap-3 items-center">
-                        <span className="w-4 h-4 rounded-md" style={{ background: color }} />
-                        <span>{label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <button className="absolute right-4 top-[130px] w-[52px] h-[52px] rounded-full text-[22px] flex items-center justify-center" style={{ background: "rgba(17,24,39,0.92)", border: "1px solid rgba(255,255,255,0.12)" }} onClick={() => setLegendCollapsed(false)}>🎨</button>
-              )}
+                ) : (
+                  <button className="w-[52px] h-[52px] rounded-full flex items-center justify-center transition-transform hover:scale-105" style={{ background: "#0c1527", border: "1px solid rgba(255,255,255,0.12)", color: palette.white, boxShadow: "0 4px 12px rgba(0,0,0,0.3)" }} onClick={() => setSummaryCollapsed(false)}>
+                    <PieChart className="w-6 h-6 opacity-90" />
+                  </button>
+                )}
+              </div>
             </>
           ) : (
             <div className="absolute inset-0 z-10 overflow-auto bg-black/20 pb-16">
