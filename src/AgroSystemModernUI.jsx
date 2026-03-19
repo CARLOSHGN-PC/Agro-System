@@ -464,7 +464,23 @@ function PostLoginScreen({ onLogout }) {
     const f_agr = p.FUNDO_AGR ? String(p.FUNDO_AGR).trim() : "N-A";
     const faz = p.FAZENDA ? String(p.FAZENDA).trim() : "N-A";
     const talhao = p.TALHAO ? String(p.TALHAO).trim() : `mock_${feature.id}`;
-    return `${f_agr}_${faz}_${talhao}`.replace(/\//g, '-').replace(/ /g, '_').toUpperCase();
+
+    // To prevent identical numbers across poorly formatted shapefiles from colliding,
+    // we generate a tiny hash from the geometry coordinates if available, ensuring absolute uniqueness.
+    let geoHash = "";
+    if (feature.geometry && feature.geometry.coordinates) {
+        try {
+            const str = JSON.stringify(feature.geometry.coordinates);
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash |= 0;
+            }
+            geoHash = `_${Math.abs(hash)}`;
+        } catch(e) {}
+    }
+
+    return `${f_agr}_${faz}_${talhao}${geoHash}`.replace(/\//g, '-').replace(/ /g, '_').toUpperCase();
   };
 
   // Derived filter options based on geoJsonData
@@ -782,9 +798,15 @@ function PostLoginScreen({ onLogout }) {
       showSuccess("Sucesso!", `Estimativa salva com sucesso para ${successCount} talhões!`);
       setEstimateOpen(false);
 
-      // Reload current if one was selected
-      if (selectedTalhao && scope === "talhao") {
-        loadEstimateData(selectedTalhao);
+      // Auto-clear selection after multiple estimates
+      if (scope === "selecionados") {
+        setSelectedTalhoes([]);
+        setSelectedTalhao(null);
+      } else {
+        // Reload current if one was selected
+        if (selectedTalhao && scope === "talhao") {
+          loadEstimateData(selectedTalhao);
+        }
       }
 
       // Refresh all estimates
@@ -1342,7 +1364,7 @@ function PostLoginScreen({ onLogout }) {
                           "fill-color": [
                             "case",
                             ["boolean", ["feature-state", "selected"], false],
-                            "#06b6d4", // Cyan striking color for selected talhoes
+                            "#eab308", // Bright yellow marking color for selected talhoes (not blue)
                             ["boolean", ["feature-state", "hover"], false],
                             palette.goldLight,
                             ["boolean", ["get", "_is_estimated"], false],
@@ -1383,7 +1405,7 @@ function PostLoginScreen({ onLogout }) {
                           "line-color": [
                             "case",
                             ["boolean", ["feature-state", "selected"], false],
-                            "#22d3ee", // Cyan border for selected
+                            "#000000", // Strong black border for selected
                             palette.white
                           ],
                           "line-opacity": [
@@ -1395,7 +1417,7 @@ function PostLoginScreen({ onLogout }) {
                           "line-width": [
                             "case",
                             ["boolean", ["feature-state", "selected"], false],
-                            4,
+                            6, // Thicker border for selected
                             1.5
                           ]
                         }}
@@ -1470,8 +1492,40 @@ function PostLoginScreen({ onLogout }) {
                           return `${totalArea.toFixed(2).replace('.', ',')} ha`;
                         })()
                       },
-                      { label: "Status", value: selectedTalhoes.length > 1 ? "-" : (isLoadingEstimate ? "Carregando..." : (currentEstimate ? "Estimado" : "Pendente")) },
-                      { label: "Última estimativa", value: selectedTalhoes.length > 1 ? "-" : (isLoadingEstimate ? "..." : (currentEstimate ? `${currentEstimate.toneladas} ton` : "Não estimado")) },
+                      { label: "Status", value: (() => {
+                          if (selectedTalhoes.length > 1) {
+                            let estCount = 0;
+                            selectedTalhoes.forEach(id => {
+                              const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+                              if (feat && feat.properties?._is_estimated) estCount++;
+                            });
+                            if (estCount === 0) return "Pendentes";
+                            if (estCount === selectedTalhoes.length) return "Estimados";
+                            return "Parcial";
+                          }
+                          return isLoadingEstimate ? "Carregando..." : (currentEstimate ? "Estimado" : "Pendente");
+                        })()
+                      },
+                      { label: "Última estimativa", value: (() => {
+                          if (selectedTalhoes.length > 1) {
+                            let totalTons = 0;
+                            let hasEstimates = false;
+                            selectedTalhoes.forEach(id => {
+                              const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+                              if (feat && feat.properties?._is_estimated) {
+                                const uniqueTalhaoId = getUniqueTalhaoId(feat);
+                                const est = allEstimates.find(e => e.talhaoId === uniqueTalhaoId);
+                                if (est && est.toneladas) {
+                                  const tons = parseFloat(String(est.toneladas).replace(/\./g, '').replace(',', '.'));
+                                  if (!isNaN(tons)) { totalTons += tons; hasEstimates = true; }
+                                }
+                              }
+                            });
+                            return hasEstimates ? `${totalTons.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ton` : "Não estimado";
+                          }
+                          return isLoadingEstimate ? "..." : (currentEstimate ? `${currentEstimate.toneladas} ton` : "Não estimado");
+                        })()
+                      },
                     ].map((item, idx) => (
                       <div key={idx} className="rounded-2xl p-3 flex flex-col justify-center" style={{ background: "rgba(31, 38, 53, 0.7)" }}>
                         <span className="text-xs mb-1" style={{ color: palette.text2 }}>{item.label}</span>
@@ -1493,7 +1547,14 @@ function PostLoginScreen({ onLogout }) {
                         }}
                       >
                         <Pencil className="w-4 h-4" />
-                        Estimar
+                        {(() => {
+                           let hasEstimated = false;
+                           selectedTalhoes.forEach(id => {
+                              const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+                              if (feat && feat.properties?._is_estimated) hasEstimated = true;
+                           });
+                           return hasEstimated ? "Reestimar" : "Estimar";
+                        })()}
                       </button>
                       <button
                         onClick={openHistory}
