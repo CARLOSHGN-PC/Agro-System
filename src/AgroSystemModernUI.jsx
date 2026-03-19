@@ -546,6 +546,8 @@ function PostLoginScreen({ onLogout }) {
         const toneladasCalc = (areaToUse * tchToUse).toFixed(2);
 
         const res = await saveEstimate(currentCompanyId, currentSafra, talhaoId, {
+          fazenda: feat.properties.FAZENDA || "N/A",
+          variedade: feat.properties.VARIEDADE || "N/A",
           area: talhoesToSave.length === 1 ? formEstimativa.area : String(areaToUse),
           tch: formEstimativa.tch,
           toneladas: talhoesToSave.length === 1 ? formEstimativa.toneladas : toneladasCalc,
