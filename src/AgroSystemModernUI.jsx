@@ -438,7 +438,16 @@ function PostLoginScreen({ onLogout }) {
       if (res.error) {
         showError("Erro ao carregar mapa", res.error);
       } else if (res.data) {
-        setGeoJsonData(res.data);
+        // Assign stable numeric IDs once on load so selections don't break when filtering
+        const featuresWithIds = res.data.features.map((f, i) => ({
+          ...f,
+          id: i,
+          properties: {
+            ...f.properties,
+            featureId: i
+          }
+        }));
+        setGeoJsonData({ ...res.data, features: featuresWithIds });
       } else {
         // No maps found in Storage
         setActiveModule("configuracao");
@@ -457,7 +466,7 @@ function PostLoginScreen({ onLogout }) {
   });
 
 
-  // Helper to generate a unique talhao ID across farms
+  // Helper to generate a truly unique talhao ID for Firestore
   const getUniqueTalhaoId = (feature) => {
     if (!feature || !feature.properties) return `mock_invalid_id`;
     const p = feature.properties;
@@ -465,22 +474,12 @@ function PostLoginScreen({ onLogout }) {
     const faz = p.FAZENDA ? String(p.FAZENDA).trim() : "N-A";
     const talhao = p.TALHAO ? String(p.TALHAO).trim() : `mock_${feature.id}`;
 
-    // To prevent identical numbers across poorly formatted shapefiles from colliding,
-    // we generate a tiny hash from the geometry coordinates if available, ensuring absolute uniqueness.
-    let geoHash = "";
-    if (feature.geometry && feature.geometry.coordinates) {
-        try {
-            const str = JSON.stringify(feature.geometry.coordinates);
-            let hash = 0;
-            for (let i = 0; i < str.length; i++) {
-                hash = ((hash << 5) - hash) + str.charCodeAt(i);
-                hash |= 0;
-            }
-            geoHash = `_${Math.abs(hash)}`;
-        } catch(e) {}
-    }
-
-    return `${f_agr}_${faz}_${talhao}${geoHash}`.replace(/\//g, '-').replace(/ /g, '_').toUpperCase();
+    // We append the stable featureId assigned on load.
+    // This solves the problem where a shapefile has multiple distinct geometries (split polygons)
+    // with the exact same Fundo, Fazenda, and Talhao string values. Without this, estimating
+    // one polygon overwrites the other in the database.
+    const uniqueIndex = p.featureId !== undefined ? p.featureId : feature.id;
+    return `${f_agr}_${faz}_${talhao}_SEQ${uniqueIndex}`.replace(/\//g, '-').replace(/ /g, '_').toUpperCase();
   };
 
   // Derived filter options based on geoJsonData
@@ -612,17 +611,16 @@ function PostLoginScreen({ onLogout }) {
 
     return {
       ...geoJsonData,
-      features: filteredFeatures.map((feature, index) => {
+      features: filteredFeatures.map((feature) => {
         const normalizedCorte = normalizeCorte(feature.properties?.ECORTE);
         const uniqueTalhaoId = getUniqueTalhaoId(feature);
         const isEstimated = allEstimates.some(est => est.talhaoId === uniqueTalhaoId);
 
         return {
           ...feature,
-          id: index,
+          // Do not mutate id or featureId here as that breaks selection stability
           properties: {
             ...feature.properties,
-            featureId: index,
             // Add a normalized property just for mapbox styling match,
             // without modifying the original ECORTE so the popup still shows the original
             _normalized_ecorte: normalizedCorte,
@@ -1492,40 +1490,8 @@ function PostLoginScreen({ onLogout }) {
                           return `${totalArea.toFixed(2).replace('.', ',')} ha`;
                         })()
                       },
-                      { label: "Status", value: (() => {
-                          if (selectedTalhoes.length > 1) {
-                            let estCount = 0;
-                            selectedTalhoes.forEach(id => {
-                              const feat = enhancedGeoJson?.features?.find(f => f.id === id);
-                              if (feat && feat.properties?._is_estimated) estCount++;
-                            });
-                            if (estCount === 0) return "Pendentes";
-                            if (estCount === selectedTalhoes.length) return "Estimados";
-                            return "Parcial";
-                          }
-                          return isLoadingEstimate ? "Carregando..." : (currentEstimate ? "Estimado" : "Pendente");
-                        })()
-                      },
-                      { label: "Última estimativa", value: (() => {
-                          if (selectedTalhoes.length > 1) {
-                            let totalTons = 0;
-                            let hasEstimates = false;
-                            selectedTalhoes.forEach(id => {
-                              const feat = enhancedGeoJson?.features?.find(f => f.id === id);
-                              if (feat && feat.properties?._is_estimated) {
-                                const uniqueTalhaoId = getUniqueTalhaoId(feat);
-                                const est = allEstimates.find(e => e.talhaoId === uniqueTalhaoId);
-                                if (est && est.toneladas) {
-                                  const tons = parseFloat(String(est.toneladas).replace(/\./g, '').replace(',', '.'));
-                                  if (!isNaN(tons)) { totalTons += tons; hasEstimates = true; }
-                                }
-                              }
-                            });
-                            return hasEstimates ? `${totalTons.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ton` : "Não estimado";
-                          }
-                          return isLoadingEstimate ? "..." : (currentEstimate ? `${currentEstimate.toneladas} ton` : "Não estimado");
-                        })()
-                      },
+                      { label: "Status", value: selectedTalhoes.length > 1 ? "-" : (isLoadingEstimate ? "Carregando..." : (currentEstimate ? "Estimado" : "Pendente")) },
+                      { label: "Última estimativa", value: selectedTalhoes.length > 1 ? "-" : (isLoadingEstimate ? "..." : (currentEstimate ? `${currentEstimate.toneladas} ton` : "Não estimado")) },
                     ].map((item, idx) => (
                       <div key={idx} className="rounded-2xl p-3 flex flex-col justify-center" style={{ background: "rgba(31, 38, 53, 0.7)" }}>
                         <span className="text-xs mb-1" style={{ color: palette.text2 }}>{item.label}</span>
