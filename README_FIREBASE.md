@@ -65,4 +65,8 @@ O mesmo problema de permissão afeta o Storage quando você tenta subir um novo 
    ```
 4. Clique em **Publicar (Publish)**.
 
-> **Importante:** Essas regras de Firestore e Storage (`allow read, write: if true;`) são recomendadas **apenas durante a fase de desenvolvimento** ou enquanto o login real não estiver configurado. No futuro, quando os usuários reais estiverem se cadastrando e fazendo login, você deverá mudar de `if true;` para `if request.auth != null;` para segurança.
+> **Importante:** Como agora o **Login Real com Firebase já está implementado**, você deve substituir essas regras para garantir a segurança da sua aplicação. Vá no console do Firebase e mude as regras tanto do Storage quanto do Firestore para:
+> ```javascript
+> allow read, write: if request.auth != null;
+> ```
+> Isso garantirá que apenas pessoas com e-mail e senha cadastrados no seu painel possam acessar o banco de dados e os mapas.

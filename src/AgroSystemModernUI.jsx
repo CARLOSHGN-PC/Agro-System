@@ -34,6 +34,8 @@ import * as turf from "@turf/turf"; // To calculate bounds
 import { saveEstimate, getEstimate, getEstimateHistory } from "./services/estimativa";
 import { fetchLatestGeoJson } from "./services/storage";
 import { showSuccess, showError, showConfirm } from "./utils/alert";
+import { auth } from "./services/firebase";
+import { signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 const palette = {
   bg: "#050505",
@@ -130,9 +132,36 @@ function AnimatedBackground() {
 }
 
 function LoginScreen({ onLogin }) {
-  const [email, setEmail] = useState("admin@agrovetor.app");
-  const [password, setPassword] = useState("123456");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleFirebaseLogin = async () => {
+    if (!email || !password) {
+      showError("Atenção", "Preencha o e-mail e a senha para entrar.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // The onAuthStateChanged listener in the main component will trigger the layout shift
+    } catch (error) {
+      console.error(error);
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        showError("Acesso Negado", "E-mail ou senha incorretos.");
+      } else if (error.code === 'auth/invalid-email') {
+        showError("Formato Inválido", "O endereço de e-mail é inválido.");
+      } else if (error.code === 'auth/too-many-requests') {
+        showError("Bloqueado", "Muitas tentativas sem sucesso. Tente novamente mais tarde.");
+      } else {
+        showError("Erro no Login", "Não foi possível conectar: " + error.message);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div
@@ -315,12 +344,17 @@ function LoginScreen({ onLogin }) {
               </div>
 
               <Button
-                onClick={onLogin}
-                className="w-full h-12 rounded-2xl text-base font-medium transition-all hover:scale-[1.01]"
+                onClick={handleFirebaseLogin}
+                disabled={isLoading}
+                className="w-full h-12 rounded-2xl text-base font-medium transition-all hover:scale-[1.01] disabled:opacity-70 disabled:hover:scale-100"
                 style={{ background: `linear-gradient(135deg, ${palette.gold} 0%, ${palette.goldLight} 100%)`, color: palette.bg }}
               >
-                Entrar agora
-                <ChevronRight className="w-4 h-4 ml-2" />
+                {isLoading ? "Conectando..." : (
+                  <>
+                    Entrar agora
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
               </Button>
 
               <div className="grid grid-cols-3 gap-3 pt-2">
@@ -1271,16 +1305,44 @@ function PostLoginScreen({ onLogout }) {
 
 export default function AgroSystemModernUI() {
   const [logged, setLogged] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setLogged(!!user);
+      setIsInitializing(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Erro ao sair", error);
+    }
+  };
+
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ background: palette.bg, color: palette.gold }}>
+        <div className="animate-pulse flex flex-col items-center gap-4">
+          <Leaf className="w-12 h-12" />
+          <div className="text-xl font-semibold">AgroSystem</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <AnimatePresence mode="wait">
       {logged ? (
         <motion.div key="success" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <PostLoginScreen onLogout={() => setLogged(false)} />
+          <PostLoginScreen onLogout={handleLogout} />
         </motion.div>
       ) : (
         <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <LoginScreen onLogin={() => setLogged(true)} />
+          <LoginScreen />
         </motion.div>
       )}
     </AnimatePresence>
