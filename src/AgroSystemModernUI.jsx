@@ -394,9 +394,7 @@ function PostLoginScreen({ onLogout }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [scope, setScope] = useState("talhao");
-  const [selectedTalhao, setSelectedTalhao] = useState(null);
   const [selectedTalhoes, setSelectedTalhoes] = useState([]);
-  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [activeModule, setActiveModule] = useState("estimativa"); // "estimativa" | "configuracao"
   const [geoJsonData, setGeoJsonData] = useState(null);
   const [hoveredTalhao, setHoveredTalhao] = useState(null);
@@ -405,7 +403,7 @@ function PostLoginScreen({ onLogout }) {
   const [currentEstimate, setCurrentEstimate] = useState(null);
   const [estimateHistory, setEstimateHistory] = useState([]);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [formEstimativa, setFormEstimativa] = useState({ area: "", tch: "", toneladas: "" });
+  const [formEstimativa, setFormEstimativa] = useState({ area: "", tch: "", toneladas: "", observacao: "" });
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingEstimate, setIsLoadingEstimate] = useState(false);
 
@@ -582,34 +580,55 @@ function PostLoginScreen({ onLogout }) {
     };
   }, [geoJsonData, appliedFilters]);
 
-  const loadEstimateData = async (feature) => {
-    if (!feature || !feature.properties) return;
-    setIsLoadingEstimate(true);
-    setCurrentEstimate(null);
-    setEstimateHistory([]);
-    const talhaoId = feature.properties.TALHAO || `mock_${feature.id}`;
+  const loadEstimateData = async (features) => {
+    if (!features || features.length === 0) return;
 
-    // Default form values
-    setFormEstimativa({
-      area: feature.properties.AREA ? String(feature.properties.AREA) : "",
-      tch: "82.50",
-      toneladas: "0"
-    });
+    // Only load estimate dynamically if it's a single feature
+    if (features.length === 1) {
+      const feature = features[0];
+      setIsLoadingEstimate(true);
+      setCurrentEstimate(null);
+      setEstimateHistory([]);
+      const talhaoId = feature.properties.TALHAO || `mock_${feature.id}`;
 
-    try {
-      const res = await getEstimate(currentCompanyId, currentSafra, talhaoId);
-      if (res.success && res.data) {
-        setCurrentEstimate(res.data);
-        setFormEstimativa({
-          area: res.data.area || feature.properties.AREA || "",
-          tch: res.data.tch || "82.50",
-          toneladas: res.data.toneladas || "0"
-        });
+      // Default form values
+      setFormEstimativa({
+        area: feature.properties.AREA ? String(feature.properties.AREA) : "",
+        tch: "",
+        toneladas: "",
+        observacao: ""
+      });
+
+      try {
+        const res = await getEstimate(currentCompanyId, currentSafra, talhaoId);
+        if (res.success && res.data) {
+          setCurrentEstimate(res.data);
+          setFormEstimativa({
+            area: res.data.area || feature.properties.AREA || "",
+            tch: res.data.tch || "",
+            toneladas: res.data.toneladas || "",
+            observacao: res.data.observacao || ""
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load estimate", err);
+      } finally {
+        setIsLoadingEstimate(false);
       }
-    } catch (err) {
-      console.error("Failed to load estimate", err);
-    } finally {
-      setIsLoadingEstimate(false);
+    } else {
+      // Multiple features selected
+      setCurrentEstimate(null);
+      let totalArea = 0;
+      features.forEach(feat => {
+        totalArea += parseFloat(String(feat.properties?.AREA || 0).replace(',', '.'));
+      });
+
+      setFormEstimativa({
+        area: totalArea ? totalArea.toFixed(2) : "",
+        tch: "",
+        toneladas: "",
+        observacao: ""
+      });
     }
   };
 
@@ -619,14 +638,13 @@ function PostLoginScreen({ onLogout }) {
 
     try {
       const talhoesToSave = [];
-      if (scope === "talhao" && selectedTalhao) {
-        talhoesToSave.push(selectedTalhao);
-      } else if (scope === "selecionados" && selectedTalhoes.length > 0) {
-        // Collect features based on their IDs
-        selectedTalhoes.forEach(id => {
-          const feat = enhancedGeoJson.features.find(f => f.id === id);
-          if (feat) talhoesToSave.push(feat);
-        });
+
+      const featuresFromSelection = selectedTalhoes.map(id => enhancedGeoJson?.features?.find(f => f.id === id)).filter(Boolean);
+
+      if (scope === "talhao" && featuresFromSelection.length === 1) {
+        talhoesToSave.push(featuresFromSelection[0]);
+      } else if (scope === "selecionados" && featuresFromSelection.length > 0) {
+        talhoesToSave.push(...featuresFromSelection);
       } else if (scope === "filtro" && enhancedGeoJson) {
         talhoesToSave.push(...enhancedGeoJson.features);
       } else if (scope === "fazenda" && geoJsonData) {
@@ -645,7 +663,7 @@ function PostLoginScreen({ onLogout }) {
         const featureAreaStr = feat.properties.AREA ? String(feat.properties.AREA).replace(',', '.') : "0";
         const areaToUse = talhoesToSave.length === 1 ? parseFloat(String(formEstimativa.area).replace(',', '.') || 0) : parseFloat(featureAreaStr);
         const tchToUse = parseFloat(String(formEstimativa.tch).replace(',', '.') || 0);
-        const toneladasCalc = (areaToUse * tchToUse).toFixed(2);
+        const toneladasCalc = (areaToUse > 0 && tchToUse > 0) ? (areaToUse * tchToUse).toFixed(2) : "";
 
         const res = await saveEstimate(currentCompanyId, currentSafra, talhaoId, {
           fundo_agricola: feat.properties.FUNDO_AGR || "N/A",
@@ -654,6 +672,7 @@ function PostLoginScreen({ onLogout }) {
           area: talhoesToSave.length === 1 ? formEstimativa.area : String(areaToUse),
           tch: formEstimativa.tch,
           toneladas: talhoesToSave.length === 1 ? formEstimativa.toneladas : toneladasCalc,
+          observacao: formEstimativa.observacao,
           responsavel: "Carlos"
         });
         if (res.success) successCount++;
@@ -662,9 +681,10 @@ function PostLoginScreen({ onLogout }) {
       showSuccess("Sucesso!", `Estimativa salva com sucesso para ${successCount} talhões!`);
       setEstimateOpen(false);
 
-      // Reload current if one was selected
-      if (selectedTalhao && scope === "talhao") {
-        loadEstimateData(selectedTalhao);
+      // Reload current if selections are active
+      if (selectedTalhoes.length > 0) {
+        const featuresFromSelection = selectedTalhoes.map(id => enhancedGeoJson?.features?.find(f => f.id === id)).filter(Boolean);
+        loadEstimateData(featuresFromSelection);
       }
 
     } catch (err) {
@@ -682,11 +702,29 @@ function PostLoginScreen({ onLogout }) {
   React.useEffect(() => {
     const area = parseFloat(String(formEstimativa.area).replace(',', '.')) || 0;
     const tch = parseFloat(String(formEstimativa.tch).replace(',', '.')) || 0;
-    const toneladas = (area * tch).toFixed(2);
-    if (formEstimativa.toneladas !== toneladas && area > 0 && tch > 0) {
-      setFormEstimativa(prev => ({ ...prev, toneladas }));
+
+    if (area > 0 && tch > 0) {
+      const toneladas = (area * tch).toFixed(2);
+      if (formEstimativa.toneladas !== toneladas) {
+        setFormEstimativa(prev => ({ ...prev, toneladas }));
+      }
+    } else if (formEstimativa.toneladas !== "") {
+      setFormEstimativa(prev => ({ ...prev, toneladas: "" }));
     }
   }, [formEstimativa.area, formEstimativa.tch]);
+
+  // Handle Scope when opening modal
+  React.useEffect(() => {
+    if (estimateOpen) {
+      if (selectedTalhoes.length > 1) {
+        setScope("selecionados");
+      } else if (selectedTalhoes.length === 1) {
+        setScope("talhao");
+      } else {
+        setScope("filtro");
+      }
+    }
+  }, [estimateOpen, selectedTalhoes.length]);
 
   // Recalculate totals when scope changes
   React.useEffect(() => {
@@ -694,8 +732,11 @@ function PostLoginScreen({ onLogout }) {
 
     let totalArea = 0;
 
-    if (scope === "talhao" && selectedTalhao) {
-      totalArea = parseFloat(String(selectedTalhao.properties?.AREA || 0).replace(',', '.'));
+    if (scope === "talhao" && selectedTalhoes.length === 1) {
+      const feat = enhancedGeoJson?.features?.find(f => f.id === selectedTalhoes[0]);
+      if (feat) {
+        totalArea = parseFloat(String(feat.properties?.AREA || 0).replace(',', '.'));
+      }
     } else if (scope === "selecionados") {
       selectedTalhoes.forEach(id => {
         const feat = enhancedGeoJson?.features?.find(f => f.id === id);
@@ -719,9 +760,13 @@ function PostLoginScreen({ onLogout }) {
   const [showLabels, setShowLabels] = useState(true);
 
   const openHistory = async () => {
-    if (!selectedTalhao) return;
+    if (selectedTalhoes.length !== 1) return;
+
+    const feat = enhancedGeoJson?.features?.find(f => f.id === selectedTalhoes[0]);
+    if (!feat) return;
+
     setHistoryOpen(true);
-    const talhaoId = selectedTalhao.properties.TALHAO || `mock_${selectedTalhao.id}`;
+    const talhaoId = feat.properties.TALHAO || `mock_${feat.id}`;
     const res = await getEstimateHistory(currentCompanyId, currentSafra, talhaoId);
     if (res.success) {
       setEstimateHistory(res.data);
@@ -732,21 +777,22 @@ function PostLoginScreen({ onLogout }) {
     const feature = e.features && e.features[0];
     if (feature && feature.properties) {
       const featureId = feature.properties.featureId;
-      if (isMultiSelectMode) {
-        setSelectedTalhoes(prev =>
-          prev.includes(featureId) ? prev.filter(id => id !== featureId) : [...prev, featureId]
-        );
-      } else {
-        setSelectedTalhao(feature);
-        setHoveredTalhao(null);
-        // Load estimate for this talhao
-        loadEstimateData(feature);
-      }
+
+      setSelectedTalhoes(prev => {
+        const isSelected = prev.includes(featureId);
+        const newSelection = isSelected ? prev.filter(id => id !== featureId) : [...prev, featureId];
+
+        // Load data dynamically based on the *new* selection state
+        const featuresFromSelection = newSelection.map(id => enhancedGeoJson?.features?.find(f => f.id === id)).filter(Boolean);
+        setTimeout(() => loadEstimateData(featuresFromSelection), 0);
+
+        return newSelection;
+      });
+      setHoveredTalhao(null);
+
     } else {
-      // Clicked outside any feature
-      if (!isMultiSelectMode) {
-        setSelectedTalhao(null);
-      }
+      // Clicked outside any feature resets selection
+      setSelectedTalhoes([]);
     }
   };
 
@@ -796,9 +842,9 @@ function PostLoginScreen({ onLogout }) {
   );
 
   React.useEffect(() => {
-    if (geoJsonData && mapRef.current) {
+    if (enhancedGeoJson && enhancedGeoJson.features.length > 0 && mapRef.current) {
       try {
-        const [minLng, minLat, maxLng, maxLat] = turf.bbox(geoJsonData);
+        const [minLng, minLat, maxLng, maxLat] = turf.bbox(enhancedGeoJson);
         mapRef.current.fitBounds(
           [
             [minLng, minLat],
@@ -807,10 +853,10 @@ function PostLoginScreen({ onLogout }) {
           { padding: 40, duration: 1000 }
         );
       } catch (err) {
-        console.error("Error calculating bounds from geoJsonData:", err);
+        console.error("Error calculating bounds from enhancedGeoJson:", err);
       }
     }
-  }, [geoJsonData]);
+  }, [enhancedGeoJson]);
 
   // Handle mapbox feature state for hover/selection
   React.useEffect(() => {
@@ -829,14 +875,10 @@ function PostLoginScreen({ onLogout }) {
       map.setFeatureState({ source: 'talhoes', id: hoveredTalhao }, { hover: true });
     }
 
-    if (isMultiSelectMode) {
-      selectedTalhoes.forEach(id => {
-        map.setFeatureState({ source: 'talhoes', id }, { selected: true });
-      });
-    } else if (selectedTalhao && selectedTalhao.id !== undefined) {
-      map.setFeatureState({ source: 'talhoes', id: selectedTalhao.id }, { selected: true });
-    }
-  }, [hoveredTalhao, selectedTalhao, selectedTalhoes, isMultiSelectMode, enhancedGeoJson]);
+    selectedTalhoes.forEach(id => {
+      map.setFeatureState({ source: 'talhoes', id }, { selected: true });
+    });
+  }, [hoveredTalhao, selectedTalhoes, enhancedGeoJson]);
 
   return (
     <div className="min-h-screen relative overflow-hidden" style={{ background: `linear-gradient(160deg, ${palette.bg2} 0%, ${palette.tech} 60%, ${palette.tech2} 100%)`, color: palette.white }}>
@@ -879,17 +921,28 @@ function PostLoginScreen({ onLogout }) {
             </div>
             <div className="p-5 max-h-[70vh] overflow-auto space-y-4">
               <div className="grid md:grid-cols-4 gap-3">
-                {[
-                  ["Fundo agrícola / Fazenda", selectedTalhao?.properties?.FAZENDA || "N/A"],
-                  ["Talhão", scope === "talhao" ? (selectedTalhao?.properties?.TALHAO || "N/A") : (scope === "selecionados" ? `${selectedTalhoes.length} selecionados` : "Múltiplos")],
-                  ["Variedade", scope === "talhao" ? (selectedTalhao?.properties?.VARIEDADE || "N/A") : "Várias"],
-                  ["Corte / Estágio", scope === "talhao" ? (selectedTalhao?.properties?.ECORTE || "N/A") : "Vários"]
-                ].map(([k, v]) => (
-                  <div key={k} className="rounded-2xl border p-3" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)" }}>
-                    <div className="text-xs" style={{ color: palette.text2 }}>{k}</div>
-                    <div className="mt-1 font-semibold truncate">{v}</div>
-                  </div>
-                ))}
+                {(() => {
+                  const firstSelected = selectedTalhoes.length > 0 ? enhancedGeoJson?.features?.find(f => f.id === selectedTalhoes[0]) : null;
+
+                  const f_agr = firstSelected?.properties?.FUNDO_AGR ? String(firstSelected.properties.FUNDO_AGR).trim() : "";
+                  const faz = firstSelected?.properties?.FAZENDA ? String(firstSelected.properties.FAZENDA).trim() : "";
+                  let fazendaName = "N/A";
+                  if (f_agr && faz) fazendaName = `${f_agr} - ${faz}`;
+                  else if (faz) fazendaName = faz;
+                  else if (f_agr) fazendaName = f_agr;
+
+                  return [
+                    ["Fundo agrícola / Fazenda", selectedTalhoes.length === 1 ? fazendaName : (selectedTalhoes.length > 1 ? "Múltiplos" : "N/A")],
+                    ["Talhão", scope === "talhao" ? (firstSelected?.properties?.TALHAO || "N/A") : (scope === "selecionados" ? `${selectedTalhoes.length} selecionados` : "Múltiplos")],
+                    ["Variedade", scope === "talhao" ? (firstSelected?.properties?.VARIEDADE || "N/A") : "Várias"],
+                    ["Corte / Estágio", scope === "talhao" ? (firstSelected?.properties?.ECORTE || "N/A") : "Vários"]
+                  ].map(([k, v]) => (
+                    <div key={k} className="rounded-2xl border p-3" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)" }}>
+                      <div className="text-xs" style={{ color: palette.text2 }}>{k}</div>
+                      <div className="mt-1 font-semibold truncate" title={v}>{v}</div>
+                    </div>
+                  ));
+                })()}
               </div>
               <div className="grid md:grid-cols-3 gap-3">
                 <div className="flex flex-col gap-2">
@@ -948,7 +1001,7 @@ function PostLoginScreen({ onLogout }) {
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-xs" style={{ color: palette.text2 }}>Observação</label>
-                <textarea defaultValue="Ao salvar, cada reestimativa gera uma nova versão por safra sem apagar o histórico anterior." className="rounded-2xl border px-4 py-3 min-h-[110px] outline-none" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
+                <textarea value={formEstimativa.observacao} onChange={(e) => setFormEstimativa({...formEstimativa, observacao: e.target.value})} placeholder="Insira alguma observação sobre a estimativa (opcional)" className="rounded-2xl border px-4 py-3 min-h-[110px] outline-none" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
               </div>
             </div>
             <div className="flex justify-end gap-3 px-5 pb-5">
@@ -1268,24 +1321,11 @@ function PostLoginScreen({ onLogout }) {
                 <div className="p-4 flex items-start justify-between gap-3">
                   <div>
                     <div className="text-[18px] font-bold leading-tight">Estimativa<br/>Safra</div>
-                    <div className="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.10)", color: "#dbe4ec" }}>Sem filtros</div>
+                    <div className="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.10)", color: "#dbe4ec" }}>
+                      {Object.values(appliedFilters).some(v => v) ? "Filtro Ativo" : "Sem filtros"}
+                    </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      className="w-11 h-11 rounded-xl flex items-center justify-center transition-colors"
-                      style={{
-                        background: isMultiSelectMode ? "rgba(212,175,55,0.2)" : "rgba(255,255,255,0.08)",
-                        border: isMultiSelectMode ? `1px solid ${palette.gold}` : "1px solid transparent",
-                        color: isMultiSelectMode ? palette.gold : "white"
-                      }}
-                      onClick={() => {
-                        setIsMultiSelectMode(!isMultiSelectMode);
-                        if (isMultiSelectMode) setSelectedTalhoes([]);
-                      }}
-                      title="Seleção múltipla"
-                    >
-                      <MousePointerSquareDashed className="w-5 h-5" />
-                    </button>
                     <button className="w-11 h-11 rounded-xl flex items-center justify-center" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setFiltersOpen(true)}>
                       <ChevronDown className="w-5 h-5" />
                     </button>
@@ -1294,63 +1334,87 @@ function PostLoginScreen({ onLogout }) {
               </div>
 
               {/* Tap Info Panel */}
-              {selectedTalhao && !isMultiSelectMode && (
+              {selectedTalhoes.length > 0 && (
                 <div className="absolute right-4 top-4 w-[340px] rounded-3xl border overflow-hidden z-20 shadow-2xl flex flex-col" style={{ background: "rgba(23, 29, 43, 0.95)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)" }}>
                   <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
                     <div>
-                      <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: palette.text2 }}>TALHÃO</div>
-                      <div className="text-[20px] font-bold mt-1 text-white">{selectedTalhao.properties.TALHAO || "N/A"}</div>
+                      <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: palette.text2 }}>
+                        {selectedTalhoes.length === 1 ? "TALHÃO" : "MÚLTIPLOS TALHÕES"}
+                      </div>
+                      <div className="text-[20px] font-bold mt-1 text-white">
+                        {selectedTalhoes.length === 1
+                          ? (enhancedGeoJson?.features?.find(f => f.id === selectedTalhoes[0])?.properties?.TALHAO || "N/A")
+                          : `${selectedTalhoes.length} selecionados`}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="px-3 py-1.5 rounded-full text-xs font-medium border" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.12)", color: palette.text2 }} onClick={() => setSelectedTalhao(null)}>Recolher</button>
-                      <button onClick={() => setSelectedTalhao(null)} className="p-1.5 rounded-full hover:bg-white/10 transition-colors">
+                      <button onClick={() => setSelectedTalhoes([])} className="p-1.5 rounded-full hover:bg-white/10 transition-colors">
                         <X className="w-4 h-4 text-white/60" />
                       </button>
                     </div>
                   </div>
 
                   <div className="p-4 grid grid-cols-2 gap-3 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)" }}>
-                    {[
-                      { label: "Fazenda", value: selectedTalhao.properties.FAZENDA || "N/A" },
-                      { label: "Variedade", value: selectedTalhao.properties.VARIEDADE || "N/A" },
-                      { label: "Estágio", value: selectedTalhao.properties.ECORTE || "N/A" },
-                      { label: "Área", value: selectedTalhao.properties.AREA ? `${selectedTalhao.properties.AREA} ha` : "N/A" },
-                      { label: "Status", value: isLoadingEstimate ? "Carregando..." : (currentEstimate ? "Estimado" : "Pendente") },
-                      { label: "Última estimativa", value: isLoadingEstimate ? "..." : (currentEstimate ? `${currentEstimate.toneladas} ton` : "Não estimado") },
-                    ].map((item, idx) => (
-                      <div key={idx} className="rounded-2xl p-3 flex flex-col justify-center" style={{ background: "rgba(31, 38, 53, 0.7)" }}>
-                        <span className="text-xs mb-1" style={{ color: palette.text2 }}>{item.label}</span>
-                        <span className="text-sm font-bold text-white break-words">{item.value}</span>
+                    {selectedTalhoes.length === 1 ? (
+                      (() => {
+                        const feat = enhancedGeoJson?.features?.find(f => f.id === selectedTalhoes[0]);
+                        const p = feat?.properties || {};
+                        const f_agr = p.FUNDO_AGR ? String(p.FUNDO_AGR).trim() : "";
+                        const faz = p.FAZENDA ? String(p.FAZENDA).trim() : "";
+                        let fazendaName = "N/A";
+                        if (f_agr && faz) fazendaName = `${f_agr} - ${faz}`;
+                        else if (faz) fazendaName = faz;
+                        else if (f_agr) fazendaName = f_agr;
+
+                        return [
+                          { label: "Fazenda", value: fazendaName },
+                          { label: "Variedade", value: p.VARIEDADE || "N/A" },
+                          { label: "Estágio", value: p.ECORTE || "N/A" },
+                          { label: "Área", value: p.AREA ? `${p.AREA} ha` : "N/A" },
+                          { label: "Status", value: isLoadingEstimate ? "Carregando..." : (currentEstimate ? "Estimado" : "Pendente") },
+                          { label: "Última estimativa", value: isLoadingEstimate ? "..." : (currentEstimate ? `${currentEstimate.toneladas} ton` : "Não estimado") },
+                        ].map((item, idx) => (
+                          <div key={idx} className="rounded-2xl p-3 flex flex-col justify-center" style={{ background: "rgba(31, 38, 53, 0.7)" }}>
+                            <span className="text-xs mb-1" style={{ color: palette.text2 }}>{item.label}</span>
+                            <span className="text-sm font-bold text-white break-words">{item.value}</span>
+                          </div>
+                        ));
+                      })()
+                    ) : (
+                      <div className="col-span-2 rounded-2xl p-4 flex flex-col justify-center text-center border" style={{ background: "rgba(31, 38, 53, 0.7)", borderColor: "rgba(255,255,255,0.05)" }}>
+                        <MapPinned className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <span className="text-sm text-white">Você tem {selectedTalhoes.length} talhões selecionados no mapa.</span>
+                        <span className="text-xs mt-1" style={{ color: palette.text2 }}>A estimativa será aplicada em lote para todos eles.</span>
                       </div>
-                    ))}
+                    )}
 
                     <div className="col-span-2 grid grid-cols-2 gap-3 mt-2">
                       <button
-                        className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02]"
+                        className={`rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] ${selectedTalhoes.length > 1 ? 'col-span-2' : ''}`}
                         style={{ background: "#22c55e", color: "#ffffff" }}
-                        onClick={() => {
-                          setScope("talhao");
-                          setEstimateOpen(true);
-                        }}
+                        onClick={() => setEstimateOpen(true)}
                       >
                         <Pencil className="w-4 h-4" />
                         {currentEstimate ? "Reestimar" : "Estimar"}
                       </button>
-                      <button
-                        onClick={openHistory}
-                        className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] border"
-                        style={{ background: "rgba(31, 38, 53, 0.7)", borderColor: "rgba(255,255,255,0.08)", color: "#ffffff" }}
-                      >
-                        <History className="w-4 h-4" />
-                        Histórico
-                      </button>
+
+                      {selectedTalhoes.length === 1 && (
+                        <button
+                          onClick={openHistory}
+                          className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] border"
+                          style={{ background: "rgba(31, 38, 53, 0.7)", borderColor: "rgba(255,255,255,0.08)", color: "#ffffff" }}
+                        >
+                          <History className="w-4 h-4" />
+                          Histórico
+                        </button>
+                      )}
                     </div>
 
                     <div className="col-span-2 mt-1">
                       <button
                         className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] border transition-colors hover:bg-white/5"
                         style={{ background: "transparent", borderColor: "rgba(255,255,255,0.12)", color: "#ffffff" }}
-                        onClick={() => setSelectedTalhao(null)}
+                        onClick={() => setSelectedTalhoes([])}
                       >
                         <X className="w-4 h-4" />
                         Limpar seleção
