@@ -457,6 +457,16 @@ function PostLoginScreen({ onLogout }) {
   });
 
 
+  // Helper to generate a unique talhao ID across farms
+  const getUniqueTalhaoId = (feature) => {
+    if (!feature || !feature.properties) return `mock_invalid_id`;
+    const p = feature.properties;
+    const f_agr = p.FUNDO_AGR ? String(p.FUNDO_AGR).trim() : "N-A";
+    const faz = p.FAZENDA ? String(p.FAZENDA).trim() : "N-A";
+    const talhao = p.TALHAO ? String(p.TALHAO).trim() : `mock_${feature.id}`;
+    return `${f_agr}_${faz}_${talhao}`.replace(/\//g, '-').replace(/ /g, '_').toUpperCase();
+  };
+
   // Derived filter options based on geoJsonData
   const filterOptions = React.useMemo(() => {
     if (!geoJsonData || !geoJsonData.features) return { fazendas: [], variedades: [], cortes: [], talhoes: [] };
@@ -588,8 +598,8 @@ function PostLoginScreen({ onLogout }) {
       ...geoJsonData,
       features: filteredFeatures.map((feature, index) => {
         const normalizedCorte = normalizeCorte(feature.properties?.ECORTE);
-        const talhaoId = feature.properties?.TALHAO || `mock_${index}`;
-        const isEstimated = allEstimates.some(est => est.talhaoId === talhaoId);
+        const uniqueTalhaoId = getUniqueTalhaoId(feature);
+        const isEstimated = allEstimates.some(est => est.talhaoId === uniqueTalhaoId);
 
         return {
           ...feature,
@@ -667,8 +677,8 @@ function PostLoginScreen({ onLogout }) {
 
       if (p._is_estimated) {
         estimadosCount++;
-        const talhaoId = p.TALHAO || `mock_${f.id}`;
-        const est = allEstimates.find(e => e.talhaoId === talhaoId);
+        const uniqueTalhaoId = getUniqueTalhaoId(f);
+        const est = allEstimates.find(e => e.talhaoId === uniqueTalhaoId);
         if (est && est.toneladas) {
           const tons = parseFloat(String(est.toneladas).replace(/\./g, '').replace(',', '.'));
           if (!isNaN(tons)) totalToneladas += tons;
@@ -692,7 +702,7 @@ function PostLoginScreen({ onLogout }) {
     setIsLoadingEstimate(true);
     setCurrentEstimate(null);
     setEstimateHistory([]);
-    const talhaoId = feature.properties.TALHAO || `mock_${feature.id}`;
+    const uniqueTalhaoId = getUniqueTalhaoId(feature);
 
     // Default form values
     setFormEstimativa({
@@ -702,7 +712,7 @@ function PostLoginScreen({ onLogout }) {
     });
 
     try {
-      const res = await getEstimate(currentCompanyId, currentSafra, talhaoId);
+      const res = await getEstimate(currentCompanyId, currentSafra, uniqueTalhaoId);
       if (res.success && res.data) {
         setCurrentEstimate(res.data);
         setFormEstimativa({
@@ -741,7 +751,7 @@ function PostLoginScreen({ onLogout }) {
 
       // Save for all selected talhões concurrently
       await Promise.all(talhoesToSave.map(async (feat) => {
-        const talhaoId = feat.properties.TALHAO || `mock_${feat.id}`;
+        const uniqueTalhaoId = getUniqueTalhaoId(feat);
 
         // Calculate the relative area vs the form area if multiple talhoes are selected.
         // If single, use the form directly.
@@ -757,7 +767,7 @@ function PostLoginScreen({ onLogout }) {
         const toneladasCalc = toneladasCalcVal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const areaToSave = talhoesToSave.length === 1 ? formEstimativa.area : areaToUse.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-        const res = await saveEstimate(currentCompanyId, currentSafra, talhaoId, {
+        const res = await saveEstimate(currentCompanyId, currentSafra, uniqueTalhaoId, {
           fundo_agricola: feat.properties.FUNDO_AGR || "N/A",
           fazenda: feat.properties.FAZENDA || "N/A",
           variedade: feat.properties.VARIEDADE || "N/A",
@@ -844,8 +854,8 @@ function PostLoginScreen({ onLogout }) {
   const openHistory = async () => {
     if (!selectedTalhao) return;
     setHistoryOpen(true);
-    const talhaoId = selectedTalhao.properties.TALHAO || `mock_${selectedTalhao.id}`;
-    const res = await getEstimateHistory(currentCompanyId, currentSafra, talhaoId);
+    const uniqueTalhaoId = getUniqueTalhaoId(selectedTalhao);
+    const res = await getEstimateHistory(currentCompanyId, currentSafra, uniqueTalhaoId);
     if (res.success) {
       setEstimateHistory(res.data);
     }
@@ -1331,8 +1341,10 @@ function PostLoginScreen({ onLogout }) {
                         paint={{
                           "fill-color": [
                             "case",
+                            ["boolean", ["feature-state", "selected"], false],
+                            "#06b6d4", // Cyan striking color for selected talhoes
                             ["boolean", ["feature-state", "hover"], false],
-                            palette.gold,
+                            palette.goldLight,
                             ["boolean", ["get", "_is_estimated"], false],
                             [
                               "match",
@@ -1368,12 +1380,22 @@ function PostLoginScreen({ onLogout }) {
                         id="talhoes-outline"
                         type="line"
                         paint={{
-                          "line-color": palette.white,
-                          "line-opacity": 0.5,
+                          "line-color": [
+                            "case",
+                            ["boolean", ["feature-state", "selected"], false],
+                            "#22d3ee", // Cyan border for selected
+                            palette.white
+                          ],
+                          "line-opacity": [
+                            "case",
+                            ["boolean", ["feature-state", "selected"], false],
+                            1.0,
+                            0.5
+                          ],
                           "line-width": [
                             "case",
                             ["boolean", ["feature-state", "selected"], false],
-                            3,
+                            4,
                             1.5
                           ]
                         }}
