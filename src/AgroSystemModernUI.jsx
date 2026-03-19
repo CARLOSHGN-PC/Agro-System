@@ -397,40 +397,16 @@ function PostLoginScreen({ onLogout }) {
     toneladas: 0,
   });
 
-  // Effect to calculate summary data based on the enhancedGeoJson (which responds to filters)
-  React.useEffect(() => {
-    if (!enhancedGeoJson || !enhancedGeoJson.features) return;
-
-    let totalArea = 0;
-    const totalTalhoes = enhancedGeoJson.features.length;
-
-    enhancedGeoJson.features.forEach(f => {
-      const p = f.properties || {};
-      const area = parseFloat(String(p.AREA || 0).replace(',', '.'));
-      if (!isNaN(area)) {
-        totalArea += area;
-      }
-    });
-
-    // In a real scenario, we'd need to query Firestore to know how many of *these specific*
-    // talhões are estimated, and sum their estimated tons.
-    // For now, we will reflect the loaded filters structure.
-    setSummaryData({
-      talhoes: totalTalhoes,
-      area: totalArea,
-      estimados: 0, // Mock, pending integration
-      pendentes: totalTalhoes, // Mock, pending integration
-      toneladas: 0, // Mock, pending integration
-    });
-  }, [enhancedGeoJson]);
   const [estimateOpen, setEstimateOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [scope, setScope] = useState("talhao");
   const [selectedTalhao, setSelectedTalhao] = useState(null);
   const [selectedTalhoes, setSelectedTalhoes] = useState([]);
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(true);
+
+  // Default scope depends on selection
+  const [scope, setScope] = useState("talhao");
   const [activeModule, setActiveModule] = useState("estimativa"); // "estimativa" | "configuracao"
   const [geoJsonData, setGeoJsonData] = useState(null);
   const [hoveredTalhao, setHoveredTalhao] = useState(null);
@@ -470,6 +446,7 @@ function PostLoginScreen({ onLogout }) {
     corte: "",
     talhao: ""
   });
+
 
   // Derived filter options based on geoJsonData
   const filterOptions = React.useMemo(() => {
@@ -615,6 +592,33 @@ function PostLoginScreen({ onLogout }) {
       })
     };
   }, [geoJsonData, appliedFilters]);
+
+  // Effect to calculate summary data based on the enhancedGeoJson (which responds to filters)
+  React.useEffect(() => {
+    if (!enhancedGeoJson || !enhancedGeoJson.features) return;
+
+    let totalArea = 0;
+    const totalTalhoes = enhancedGeoJson.features.length;
+
+    enhancedGeoJson.features.forEach(f => {
+      const p = f.properties || {};
+      const area = parseFloat(String(p.AREA || 0).replace(',', '.'));
+      if (!isNaN(area)) {
+        totalArea += area;
+      }
+    });
+
+    // In a real scenario, we'd need to query Firestore to know how many of *these specific*
+    // talhões are estimated, and sum their estimated tons.
+    // For now, we will reflect the loaded filters structure.
+    setSummaryData({
+      talhoes: totalTalhoes,
+      area: totalArea,
+      estimados: 0, // Mock, pending integration
+      pendentes: totalTalhoes, // Mock, pending integration
+      toneladas: 0, // Mock, pending integration
+    });
+  }, [enhancedGeoJson]);
 
   const loadEstimateData = async (feature) => {
     if (!feature || !feature.properties) return;
