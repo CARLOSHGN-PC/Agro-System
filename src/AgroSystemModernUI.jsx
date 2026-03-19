@@ -33,6 +33,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import * as turf from "@turf/turf"; // To calculate bounds
 import { saveEstimate, getEstimate, getEstimateHistory } from "./services/estimativa";
 import { fetchLatestGeoJson } from "./services/storage";
+import { showSuccess, showError, showConfirm } from "./utils/alert";
 
 const palette = {
   bg: "#050505",
@@ -381,7 +382,7 @@ function PostLoginScreen({ onLogout }) {
     async function loadData() {
       const res = await fetchLatestGeoJson(currentCompanyId);
       if (res.error) {
-        alert(res.error);
+        showError("Erro ao carregar mapa", res.error);
       } else if (res.data) {
         setGeoJsonData(res.data);
       } else {
@@ -553,7 +554,7 @@ function PostLoginScreen({ onLogout }) {
         if (res.success) successCount++;
       }));
 
-      alert(`Estimativa salva com sucesso para ${successCount} talhões!`);
+      showSuccess("Sucesso!", `Estimativa salva com sucesso para ${successCount} talhões!`);
       setEstimateOpen(false);
 
       // Reload current if one was selected
@@ -563,9 +564,9 @@ function PostLoginScreen({ onLogout }) {
 
     } catch (err) {
       if (err.message && (err.message.includes("permission") || err.message.includes("Missing or insufficient permissions"))) {
-        alert("Erro de permissão no Firebase. Por favor, vá ao Console do Firebase > Firestore > Rules e configure para: allow read, write: if true;");
+        showError("Acesso Negado", "Erro de permissão no Firebase. Por favor, vá ao Console do Firebase > Firestore > Rules e configure para: allow read, write: if true;");
       } else {
-        alert("Erro ao salvar estimativa: " + err.message);
+        showError("Erro", "Erro ao salvar estimativa: " + err.message);
       }
     } finally {
       setIsSaving(false);
@@ -820,9 +821,15 @@ function PostLoginScreen({ onLogout }) {
                 ].map(([key, title, sub]) => (
                   <button
                     key={key}
-                    onClick={() => {
-                      if ((key === "fazenda" || key === "filtro") && !window.confirm(`Tem certeza que deseja aplicar a estimativa para a ${title}? Essa ação impactará vários talhões.`)) {
-                        return;
+                    onClick={async () => {
+                      if (key === "fazenda" || key === "filtro") {
+                        const confirmResult = await showConfirm(
+                          "Aplicar em massa",
+                          `Tem certeza que deseja aplicar a estimativa para a ${title}? Essa ação impactará vários talhões.`
+                        );
+                        if (!confirmResult.isConfirmed) {
+                          return;
+                        }
                       }
                       setScope(key);
                     }}

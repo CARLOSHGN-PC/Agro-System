@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      // PERMITIR LEITURA E ESCRITA SEM AUTENTICAÇÃO
+      // (Útil durante desenvolvimento com "mock" login)
+      allow read, write: if true;
+    }
+  }
+}

@@ -23,7 +23,9 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-map-gl": "^7.1.7",
-    "shpjs": "^6.2.0"
+    "shpjs": "^6.2.0",
+    "sweetalert2": "^11.26.23",
+    "sweetalert2-react-content": "^5.1.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",

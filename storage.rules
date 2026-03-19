@@ -1,0 +1,11 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      // PERMITIR UPLOAD E DOWNLOAD SEM AUTENTICAÇÃO
+      // (Útil durante desenvolvimento com "mock" login)
+      allow read, write: if true;
+    }
+  }
+}
