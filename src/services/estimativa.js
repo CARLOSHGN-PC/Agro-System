@@ -53,8 +53,12 @@ export const saveEstimate = async (companyId, safra, talhaoId, estimateData) => 
     // 2. SALVAMENTO LOCAL IMEDIATO (Sempre funciona, mesmo num mato sem internet)
     await db.estimativas.put(newEstimateData);
 
+    // Cria um ID determinístico para o histórico para evitar duplicação em caso de retry
+    const historyDocId = `${estimateDocId}_v${version}`;
+
     // Salvamento no histórico local
     await db.historico.add({
+        id: historyDocId, // Determinístico
         estimateDocId,
         companyId,
         safra,
@@ -70,7 +74,8 @@ export const saveEstimate = async (companyId, safra, talhaoId, estimateData) => 
     // de dados em cenários extremos (ex: disco cheio).
 
     await enqueueTask('createOrUpdate', COLLECTION_ESTIMATIVAS, estimateDocId, newEstimateData);
-    await enqueueTask('addHistory', COLLECTION_HISTORICO, null, {
+    // Usa 'createOrUpdate' com historyDocId determinístico em vez de 'addHistory' para garantir idempotência.
+    await enqueueTask('createOrUpdate', COLLECTION_HISTORICO, historyDocId, {
         estimateDocId,
         companyId,
         safra,

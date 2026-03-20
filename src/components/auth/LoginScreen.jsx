@@ -26,7 +26,16 @@ import AnimatedBackground from "../layout/AnimatedBackground";
  * O que entra e o que sai:
  * @returns {JSX.Element} A interface gráfica inteira do login com animações Framer Motion.
  */
-export default function LoginScreen() {
+// Helper de hash real e seguro para armazenar a senha offline sem expô-la em texto claro.
+// Utiliza a Web Crypto API nativa do navegador (SHA-256).
+const hashPassword = async (password) => {
+  const msgBuffer = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+export default function LoginScreen({ onLoginSuccess }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
@@ -39,10 +48,40 @@ export default function LoginScreen() {
     }
 
     setIsLoading(true);
+
+    // MODO OFFLINE FIRST AUTENTICAÇÃO
+    if (!navigator.onLine) {
+        // Tenta achar as credenciais seguras (hash) salvas no cache do localStorage do PWA
+        const cachedAuth = localStorage.getItem('@AgroSystem:auth');
+        if (cachedAuth) {
+            try {
+                const { e, hash } = JSON.parse(cachedAuth);
+                const inputHash = await hashPassword(password);
+
+                if (e === email.trim() && hash === inputHash) {
+                    onLoginSuccess();
+                    setIsLoading(false);
+                    return;
+                }
+            } catch(e) {}
+        }
+        showError("Acesso Negado", "Modo offline: e-mail ou senha incorretos, ou você nunca logou neste dispositivo antes.");
+        setIsLoading(false);
+        return;
+    }
+
+    // MODO ONLINE
     try {
+      // Se já houver um usuário logado (token ativo), só validamos as credenciais locais
+      // se a internet estiver oscilando. Mas como estamos online, vamos forçar o login
+      // de novo no Firebase para garantir o token atualizado.
       await signInWithEmailAndPassword(auth, email, password);
-      // A mudança de tela ocorre porque o useAuth (observer global)
-      // vai detectar que o usuário mudou, setando `logged = true` no componente pai.
+      // Se deu sucesso online, gera o hash seguro da senha e salva pro proximo acesso offline
+      const hashedPw = await hashPassword(password);
+      const payload = JSON.stringify({ e: email.trim(), hash: hashedPw });
+      localStorage.setItem('@AgroSystem:auth', payload);
+
+      onLoginSuccess();
     } catch (error) {
       console.error(error);
       if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
