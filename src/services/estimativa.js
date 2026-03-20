@@ -130,6 +130,15 @@ export const subscribeToEstimatesRealtime = (companyId, safra, onUpdateCallback)
                         });
                     }
                 });
+            } else if (change.type === "removed") {
+                hasChanges = true;
+                updates.push(async () => {
+                    const existing = await db.estimativas.get(change.doc.id);
+                    // Deleta o registro localmente, mas previne deletar se tiver um envio pending
+                    if (existing && existing.syncStatus !== 'pending') {
+                        await db.estimativas.delete(change.doc.id);
+                    }
+                });
             }
         });
 
@@ -182,7 +191,10 @@ export const getAllEstimates = async (companyId, safra, rodada = null) => {
                 const querySnapshot = await getDocs(q);
 
                 const updates = [];
+                const remoteIds = new Set();
+
                 querySnapshot.forEach((d) => {
+                    remoteIds.add(d.id);
                     const fbData = d.data();
                     // Atualiza o Dexie. Mas se o Dexie tiver um 'pending', a gente não esmaga ele com o do banco!
                     updates.push(async () => {
@@ -197,6 +209,16 @@ export const getAllEstimates = async (companyId, safra, rodada = null) => {
                         }
                     });
                 });
+
+                // Remove do Dexie os documentos que não estão mais no Firestore
+                localData.forEach((localItem) => {
+                    if (!remoteIds.has(localItem.id) && localItem.syncStatus !== 'pending') {
+                        updates.push(async () => {
+                            await db.estimativas.delete(localItem.id);
+                        });
+                    }
+                });
+
                 await Promise.all(updates.map(u => u()));
              } catch (e) { console.warn("Erro ao puxar updates em background do Firebase", e) }
         })();
