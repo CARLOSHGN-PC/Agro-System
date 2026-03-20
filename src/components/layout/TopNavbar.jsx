@@ -31,6 +31,21 @@ export default function TopNavbar({
   notifications = [],
   onLogout
 }) {
+  const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
+
+  React.useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   return (
     <div className="sticky top-0 z-30 h-16 border-b flex items-center justify-between px-3 sm:px-6" style={{ background: "rgba(10,10,10,0.82)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(18px)" }}>
       {/* Esquerda: Botão Sanduíche */}
@@ -44,12 +59,19 @@ export default function TopNavbar({
         </button>
       </div>
 
-      {/* Centro: Logo */}
-      <div className="flex items-center gap-2 sm:gap-3 text-white font-semibold text-lg sm:text-xl">
-        <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.14)", color: palette.gold }}>
-          <Leaf className="w-4 h-4 sm:w-5 sm:h-5" />
+      {/* Centro: Logo e Status Offline */}
+      <div className="flex flex-col items-center">
+        <div className="flex items-center gap-2 sm:gap-3 text-white font-semibold text-lg sm:text-xl">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.14)", color: palette.gold }}>
+            <Leaf className="w-4 h-4 sm:w-5 sm:h-5" />
+          </div>
+          <span className="hidden sm:inline">AgroSystem</span>
         </div>
-        <span className="hidden sm:inline">AgroSystem</span>
+        {isOffline && (
+          <span className="text-[10px] sm:text-xs font-medium text-orange-400 mt-0.5">
+            Modo Offline
+          </span>
+        )}
       </div>
 
       {/* Direita: Notificações e Perfil */}

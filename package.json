@@ -12,6 +12,8 @@
     "@turf/turf": "^7.3.4",
     "@types/proj4": "^2.5.6",
     "cors": "^2.8.6",
+    "dexie": "^4.3.0",
+    "dexie-react-hooks": "^4.2.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "firebase": "^12.10.0",
@@ -25,7 +27,8 @@
     "react-map-gl": "^7.1.7",
     "shpjs": "^6.2.0",
     "sweetalert2": "^11.26.23",
-    "sweetalert2-react-content": "^5.1.2"
+    "sweetalert2-react-content": "^5.1.2",
+    "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
