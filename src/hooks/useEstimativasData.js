@@ -110,21 +110,19 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
   // Listener para o evento global de sincronização completa
   useEffect(() => {
     const handleSyncCompleted = (e) => {
-      // Se ocorreu uma sincronização com sucesso no background (ex: a internet voltou),
-      // recarregamos a lista de estimativas e forçamos a atualização da interface silenciosamente.
+      // Quando a sincronização via background finaliza com sucesso:
+      // O refetch global do mapa (allEstimates) não precisa mais ser
+      // chamado aqui porque a camada do `onSnapshot` do Firebase já atualizará o Dexie
+      // e chamará o refetch sozinho de forma reativa, impedindo o loop.
+      // E para o histórico, evitamos disparar funções indefinidas.
       if (e.detail && e.detail.count > 0) {
-        refetchEstimates();
-
-        // Se o modal de histórico estiver aberto para o mesmo talhão sendo visualizado,
-        // pode ser interessante também re-puxar o histórico (aqui opcional para simplificar).
-        if (historyOpen && selectedTalhao) {
-            openHistory(selectedTalhao);
-        }
+        // Como o app já assina atualizações, não precisamos forçar fetch de histórico
+        // ao reconectar internet para evitar refetch loops.
       }
     };
     window.addEventListener('sync-completed', handleSyncCompleted);
     return () => window.removeEventListener('sync-completed', handleSyncCompleted);
-  }, [currentCompanyId, currentSafra, currentRodada, historyOpen]); // dependências atualizadas para garantir que os refetchs peguem o state atual
+  }, []);
 
   // Efeito isolado para quando a `currentRodada` mudar. Ele esvazia a tela e busca as estimativas novas.
   useEffect(() => {

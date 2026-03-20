@@ -155,12 +155,13 @@ export const subscribeToEstimatesRealtime = (companyId, safra, onUpdateCallback)
 };
 
 /**
- * Retorna todas as estimativas. Agora tenta puxar da Base Local (offline first), e
- * em paralelo, puxa do Firebase em background para manter atualizado (se tiver net).
+ * Retorna todas as estimativas. Puxa APENAS da Base Local (offline first).
+ * Removemos o pull em background do Firebase daqui pois o 'subscribeToEstimatesRealtime'
+ * já cuida de manter o Dexie perfeitamente sincronizado. Isso evita sobrecarga (aquecimento)
+ * com múltiplas requisições GET em paralelo (looping) quando a UI re-renderiza ou internet volta.
  */
 export const getAllEstimates = async (companyId, safra, rodada = null) => {
   try {
-    // 1. CARREGAMENTO LOCAL INSTANTÂNEO (Sempre vai ter alguma coisa, caso offline)
     let localData = [];
     if (rodada) {
         localData = await db.estimativas
@@ -174,57 +175,8 @@ export const getAllEstimates = async (companyId, safra, rodada = null) => {
             .toArray();
     }
 
-    // 2. TENTATIVA DE SINCRONIZAÇÃO EM BACKGROUND
-    // Se estivermos online, vamos baixar do Firebase para atualizar a base local.
-    // Isso é feito SEM travar o retorno pros componentes de UI. O React reage nas re-renders.
-    if (navigator.onLine) {
-        // Função anônima auto-executável para rodar "em background"
-        (async () => {
-             try {
-                let constraints = [
-                    where("companyId", "==", companyId),
-                    where("safra", "==", safra)
-                ];
-                if (rodada) constraints.push(where("rodada", "==", rodada));
-
-                const q = query(collection(firestore, COLLECTION_ESTIMATIVAS), ...constraints);
-                const querySnapshot = await getDocs(q);
-
-                const updates = [];
-                const remoteIds = new Set();
-
-                querySnapshot.forEach((d) => {
-                    remoteIds.add(d.id);
-                    const fbData = d.data();
-                    // Atualiza o Dexie. Mas se o Dexie tiver um 'pending', a gente não esmaga ele com o do banco!
-                    updates.push(async () => {
-                        const existing = await db.estimativas.get(d.id);
-                        if (!existing || existing.syncStatus === 'synced') {
-                            await db.estimativas.put({
-                                id: d.id,
-                                ...fbData,
-                                syncStatus: 'synced', // Veio do Firebase, tá safo.
-                                updatedAt: fbData.updatedAt?.toDate()?.toISOString() || new Date().toISOString()
-                            });
-                        }
-                    });
-                });
-
-                // Remove do Dexie os documentos que não estão mais no Firestore
-                localData.forEach((localItem) => {
-                    if (!remoteIds.has(localItem.id) && localItem.syncStatus !== 'pending') {
-                        updates.push(async () => {
-                            await db.estimativas.delete(localItem.id);
-                        });
-                    }
-                });
-
-                await Promise.all(updates.map(u => u()));
-             } catch (e) { console.warn("Erro ao puxar updates em background do Firebase", e) }
-        })();
-    }
-
-    // Retorna imediatamente a cópia local, não importa se terminou o refresh de background
+    // Retorna imediatamente a cópia local.
+    // Qualquer nova estimativa salva por outro dispositivo chegará via onSnapshot.
     return { success: true, data: localData };
 
   } catch (error) {
