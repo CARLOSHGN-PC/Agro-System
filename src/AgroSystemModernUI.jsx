@@ -1551,12 +1551,24 @@ function PostLoginScreen({ onLogout }) {
 
               {/* Tap Info Panel */}
               {selectedTalhoes.length > 0 && (
-                <div className="absolute bottom-0 sm:bottom-auto sm:top-4 left-0 sm:left-auto right-0 sm:right-4 w-full sm:w-[340px] rounded-t-[28px] sm:rounded-3xl border-t sm:border overflow-hidden z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.4)] sm:shadow-2xl flex flex-col" style={{ background: "rgba(23, 29, 43, 0.95)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(20px)" }}>
-                  <div className="w-12 h-1.5 rounded-full mx-auto mt-2 sm:hidden" style={{ background: "rgba(255,255,255,0.2)" }} />
-                  <div className="px-5 py-3 sm:py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-                    <div>
+                <div className="absolute top-28 sm:top-4 left-4 sm:left-auto right-4 w-auto sm:w-[340px] rounded-3xl border overflow-hidden z-20 shadow-2xl flex flex-col" style={{ background: "rgba(23, 29, 43, 0.95)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)" }}>
+                  <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                    <div className="overflow-hidden flex-1 mr-3">
                       <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: palette.text2 }}>{selectedTalhoes.length > 1 ? "TALHÕES" : "TALHÃO"}</div>
-                      <div className="text-[20px] font-bold mt-1 text-white">{selectedTalhoes.length > 1 ? `${selectedTalhoes.length} Selecionados` : (selectedTalhao?.properties?.TALHAO || "N/A")}</div>
+                      <div className="text-[20px] font-bold mt-1 text-white truncate">
+                        {selectedTalhoes.length > 1 ? (
+                           (() => {
+                              const uniqueTalhoesNames = new Set();
+                              selectedTalhoes.forEach(id => {
+                                const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+                                if (feat && feat.properties?.TALHAO) uniqueTalhoesNames.add(feat.properties.TALHAO);
+                              });
+                              const namesArray = Array.from(uniqueTalhoesNames);
+                              if (namesArray.length <= 3) return namesArray.join(", ");
+                              return `${selectedTalhoes.length} Selecionados`;
+                           })()
+                        ) : (selectedTalhao?.properties?.TALHAO || "N/A")}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <button className="px-3 py-1.5 rounded-full text-xs font-medium border" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.12)", color: palette.text2 }} onClick={() => setInfoCollapsed(!infoCollapsed)}>{infoCollapsed ? "Expandir" : "Recolher"}</button>
@@ -1569,9 +1581,39 @@ function PostLoginScreen({ onLogout }) {
                   {!infoCollapsed && (
                     <div className="p-4 grid grid-cols-2 gap-3 overflow-y-auto max-h-[45vh] sm:max-h-[calc(100vh-200px)]">
                       {[
-                      { label: "Fazenda", value: selectedTalhoes.length > 1 ? "Múltiplas" : (selectedTalhao?.properties?.FAZENDA || "N/A") },
-                      { label: "Variedade", value: selectedTalhoes.length > 1 ? "Múltiplas" : (selectedTalhao?.properties?.VARIEDADE || "N/A") },
-                      { label: "Estágio", value: selectedTalhoes.length > 1 ? "Múltiplos" : (selectedTalhao?.properties?.ECORTE || "N/A") },
+                      { label: "Fazenda", value: (() => {
+                          if (selectedTalhoes.length <= 1) return selectedTalhao?.properties?.FAZENDA || "N/A";
+                          const uniqueVals = new Set();
+                          selectedTalhoes.forEach(id => {
+                            const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+                            if (feat && feat.properties?.FAZENDA) uniqueVals.add(feat.properties.FAZENDA);
+                          });
+                          const vals = Array.from(uniqueVals);
+                          if (vals.length === 1) return vals[0];
+                          return vals.length > 2 ? `${vals[0]}, ${vals[1]}...` : vals.join(", ");
+                      })() },
+                      { label: "Variedade", value: (() => {
+                          if (selectedTalhoes.length <= 1) return selectedTalhao?.properties?.VARIEDADE || "N/A";
+                          const uniqueVals = new Set();
+                          selectedTalhoes.forEach(id => {
+                            const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+                            if (feat && feat.properties?.VARIEDADE) uniqueVals.add(feat.properties.VARIEDADE);
+                          });
+                          const vals = Array.from(uniqueVals);
+                          if (vals.length === 1) return vals[0];
+                          return vals.length > 2 ? `${vals[0]}, ${vals[1]}...` : vals.join(", ");
+                      })() },
+                      { label: "Estágio", value: (() => {
+                          if (selectedTalhoes.length <= 1) return selectedTalhao?.properties?.ECORTE || "N/A";
+                          const uniqueVals = new Set();
+                          selectedTalhoes.forEach(id => {
+                            const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+                            if (feat && feat.properties?.ECORTE) uniqueVals.add(feat.properties.ECORTE);
+                          });
+                          const vals = Array.from(uniqueVals);
+                          if (vals.length === 1) return vals[0];
+                          return vals.length > 2 ? `${vals[0]}, ${vals[1]}...` : vals.join(", ");
+                      })() },
                       { label: "Área Total", value: (() => {
                           let totalArea = 0;
                           selectedTalhoes.forEach(id => {
@@ -1588,7 +1630,7 @@ function PostLoginScreen({ onLogout }) {
                     ].map((item, idx) => (
                       <div key={idx} className="rounded-2xl p-3 flex flex-col justify-center" style={{ background: "rgba(31, 38, 53, 0.7)" }}>
                         <span className="text-xs mb-1" style={{ color: palette.text2 }}>{item.label}</span>
-                        <span className="text-sm font-bold text-white break-words">{item.value}</span>
+                        <span className="text-sm font-bold text-white line-clamp-2" title={item.value}>{item.value}</span>
                       </div>
                     ))}
 
@@ -1641,7 +1683,7 @@ function PostLoginScreen({ onLogout }) {
                 </div>
               )}
 
-              <div className="absolute left-4 bottom-4 right-4 sm:right-auto z-20 flex flex-col gap-3 items-start transition-all duration-300" style={{ bottom: selectedTalhoes.length > 0 && window.innerWidth < 640 ? (infoCollapsed ? '90px' : '50vh') : '1rem' }}>
+              <div className="absolute left-4 bottom-4 right-4 sm:right-auto z-20 flex flex-col gap-3 items-start">
                 {!legendCollapsed ? (
                   <div className="w-auto sm:w-[250px] max-w-[calc(100vw-2rem)] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
                     <div className="px-4 pt-4 pb-2 flex items-center justify-between">
