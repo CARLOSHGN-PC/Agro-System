@@ -20,6 +20,10 @@ import { parseBrazilianFloat } from "../../utils/formatters";
  * @returns {JSX.Element} Conjunto de divs absolutas de UI.
  */
 export default function EstimativaPanels({
+  currentRodada,
+  setCurrentRodada,
+  availableRodadas,
+  createNewRodada,
   setFiltersOpen,
   selectedTalhoes,
   selectedTalhao,
@@ -49,7 +53,28 @@ export default function EstimativaPanels({
         <div className="p-4 flex items-start justify-between gap-3">
           <div>
             <div className="text-[18px] font-bold leading-tight">Estimativa<br/>Safra</div>
-            <div className="mt-3 inline-flex rounded-full px-3 py-1 text-xs font-medium" style={{ background: "rgba(255,255,255,0.10)", color: "#dbe4ec" }}>Filtro manual</div>
+            <div className="mt-3 inline-flex items-center gap-2">
+              <div className="relative">
+                <select
+                  value={currentRodada}
+                  onChange={(e) => {
+                     if (e.target.value === "new") {
+                        createNewRodada();
+                     } else {
+                        setCurrentRodada(e.target.value);
+                     }
+                  }}
+                  className="rounded-full px-3 py-1 text-xs font-bold appearance-none outline-none pr-8 cursor-pointer"
+                  style={{ background: "rgba(255,255,255,0.10)", color: "#dbe4ec" }}
+                >
+                  {availableRodadas.map(r => (
+                    <option key={r} value={r} style={{ color: "black" }}>{r}</option>
+                  ))}
+                  <option value="new" style={{ color: "black" }}>+ Nova Rodada</option>
+                </select>
+                <ChevronDown className="w-3 h-3 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#dbe4ec" }} />
+              </div>
+            </div>
           </div>
           <div className="flex gap-2">
             <button className="w-11 h-11 rounded-xl flex items-center justify-center transition-colors hover:bg-white/10" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setFiltersOpen(true)}>

@@ -178,10 +178,19 @@ export default function EstimativaModals({
                 <div className="text-center py-8 text-sm" style={{ color: palette.text2 }}>Nenhum histórico encontrado para esta safra.</div>
               ) : (
                 estimateHistory.map((item, idx) => (
-                  <div key={idx} className="rounded-2xl border p-4 hover:bg-white/5 transition-colors" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}>
-                    <div className="flex justify-between items-center mb-2">
-                      <div className="font-semibold text-[15px]">Versão {item.version}</div>
-                      <div className="text-xs" style={{ color: palette.text2 }}>{new Date(item.updatedAt?.seconds * 1000).toLocaleString()}</div>
+                  <div key={idx} className="rounded-2xl border p-4 hover:bg-white/5 transition-colors relative overflow-hidden" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.08)" }}>
+                    {item.rodada && (
+                       <div className="absolute top-0 right-0 px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-bl-xl" style={{ background: "rgba(212,175,55,0.15)", color: palette.gold }}>
+                         {item.rodada}
+                       </div>
+                    )}
+                    <div className="flex justify-between items-center mb-2 mt-1">
+                      <div className="font-semibold text-[15px] flex items-center gap-2">
+                         Versão {item.version}
+                      </div>
+                      <div className="text-xs" style={{ color: palette.text2 }}>
+                         {item.updatedAt ? new Date(item.updatedAt.seconds * 1000).toLocaleString() : "Data indisponível"}
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                       <div><span style={{ color: palette.text2 }}>Área:</span> {item.area} ha</div>
