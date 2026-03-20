@@ -1,5 +1,5 @@
 import { firestore } from "./firebase";
-import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, query, where, onSnapshot } from "firebase/firestore";
 
 // Offline-first imports
 import db from "./localDb";
@@ -90,6 +90,59 @@ export const saveEstimate = async (companyId, safra, talhaoId, estimateData) => 
     console.error("Erro fatal ao salvar estimativa localmente:", error);
     throw error;
   }
+};
+
+/**
+ * Inscreve-se em atualizações em tempo real (onSnapshot) para uma safra/empresa.
+ * Sempre que outro dispositivo (ex: o celular) atualizar o Firestore, o onSnapshot
+ * vai baixar as mudanças, injetar no Dexie e chamar o callback, atualizando o mapa na hora.
+ */
+export const subscribeToEstimatesRealtime = (companyId, safra, onUpdateCallback) => {
+    // Se não tiver net, não se inscreve. O Dexie sozinho vai suprir a tela pelo getAllEstimates.
+    if (!navigator.onLine) return () => {};
+
+    const constraints = [
+        where("companyId", "==", companyId),
+        where("safra", "==", safra)
+    ];
+
+    const q = query(collection(firestore, COLLECTION_ESTIMATIVAS), ...constraints);
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        let hasChanges = false;
+        const updates = [];
+
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added" || change.type === "modified") {
+                const fbData = change.doc.data();
+                hasChanges = true;
+
+                updates.push(async () => {
+                    const existing = await db.estimativas.get(change.doc.id);
+                    // Sobrescreve apenas se for um registro novo ou se não tiver um status "pending"
+                    // (para evitar que o snapshot destrua a fila offline atual do próprio dispositivo)
+                    if (!existing || existing.syncStatus === 'synced') {
+                        await db.estimativas.put({
+                            id: change.doc.id,
+                            ...fbData,
+                            syncStatus: 'synced',
+                            updatedAt: fbData.updatedAt?.toDate()?.toISOString() || new Date().toISOString()
+                        });
+                    }
+                });
+            }
+        });
+
+        if (hasChanges) {
+            await Promise.all(updates.map(u => u()));
+            // Quando terminar de atualizar o Dexie, avisa o React que os dados mudaram!
+            onUpdateCallback();
+        }
+    }, (error) => {
+        console.warn("Realtime sync lost or permission denied:", error);
+    });
+
+    return unsubscribe;
 };
 
 /**

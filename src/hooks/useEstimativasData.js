@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { fetchLatestGeoJson } from "../services/storage";
-import { saveEstimate, getEstimate, getEstimateHistory, getAllEstimates } from "../services/estimativa";
+import { saveEstimate, getEstimate, getEstimateHistory, getAllEstimates, subscribeToEstimatesRealtime } from "../services/estimativa";
 import { showError, showSuccess } from "../utils/alert";
 import { parseBrazilianFloat } from "../utils/formatters";
 import { getFazendaName, getUniqueTalhaoId } from "../utils/geoHelpers";
@@ -91,7 +91,20 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
   };
 
   useEffect(() => {
+    if (!currentCompanyId || !currentSafra) return;
     loadInitialData();
+
+    // Inscreve no Firebase para ouvir atualizações em tempo real (cross-device sync).
+    // Se o usuário salvar no celular, o Firestore será atualizado, o snapshot avisará,
+    // o Dexie será atualizado em background e o `refetchEstimates` será chamado, repintando o mapa!
+    const unsubscribeRealtime = subscribeToEstimatesRealtime(currentCompanyId, currentSafra, () => {
+        // Usa uma flag temporária para evitar que a promisse polua algo se desmontar rápido
+        refetchEstimates();
+    });
+
+    return () => {
+        if (unsubscribeRealtime) unsubscribeRealtime();
+    };
   }, [currentCompanyId, currentSafra]);
 
   // Listener para o evento global de sincronização completa
