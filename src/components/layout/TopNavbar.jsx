@@ -1,7 +1,9 @@
 import React from "react";
-import { Leaf, Menu, Bell, User } from "lucide-react";
+import { Leaf, Menu, Bell, User, CloudOff, CloudUpload, CheckCircle2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { palette } from "../../constants/theme";
+import db from "../../services/localDb";
+import { showSuccess } from "../../utils/alert";
 
 /**
  * TopNavbar.jsx
@@ -32,19 +34,62 @@ export default function TopNavbar({
   onLogout
 }) {
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
+  const [pendingCount, setPendingCount] = React.useState(0);
+  const [isSyncing, setIsSyncing] = React.useState(false);
 
+  // Monitora o estado da conexão e exibe toast de conclusão quando houver sync finalizado
   React.useEffect(() => {
     const handleOnline = () => setIsOffline(false);
     const handleOffline = () => setIsOffline(true);
 
+    const handleSyncCompleted = (e) => {
+      setIsSyncing(false);
+      if (e.detail && e.detail.count > 0) {
+        showSuccess(
+          "Sincronização Concluída",
+          `${e.detail.count} estimativa(s) enviada(s) para a nuvem com sucesso!`
+        );
+      }
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('sync-completed', handleSyncCompleted);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('sync-completed', handleSyncCompleted);
     };
   }, []);
+
+  // Hook no banco Dexie para mostrar a fila pendente ao vivo no ícone de nuvem
+  React.useEffect(() => {
+    const updatePendingCount = async () => {
+      try {
+        const count = await db.syncQueue.where('status').equals('pending').count();
+        setPendingCount(count);
+        // Se temos internet mas ainda há pendentes diminuindo, consideramos estar sincronizando
+        if (!isOffline && count > 0) {
+            setIsSyncing(true);
+        } else if (count === 0) {
+            setIsSyncing(false);
+        }
+      } catch (err) {
+        console.error("Erro ao ler fila de sync para o badge", err);
+      }
+    };
+
+    // Lê inicial
+    updatePendingCount();
+
+    // Podemos ouvir um evento que nós mesmos emitimos no app quando enfileiramos ou tentar ler num intervalo
+    // No caso como Dexie LiveQuery é um pouco mais chato de usar sem hooks nativos, faremos um poll a cada 3s caso offline
+    // Ou quando o app interage com o window
+    const interval = setInterval(updatePendingCount, 2500);
+
+    return () => clearInterval(interval);
+  }, [isOffline]);
 
   return (
     <div className="sticky top-0 z-30 h-16 border-b flex items-center justify-between px-3 sm:px-6" style={{ background: "rgba(10,10,10,0.82)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(18px)" }}>
@@ -59,18 +104,37 @@ export default function TopNavbar({
         </button>
       </div>
 
-      {/* Centro: Logo e Status Offline */}
-      <div className="flex flex-col items-center">
+      {/* Centro: Logo e Status de Conexão/Sincronização */}
+      <div className="flex flex-col items-center absolute left-1/2 transform -translate-x-1/2">
         <div className="flex items-center gap-2 sm:gap-3 text-white font-semibold text-lg sm:text-xl">
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.14)", color: palette.gold }}>
             <Leaf className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <span className="hidden sm:inline">AgroSystem</span>
         </div>
-        {isOffline && (
-          <span className="text-[10px] sm:text-xs font-medium text-orange-400 mt-0.5">
-            Modo Offline
-          </span>
+
+        {/* Indicadores dinâmicos de Rede/Sync */}
+        {isOffline ? (
+          <div className="flex items-center gap-1.5 mt-0.5 text-orange-400">
+            <CloudOff className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span className="text-[10px] sm:text-xs font-medium">
+              Offline {pendingCount > 0 ? `(${pendingCount} pendentes)` : ''}
+            </span>
+          </div>
+        ) : isSyncing && pendingCount > 0 ? (
+          <div className="flex items-center gap-1.5 mt-0.5 text-blue-400 animate-pulse">
+            <CloudUpload className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span className="text-[10px] sm:text-xs font-medium">
+              Sincronizando {pendingCount}...
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 mt-0.5 text-green-400 opacity-70">
+            <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+            <span className="text-[10px] sm:text-xs font-medium">
+              Sincronizado
+            </span>
+          </div>
         )}
       </div>
 

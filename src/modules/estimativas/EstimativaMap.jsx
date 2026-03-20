@@ -31,7 +31,7 @@ const MAPBOX_TOKEN = "pk.eyJ1IjoiY2FybG9zaGduIiwiYSI6ImNtZDk0bXVxeTA0MTcyam9sb2h
  * @param {Object} selectedTalhao - A info do ultimo talhão unico.
  * @returns {JSX.Element} Instância do mapbox `<Map>`.
  */
-export default function EstimativaMap({
+const EstimativaMap = React.memo(function EstimativaMap({
   mapRef,
   enhancedGeoJson,
   onMapClick,
@@ -185,6 +185,7 @@ export default function EstimativaMap({
               <Layer
                 id="talhoes-labels"
                 type="symbol"
+                minzoom={13} // OTIMIZAÇÃO: Mostra apenas quando tiver zoom adequado para não fritar CPU e não poluir
                 layout={{
                   "text-field": ["get", "TALHAO"],
                   "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
@@ -204,4 +205,6 @@ export default function EstimativaMap({
       </Map>
     </div>
   );
-}
+});
+
+export default EstimativaMap;
