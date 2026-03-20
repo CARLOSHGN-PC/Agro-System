@@ -404,6 +404,7 @@ function PostLoginScreen({ onLogout }) {
   const [selectedTalhao, setSelectedTalhao] = useState(null);
   const [selectedTalhoes, setSelectedTalhoes] = useState([]);
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(true);
+  const [infoCollapsed, setInfoCollapsed] = useState(false);
 
   // Default scope depends on selection
   const [scope, setScope] = useState("talhao");
@@ -760,6 +761,11 @@ function PostLoginScreen({ onLogout }) {
   };
 
   const handleSaveEstimate = async () => {
+    if (!formEstimativa.tch || parseBrazilianFloat(formEstimativa.tch) <= 0) {
+      showError("Atenção", "O TCH (Toneladas de Cana por Hectare) é obrigatório e deve ser maior que zero.");
+      return;
+    }
+
     setIsSaving(true);
     let successCount = 0;
 
@@ -831,6 +837,8 @@ function PostLoginScreen({ onLogout }) {
           loadEstimateData(selectedTalhao);
         }
       }
+
+      setInfoCollapsed(false);
 
       // Refresh all estimates
       await fetchEstimates();
@@ -911,6 +919,11 @@ function PostLoginScreen({ onLogout }) {
       setSelectedTalhoes(prev => {
         const newSelection = prev.includes(featureId) ? prev.filter(id => id !== featureId) : [...prev, featureId];
 
+        // Automatically expand the panel if this is the first item being selected
+        if (prev.length === 0 && newSelection.length > 0) {
+           setInfoCollapsed(false);
+        }
+
         // Se após clicar, a seleção tiver apenas 1 item, carregue seus dados de estimativa
         if (newSelection.length === 1) {
           const singleFeature = enhancedGeoJson.features.find(f => f.id === newSelection[0]);
@@ -933,6 +946,7 @@ function PostLoginScreen({ onLogout }) {
       // Clicked outside any feature
       setSelectedTalhoes([]);
       setSelectedTalhao(null);
+      setInfoCollapsed(false);
     }
   };
 
@@ -1489,15 +1503,16 @@ function PostLoginScreen({ onLogout }) {
                       <div className="text-[20px] font-bold mt-1 text-white">{selectedTalhoes.length > 1 ? `${selectedTalhoes.length} Selecionados` : (selectedTalhao?.properties?.TALHAO || "N/A")}</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="px-3 py-1.5 rounded-full text-xs font-medium border" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.12)", color: palette.text2 }} onClick={() => setSelectedTalhoes([])}>Limpar</button>
-                      <button onClick={() => setSelectedTalhoes([])} className="p-1.5 rounded-full hover:bg-white/10 transition-colors">
+                      <button className="px-3 py-1.5 rounded-full text-xs font-medium border" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.12)", color: palette.text2 }} onClick={() => setInfoCollapsed(!infoCollapsed)}>{infoCollapsed ? "Expandir" : "Recolher"}</button>
+                      <button onClick={() => {setSelectedTalhoes([]); setInfoCollapsed(false);}} className="p-1.5 rounded-full hover:bg-white/10 transition-colors">
                         <X className="w-4 h-4 text-white/60" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="p-4 grid grid-cols-2 gap-3 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)" }}>
-                    {[
+                  {!infoCollapsed && (
+                    <div className="p-4 grid grid-cols-2 gap-3 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)" }}>
+                      {[
                       { label: "Fazenda", value: selectedTalhoes.length > 1 ? "Múltiplas" : (selectedTalhao?.properties?.FAZENDA || "N/A") },
                       { label: "Variedade", value: selectedTalhoes.length > 1 ? "Múltiplas" : (selectedTalhao?.properties?.VARIEDADE || "N/A") },
                       { label: "Estágio", value: selectedTalhoes.length > 1 ? "Múltiplos" : (selectedTalhao?.properties?.ECORTE || "N/A") },
@@ -1509,7 +1524,7 @@ function PostLoginScreen({ onLogout }) {
                               totalArea += parseBrazilianFloat(feat.properties?.AREA);
                             }
                           });
-                          return `${totalArea.toFixed(2).replace('.', ',')} ha`;
+                          return `${totalArea.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha`;
                         })()
                       },
                       { label: "Status", value: selectedTalhoes.length > 1 ? "-" : (isLoadingEstimate ? "Carregando..." : (currentEstimate ? "Estimado" : "Pendente")) },
@@ -1555,17 +1570,18 @@ function PostLoginScreen({ onLogout }) {
                       </button>
                     </div>
 
-                    <div className="col-span-2 mt-1">
-                      <button
-                        className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] border transition-colors hover:bg-white/5"
-                        style={{ background: "transparent", borderColor: "rgba(255,255,255,0.12)", color: "#ffffff" }}
-                        onClick={() => { setSelectedTalhao(null); setSelectedTalhoes([]); }}
-                      >
-                        <X className="w-4 h-4" />
-                        Limpar seleção
-                      </button>
+                      <div className="col-span-2 mt-1">
+                        <button
+                          className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] border transition-colors hover:bg-white/5"
+                          style={{ background: "transparent", borderColor: "rgba(255,255,255,0.12)", color: "#ffffff" }}
+                          onClick={() => { setSelectedTalhao(null); setSelectedTalhoes([]); setInfoCollapsed(false); }}
+                        >
+                          <X className="w-4 h-4" />
+                          Limpar seleção
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
@@ -1605,14 +1621,14 @@ function PostLoginScreen({ onLogout }) {
                     <div className="px-4 pt-4 pb-2 flex items-center justify-between">
                       <div>
                         <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: "#c6d1dc" }}>Resumo</div>
-                        <div className="text-[17px] font-bold mt-1">{summaryData.talhoes} talhões • {summaryData.area.toFixed(2).replace('.', ',')} ha</div>
+                        <div className="text-[17px] font-bold mt-1">{summaryData.talhoes} talhões • {summaryData.area.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha</div>
                       </div>
                       <button className="rounded-xl px-3 py-2 text-sm font-medium" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setSummaryCollapsed(true)}>Recolher</button>
                     </div>
                     <div className="grid grid-cols-2 gap-3 p-4 pt-2">
                       {[
                         ["Talhões", String(summaryData.talhoes)],
-                        ["Área filtrada", `${summaryData.area.toFixed(2).replace('.', ',')} ha`],
+                        ["Área filtrada", `${summaryData.area.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha`],
                         ["Estimados", String(summaryData.estimados)],
                         ["Pendentes", String(summaryData.pendentes)],
                         ["Toneladas", String(summaryData.toneladas)]
