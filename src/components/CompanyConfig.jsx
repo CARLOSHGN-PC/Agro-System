@@ -70,8 +70,8 @@ export default function CompanyConfig({ onUploadSuccess }) {
   };
 
   return (
-    <div className="p-6 sm:p-10 max-w-5xl mx-auto text-white">
-      <div className="mb-8">
+    <div className="p-4 sm:p-10 max-w-5xl mx-auto text-white">
+      <div className="mb-6 sm:mb-8">
         <h1 className="text-3xl font-semibold flex items-center gap-3">
           <Map className="w-8 h-8" style={{ color: palette.gold }} />
           Configuração da Empresa
@@ -89,16 +89,16 @@ export default function CompanyConfig({ onUploadSuccess }) {
           borderColor: "rgba(230,199,107,0.18)",
         }}
       >
-        <div className="p-6 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
-          <h2 className="text-xl font-medium">Importação de Contornos (Shapefile)</h2>
+        <div className="p-4 sm:p-6 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <h2 className="text-lg sm:text-xl font-medium">Importação de Contornos (Shapefile)</h2>
           <p className="text-sm mt-1" style={{ color: palette.text2 }}>
             Faça upload do arquivo .ZIP contendo o shapefile ou selecione os arquivos soltos (.shp, .shx, .dbf, .prj, etc).
           </p>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-6">
           <div
-            className="border-2 border-dashed rounded-[20px] p-8 text-center transition-colors duration-200"
+            className="border-2 border-dashed rounded-[20px] p-6 sm:p-8 text-center transition-colors duration-200"
             style={{
               borderColor: "rgba(255,255,255,0.15)",
               background: "rgba(255,255,255,0.02)",

@@ -276,12 +276,12 @@ function LoginScreen({ onLogin }) {
           </div>
         </div>
 
-        <div className="flex items-center justify-center p-6 sm:p-10">
+        <div className="flex items-center justify-center p-4 sm:p-10 w-full min-h-screen lg:min-h-0">
           <motion.div
             initial={{ opacity: 0, scale: 0.96, y: 16 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ duration: 0.75 }}
-            className="w-full max-w-md rounded-[28px] border backdrop-blur-2xl shadow-2xl overflow-hidden"
+            className="w-full max-w-md rounded-[24px] sm:rounded-[28px] border backdrop-blur-2xl shadow-2xl overflow-hidden relative z-20"
             style={{
               background: "linear-gradient(180deg, rgba(22,24,28,0.78), rgba(18,20,24,0.66))",
               borderColor: "rgba(230,199,107,0.18)",
@@ -1055,16 +1055,16 @@ function PostLoginScreen({ onLogout }) {
 
       <AnimatePresence>
         {estimateOpen && modalShell(
-          <motion.div initial={{ opacity: 0, y: 14, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.98 }} className="w-full max-w-[920px] rounded-[26px] overflow-hidden border" style={{ background: "#111a2d", borderColor: "rgba(255,255,255,0.12)", boxShadow: "0 10px 30px rgba(0,0,0,0.28)" }}>
-            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
+          <motion.div initial={{ opacity: 0, y: 14, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.98 }} className="w-full max-w-[920px] max-h-[90vh] flex flex-col rounded-[26px] overflow-hidden border" style={{ background: "#111a2d", borderColor: "rgba(255,255,255,0.12)", boxShadow: "0 10px 30px rgba(0,0,0,0.28)" }}>
+            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b shrink-0" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
               <div>
                 <h2 className="text-[22px] font-semibold">Nova estimativa</h2>
                 <p className="text-sm mt-1" style={{ color: palette.text2 }}>Revise o escopo da estimativa e confirme os dados antes de salvar.</p>
               </div>
               <button className="rounded-xl border px-3 py-2" style={{ borderColor: "rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)" }} onClick={() => setEstimateOpen(false)}>✕</button>
             </div>
-            <div className="p-5 max-h-[70vh] overflow-auto space-y-4">
-              <div className="grid md:grid-cols-4 gap-3">
+            <div className="p-5 overflow-y-auto space-y-4 flex-1">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
                   ["Fundo agrícola / Fazenda", scope === "talhao" ? ((selectedTalhao?.properties?.FUNDO_AGR && selectedTalhao?.properties?.FAZENDA) ? `${selectedTalhao.properties.FUNDO_AGR} - ${selectedTalhao.properties.FAZENDA}` : selectedTalhao?.properties?.FAZENDA || selectedTalhao?.properties?.FUNDO_AGR || "N/A") : (scope === "selecionados" && selectedTalhoes.length > 0 ? ((enhancedGeoJson.features.find(f => f.id === selectedTalhoes[0])?.properties?.FUNDO_AGR && enhancedGeoJson.features.find(f => f.id === selectedTalhoes[0])?.properties?.FAZENDA) ? `${enhancedGeoJson.features.find(f => f.id === selectedTalhoes[0]).properties.FUNDO_AGR} - ${enhancedGeoJson.features.find(f => f.id === selectedTalhoes[0]).properties.FAZENDA}` : "Múltiplos/Variados") : "Várias")],
                   ["Talhão", scope === "talhao" ? (selectedTalhao?.properties?.TALHAO || "N/A") : (scope === "selecionados" ? `${selectedTalhoes.length} selecionados` : "Múltiplos")],
@@ -1077,7 +1077,7 @@ function PostLoginScreen({ onLogout }) {
                   </div>
                 ))}
               </div>
-              <div className="grid md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 <div className="flex flex-col gap-2">
                   <label className="text-xs" style={{ color: palette.text2 }}>Safra</label>
                   <input readOnly value={currentSafra} className="rounded-2xl border px-4 py-3 outline-none opacity-60" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
@@ -1103,7 +1103,7 @@ function PostLoginScreen({ onLogout }) {
                   <input readOnly value="Carlos" className="rounded-2xl border px-4 py-3 outline-none opacity-60" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
                 </div>
               </div>
-              <div className="grid md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                 {[
                   ["talhao", "Talhão atual", "Grava apenas no talhão selecionado."],
                   ["selecionados", "Selecionados", "Usa a seleção múltipla do mapa."],
@@ -1137,7 +1137,7 @@ function PostLoginScreen({ onLogout }) {
                 <textarea placeholder="Ao salvar, cada reestimativa gera uma nova versão por safra sem apagar o histórico anterior." className="rounded-2xl border px-4 py-3 min-h-[110px] outline-none" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-5 pb-5">
+            <div className="flex justify-end gap-3 px-5 py-4 border-t shrink-0" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
               <button className="rounded-xl border px-4 py-3 hover:bg-white/5 transition-colors" style={{ borderColor: "rgba(255,255,255,0.12)", background: "transparent" }} onClick={() => setEstimateOpen(false)}>Cancelar</button>
               <button disabled={isSaving} className="rounded-xl px-4 py-3 transition-transform hover:scale-[1.02] disabled:opacity-50" style={{ background: "linear-gradient(135deg, #f59e0b, #f97316)", color: "white" }} onClick={handleSaveEstimate}>
                 {isSaving ? "Salvando..." : "Salvar estimativa"}
@@ -1149,15 +1149,15 @@ function PostLoginScreen({ onLogout }) {
 
       <AnimatePresence>
         {historyOpen && modalShell(
-          <motion.div initial={{ opacity: 0, y: 14, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.98 }} className="w-full max-w-[620px] rounded-[26px] overflow-hidden border" style={{ background: "#111a2d", borderColor: "rgba(255,255,255,0.12)", boxShadow: "0 10px 30px rgba(0,0,0,0.28)" }}>
-            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
+          <motion.div initial={{ opacity: 0, y: 14, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.98 }} className="w-full max-w-[620px] max-h-[90vh] flex flex-col rounded-[26px] overflow-hidden border" style={{ background: "#111a2d", borderColor: "rgba(255,255,255,0.12)", boxShadow: "0 10px 30px rgba(0,0,0,0.28)" }}>
+            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b shrink-0" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
               <div>
                 <h2 className="text-[22px] font-semibold">Histórico de Estimativas</h2>
                 <p className="text-sm mt-1" style={{ color: palette.text2 }}>Safra {currentSafra}</p>
               </div>
               <button className="rounded-xl border px-3 py-2" style={{ borderColor: "rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)" }} onClick={() => setHistoryOpen(false)}>✕</button>
             </div>
-            <div className="p-5 max-h-[60vh] overflow-y-auto space-y-3">
+            <div className="p-5 overflow-y-auto space-y-3 flex-1">
               {estimateHistory.length === 0 ? (
                 <div className="text-center py-8 text-sm" style={{ color: palette.text2 }}>Nenhum histórico encontrado para esta safra.</div>
               ) : (
@@ -1167,7 +1167,7 @@ function PostLoginScreen({ onLogout }) {
                       <div className="font-semibold text-[15px]">Versão {item.version}</div>
                       <div className="text-xs" style={{ color: palette.text2 }}>{new Date(item.updatedAt?.seconds * 1000).toLocaleString()}</div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
                       <div><span style={{ color: palette.text2 }}>Área:</span> {item.area} ha</div>
                       <div><span style={{ color: palette.text2 }}>TCH:</span> {item.tch}</div>
                       <div><span style={{ color: palette.text2 }}>Toneladas:</span> {item.toneladas}</div>
@@ -1182,15 +1182,15 @@ function PostLoginScreen({ onLogout }) {
 
       <AnimatePresence>
         {filtersOpen && modalShell(
-          <motion.div initial={{ opacity: 0, y: 14, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.98 }} className="w-full max-w-[620px] rounded-[26px] overflow-hidden border" style={{ background: "#111a2d", borderColor: "rgba(255,255,255,0.12)", boxShadow: "0 10px 30px rgba(0,0,0,0.28)" }}>
-            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
+          <motion.div initial={{ opacity: 0, y: 14, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: 0.98 }} className="w-full max-w-[620px] max-h-[90vh] flex flex-col rounded-[26px] overflow-hidden border" style={{ background: "#111a2d", borderColor: "rgba(255,255,255,0.12)", boxShadow: "0 10px 30px rgba(0,0,0,0.28)" }}>
+            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b shrink-0" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
               <div>
                 <h2 className="text-[22px] font-semibold">Filtros do mapa</h2>
                 <p className="text-sm mt-1" style={{ color: palette.text2 }}>Selecione o fundo agrícola/fazenda, variedade, corte e talhão que deseja visualizar.</p>
               </div>
               <button className="rounded-xl border px-3 py-2" style={{ borderColor: "rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)" }} onClick={() => setFiltersOpen(false)}>✕</button>
             </div>
-            <div className="p-5 grid sm:grid-cols-2 gap-3">
+            <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto flex-1">
               <div className="flex flex-col gap-2">
                 <label className="text-xs" style={{ color: palette.text2 }}>Fundo agrícola / Fazenda</label>
                 <div className="relative">
@@ -1255,7 +1255,7 @@ function PostLoginScreen({ onLogout }) {
                 </div>
               </div>
             </div>
-            <div className="flex justify-end gap-3 px-5 pb-5">
+            <div className="flex justify-end gap-3 px-5 py-4 border-t shrink-0" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
               <button className="rounded-xl border px-4 py-3" style={{ borderColor: "rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)" }} onClick={() => {
                 setFilters({fazenda: "", variedade: "", corte: "", talhao: ""});
                 setAppliedFilters({fazenda: "", variedade: "", corte: "", talhao: ""});
@@ -1271,32 +1271,32 @@ function PostLoginScreen({ onLogout }) {
       </AnimatePresence>
 
       <div className="relative z-10 min-h-screen flex flex-col">
-        <div className="sticky top-0 z-30 h-16 border-b flex items-center justify-between px-4 sm:px-6" style={{ background: "rgba(10,10,10,0.82)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(18px)" }}>
-          <div className="flex items-center gap-4">
+        <div className="sticky top-0 z-30 h-16 border-b flex items-center justify-between px-3 sm:px-6" style={{ background: "rgba(10,10,10,0.82)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(18px)" }}>
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={() => setMenuOpen((v) => !v)}
-              className="w-11 h-11 rounded-2xl flex items-center justify-center"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl flex items-center justify-center"
               style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", color: palette.white }}
             >
               <Menu className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="flex items-center gap-3 text-white font-semibold text-xl">
-            <div className="w-9 h-9 rounded-2xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.14)", color: palette.gold }}>
-              <Leaf className="w-5 h-5" />
+          <div className="flex items-center gap-2 sm:gap-3 text-white font-semibold text-lg sm:text-xl">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.14)", color: palette.gold }}>
+              <Leaf className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
-            <span>AgroSystem</span>
+            <span className="hidden sm:inline">AgroSystem</span>
           </div>
 
-          <div className="flex items-center gap-3 relative">
+          <div className="flex items-center gap-2 sm:gap-3 relative">
             <div className="relative">
               <button
                 onClick={() => {
                   setNotificationsOpen((v) => !v);
                   setProfileOpen(false);
                 }}
-                className="w-11 h-11 rounded-full flex items-center justify-center"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center"
                 style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", color: palette.white }}
               >
                 <Bell className="w-5 h-5" />
@@ -1325,7 +1325,7 @@ function PostLoginScreen({ onLogout }) {
                   setProfileOpen((v) => !v);
                   setNotificationsOpen(false);
                 }}
-                className="w-11 h-11 rounded-full flex items-center justify-center"
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center"
                 style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", color: palette.white }}
               >
                 <User className="w-5 h-5" />
@@ -1466,7 +1466,7 @@ function PostLoginScreen({ onLogout }) {
               </div>
               <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(5,5,5,0.14), rgba(5,5,5,0.08) 20%, rgba(5,5,5,0.18) 100%)" }} />
 
-              <div className="absolute top-4 left-4 w-[400px] rounded-[22px] border overflow-hidden z-10" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
+              <div className="absolute top-4 left-4 right-4 sm:right-auto w-auto sm:w-[400px] rounded-[22px] border overflow-hidden z-10" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
                 <div className="p-4 flex items-start justify-between gap-3">
                   <div>
                     <div className="text-[18px] font-bold leading-tight">Estimativa<br/>Safra</div>
@@ -1482,7 +1482,7 @@ function PostLoginScreen({ onLogout }) {
 
               {/* Tap Info Panel */}
               {selectedTalhoes.length > 0 && (
-                <div className="absolute right-4 top-4 w-[340px] rounded-3xl border overflow-hidden z-20 shadow-2xl flex flex-col" style={{ background: "rgba(23, 29, 43, 0.95)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)" }}>
+                <div className="absolute top-28 sm:top-4 left-4 sm:left-auto right-4 w-auto sm:w-[340px] rounded-3xl border overflow-hidden z-20 shadow-2xl flex flex-col" style={{ background: "rgba(23, 29, 43, 0.95)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)" }}>
                   <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
                     <div>
                       <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: palette.text2 }}>{selectedTalhoes.length > 1 ? "TALHÕES" : "TALHÃO"}</div>
@@ -1569,9 +1569,9 @@ function PostLoginScreen({ onLogout }) {
                 </div>
               )}
 
-              <div className="absolute left-4 bottom-4 z-20 flex flex-col gap-3">
+              <div className="absolute left-4 bottom-4 right-4 sm:right-auto z-20 flex flex-col gap-3 items-start">
                 {!legendCollapsed ? (
-                  <div className="w-[250px] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
+                  <div className="w-full sm:w-[250px] max-w-[calc(100vw-2rem)] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
                     <div className="px-4 pt-4 pb-2 flex items-center justify-between">
                       <div className="font-bold text-[15px]">Estágios de corte</div>
                       <div className="flex gap-2">
@@ -1601,7 +1601,7 @@ function PostLoginScreen({ onLogout }) {
                 )}
 
                 {!summaryCollapsed ? (
-                  <div className="w-[420px] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
+                  <div className="w-full sm:w-[420px] max-w-[calc(100vw-2rem)] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
                     <div className="px-4 pt-4 pb-2 flex items-center justify-between">
                       <div>
                         <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: "#c6d1dc" }}>Resumo</div>
