@@ -27,8 +27,8 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
   // Configuração e Dados
   const [geoJsonData, setGeoJsonData] = useState(null);
   const [allEstimates, setAllEstimates] = useState([]);
-  const [currentRodada, setCurrentRodada] = useState("Rodada 1");
-  const [availableRodadas, setAvailableRodadas] = useState(["Rodada 1"]);
+  const [currentRodada, setCurrentRodada] = useState("Estimativa");
+  const [availableRodadas, setAvailableRodadas] = useState(["Estimativa"]);
 
   // Modais de histórico e Form de Salvamento
   const [currentEstimate, setCurrentEstimate] = useState(null);
@@ -71,12 +71,24 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
     if (resEstAll.success) {
        const allData = resEstAll.data;
 
-       const distinctRodadas = new Set(["Rodada 1"]);
+       const distinctRodadas = new Set(["Estimativa"]);
        allData.forEach(e => {
-         if (e.rodada) distinctRodadas.add(e.rodada);
+         if (e.rodada) {
+             // Mantém compatibilidade com o legado convertendo "Rodada 1" -> "Estimativa" e "Rodada X" -> "Reestimativa X-1" visualmente se necessário, mas melhor forçar a string pura do banco.
+             distinctRodadas.add(e.rodada);
+         }
        });
 
-       const arrRodadas = Array.from(distinctRodadas).sort((a,b) => {
+       const arrRodadas = Array.from(distinctRodadas).sort((a, b) => {
+         // Garante que "Estimativa" venha sempre primeiro
+         if (a === "Estimativa") return -1;
+         if (b === "Estimativa") return 1;
+
+         // Se tiver "Rodada 1" no banco antigo, trata como primário também para ordenação
+         if (a === "Rodada 1") return -1;
+         if (b === "Rodada 1") return 1;
+
+         // Ordena "Reestimativa 1", "Reestimativa 2" por número natural
          return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
        });
 
@@ -85,7 +97,12 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
        const highestRodada = arrRodadas[arrRodadas.length - 1];
        setCurrentRodada(highestRodada);
 
-       const filtered = allData.filter(e => (e.rodada || "Rodada 1") === highestRodada);
+       const filtered = allData.filter(e => {
+         const r = e.rodada || "Estimativa";
+         // Se o banco tá sujo com "Rodada 1" e estamos filtrando "Estimativa", mapeamos
+         if (highestRodada === "Estimativa" && r === "Rodada 1") return true;
+         return r === highestRodada;
+       });
        setAllEstimates(filtered);
     }
   };
@@ -150,8 +167,8 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
    * limpando automaticamente o visual do mapa.
    */
   const createNewRodada = () => {
-    const nextNumber = availableRodadas.length + 1;
-    const newName = `Rodada ${nextNumber}`;
+    const nextNumber = availableRodadas.length; // Estimativa é o index 0 (1º item)
+    const newName = `Reestimativa ${nextNumber}`;
     setAvailableRodadas(prev => [...prev, newName]);
     setCurrentRodada(newName);
   };

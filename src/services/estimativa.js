@@ -19,7 +19,7 @@ const COLLECTION_HISTORICO = "estimativas_safra_historico";
 
 export const saveEstimate = async (companyId, safra, talhaoId, estimateData) => {
   try {
-    const rodadaKey = estimateData.rodada ? String(estimateData.rodada).replace(/ /g, '_') : 'Rodada_1';
+    const rodadaKey = estimateData.rodada ? String(estimateData.rodada).replace(/ /g, '_') : 'Estimativa';
     const estimateDocId = `${companyId}_${safra.replace('/', '-')}_${rodadaKey}_${talhaoId}`;
 
     // 1. OBTENDO VERSÃO LOCAL: tenta pegar o antigo pra incrementar a versão
@@ -63,7 +63,7 @@ export const saveEstimate = async (companyId, safra, talhaoId, estimateData) => 
         companyId,
         safra,
         talhaoId,
-        rodada: estimateData.rodada || "Rodada 1",
+        rodada: estimateData.rodada || "Estimativa",
         version,
         ...estimateData,
         createdAt: isoDate
@@ -80,7 +80,7 @@ export const saveEstimate = async (companyId, safra, talhaoId, estimateData) => 
         companyId,
         safra,
         talhaoId,
-        rodada: estimateData.rodada || "Rodada 1",
+        rodada: estimateData.rodada || "Estimativa",
         version,
         ...estimateData
     });
@@ -189,7 +189,7 @@ export const getAllEstimates = async (companyId, safra, rodada = null) => {
  * Puxa os detalhes da estimativa de 1 talhão para abrir no Formulário.
  * Lê do localDb, com uma checagem rápida no Firebase caso nada seja encontrado.
  */
-export const getEstimate = async (companyId, safra, talhaoId, rodada = "Rodada 1") => {
+export const getEstimate = async (companyId, safra, talhaoId, rodada = "Estimativa") => {
   try {
     const rodadaKey = String(rodada).replace(/ /g, '_');
     const estimateDocId = `${companyId}_${safra.replace('/', '-')}_${rodadaKey}_${talhaoId}`;

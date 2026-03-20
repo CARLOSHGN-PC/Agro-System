@@ -107,7 +107,7 @@ export default function PostLoginScreen({ onLogout }) {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden" style={{ background: `linear-gradient(160deg, ${palette.bg2} 0%, ${palette.tech} 60%, ${palette.tech2} 100%)`, color: palette.white }}>
+    <div className="h-[100dvh] relative overflow-hidden flex flex-col" style={{ background: `linear-gradient(160deg, ${palette.bg2} 0%, ${palette.tech} 60%, ${palette.tech2} 100%)`, color: palette.white }}>
       <AnimatedBackground />
       <GlowOrb className="top-[-70px] right-[-70px] bg-yellow-300/20" size={260} delay={0.2} />
       <GlowOrb className="bottom-[8%] left-[-60px] bg-blue-500/20" size={300} delay={0.8} />
@@ -159,7 +159,7 @@ export default function PostLoginScreen({ onLogout }) {
       )}
 
       {/* --- CORPO DA PÁGINA (NAVBAR + CONTEÚDO) --- */}
-      <div className="relative z-10 min-h-screen flex flex-col">
+      <div className="relative z-10 h-full flex flex-col">
         <TopNavbar
           setMenuOpen={setMenuOpen}
           notificationsOpen={notificationsOpen}
@@ -170,7 +170,7 @@ export default function PostLoginScreen({ onLogout }) {
           onLogout={onLogout}
         />
 
-        <div className="relative flex-1 min-h-[calc(100vh-64px)] overflow-hidden">
+        <div className="relative flex-1 overflow-hidden">
           {activeModule === "estimativa" ? (
             <>
               {/* O componente de renderização pura do WebGL via Mapbox */}
