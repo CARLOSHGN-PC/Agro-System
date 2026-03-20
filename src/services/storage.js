@@ -26,70 +26,87 @@ export const uploadJson = async (path, jsonObject) => {
 };
 
 export const fetchLatestGeoJson = async (companyId = "empresa_default") => {
-  // 1. TENTATIVA RÁPIDA: Busca o último mapa cacheado no Dexie para essa empresa
+  let cachedData = null;
+
+  // 1. OBTENÇÃO LOCAL (Sempre tenta ler o cache primeiro)
+  // Isso garante que a UI nunca espere a nuvem se já houver um mapa baixado (verdadeiro Offline-First).
   try {
       const localMap = await db.mapData.get(`${companyId}_default`);
-      if (localMap && !navigator.onLine) {
-          // Se estamos offline e temos cache, usamos o cache e pronto
-          return { data: JSON.parse(localMap.geojson), error: null, source: 'local' };
+      if (localMap && localMap.geojson) {
+          cachedData = JSON.parse(localMap.geojson);
+          // Retornamos os dados cacheados na hora. Não amarramos o retorno inicial à internet.
       }
   } catch (err) {
       console.warn("Erro ao buscar mapa local do Dexie", err);
   }
 
-  // Se estamos online, tentamos puxar a versão mais nova do Storage
+  // 2. VERIFICAÇÃO DE REDE EM BACKGROUND (Se online, baixa mapa novo)
+  // Como a interface (React) aguarda a promise terminar no onMount, se já tivermos `cachedData`
+  // nós devolvemos o cache local IMEDIATAMENTE.
+  // Criamos uma lógica para que, se não houver cache, ele seja forçado a esperar a nuvem.
+
   if (navigator.onLine) {
-      try {
-        const listRef = ref(storage, `${companyId}/mapas/processados/`);
-        const res = await listAll(listRef);
+     const fetchFromRemote = async () => {
+         try {
+            const listRef = ref(storage, `${companyId}/mapas/processados/`);
+            const res = await listAll(listRef);
 
-        if (res.items.length === 0) return { data: null, error: null };
+            if (res.items.length > 0) {
+                const items = res.items.map(item => {
+                    const match = item.name.match(/geojson_(\d+)\.json/);
+                    return { itemRef: item, timestamp: match ? parseInt(match[1]) : 0 };
+                });
 
-        const items = res.items.map(item => {
-          const match = item.name.match(/geojson_(\d+)\.json/);
-          return {
-            itemRef: item,
-            timestamp: match ? parseInt(match[1]) : 0
-          };
-        });
+                items.sort((a, b) => b.timestamp - a.timestamp);
+                const latestRef = items[0].itemRef;
 
-        items.sort((a, b) => b.timestamp - a.timestamp);
-        const latestRef = items[0].itemRef;
+                const url = await getDownloadURL(latestRef);
+                const response = await fetch(url);
+                if (response.ok) {
+                    const json = await response.json();
 
-        const url = await getDownloadURL(latestRef);
-        const response = await fetch(url);
-        if (!response.ok) throw new Error("Failed to fetch GeoJSON via URL");
+                    // ATUALIZAÇÃO DO CACHE: Salva/Sobrescreve no Dexie pra usar offline depois
+                    await db.mapData.put({
+                        id: `${companyId}_default`,
+                        companyId,
+                        geojson: JSON.stringify(json),
+                        updatedAt: new Date().toISOString()
+                    });
 
-        const json = await response.json();
-
-        // 2. ATUALIZAÇÃO DO CACHE: Salva o novo mapa puxado da nuvem no Dexie pra usar offline depois
-        await db.mapData.put({
-            id: `${companyId}_default`,
-            companyId,
-            geojson: JSON.stringify(json),
-            updatedAt: new Date().toISOString()
-        });
-
-        return { data: json, error: null, source: 'remote' };
-      } catch (error) {
-        console.error("Error fetching latest GeoJSON:", error);
-
-        // Se a chamada de rede falhou, mas temos cache, caímos nele
-        try {
-            const fallbackLocal = await db.mapData.get(`${companyId}_default`);
-            if (fallbackLocal) {
-                 return { data: JSON.parse(fallbackLocal.geojson), error: null, source: 'local_fallback' };
+                    return json;
+                }
             }
-        } catch(e) {}
+         } catch (error) {
+            console.error("Error fetching remote GeoJSON:", error);
+         }
+         return null;
+     };
 
-        let errorMessage = "Erro ao carregar o mapa do Storage.";
-        if (error.code === 'storage/unauthorized' || (error.message && error.message.includes('403'))) {
-          errorMessage = "Erro de permissão no Firebase Storage. Verifique as regras de segurança.";
-        }
-        return { data: null, error: errorMessage };
-      }
+     // Se NUNCA tivermos entrado no app (não tem cache), precisamos bloquear e esperar a nuvem:
+     if (!cachedData) {
+         try {
+             const remoteJson = await fetchFromRemote();
+             if (remoteJson) {
+                 return { data: remoteJson, error: null, source: 'remote' };
+             } else {
+                 return { data: null, error: "Nenhum mapa encontrado no servidor.", source: 'remote' };
+             }
+         } catch (e) {
+             return { data: null, error: "Erro de permissão ou falha de rede ao baixar mapa do servidor." };
+         }
+     } else {
+         // Se já tínhamos cache, baixamos do Firebase apenas em "background" de forma assíncrona,
+         // e se ele baixar algo novo, fica lá gravado pro próximo F5 do usuário.
+         // Isso evita a tela branca de carregamento!
+         fetchFromRemote().catch(e => console.warn(e));
+         return { data: cachedData, error: null, source: 'local' };
+     }
   }
 
-  // Se chegou aqui, tá offline e não tem cache
+  // 3. CENÁRIO OFFLINE (ou Sem Resposta)
+  if (cachedData) {
+      return { data: cachedData, error: null, source: 'local_fallback' };
+  }
+
   return { data: null, error: "Você está offline e ainda não baixou nenhum mapa para visualização." };
 };
