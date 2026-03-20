@@ -782,8 +782,31 @@ function PostLoginScreen({ onLogout }) {
       } else if (scope === "filtro" && enhancedGeoJson) {
         talhoesToSave.push(...enhancedGeoJson.features);
       } else if (scope === "fazenda" && geoJsonData) {
-        // Simple mock for all farm: just use all geojson data
-        talhoesToSave.push(...geoJsonData.features);
+        // Only target talhoes that belong to the currently selected Fazenda (and Fundo Agrícola, if present)
+        let referenceFazenda = "";
+        let referenceFundo = "";
+        if (selectedTalhao && selectedTalhao.properties) {
+          referenceFazenda = selectedTalhao.properties.FAZENDA || "";
+          referenceFundo = selectedTalhao.properties.FUNDO_AGR || "";
+        } else if (selectedTalhoes.length > 0) {
+          const firstSelected = geoJsonData.features.find(f => f.id === selectedTalhoes[0]);
+          if (firstSelected && firstSelected.properties) {
+            referenceFazenda = firstSelected.properties.FAZENDA || "";
+            referenceFundo = firstSelected.properties.FUNDO_AGR || "";
+          }
+        }
+
+        if (referenceFazenda) {
+          const farmFeatures = geoJsonData.features.filter(feat => {
+             const featFaz = feat.properties.FAZENDA || "";
+             const featFundo = feat.properties.FUNDO_AGR || "";
+             return featFaz === referenceFazenda && featFundo === referenceFundo;
+          });
+          talhoesToSave.push(...farmFeatures);
+        } else {
+          // Fallback just in case
+          talhoesToSave.push(...geoJsonData.features);
+        }
       }
 
       // Save for all selected talhões concurrently
@@ -891,8 +914,29 @@ function PostLoginScreen({ onLogout }) {
         totalArea += parseBrazilianFloat(feat.properties?.AREA);
       });
     } else if (scope === "fazenda" && geoJsonData) {
+      let referenceFazenda = "";
+      let referenceFundo = "";
+      if (selectedTalhao && selectedTalhao.properties) {
+        referenceFazenda = selectedTalhao.properties.FAZENDA || "";
+        referenceFundo = selectedTalhao.properties.FUNDO_AGR || "";
+      } else if (selectedTalhoes.length > 0) {
+        const firstSelected = geoJsonData.features.find(f => f.id === selectedTalhoes[0]);
+        if (firstSelected && firstSelected.properties) {
+          referenceFazenda = firstSelected.properties.FAZENDA || "";
+          referenceFundo = firstSelected.properties.FUNDO_AGR || "";
+        }
+      }
+
       geoJsonData.features.forEach(feat => {
-        totalArea += parseBrazilianFloat(feat.properties?.AREA);
+        const featFaz = feat.properties.FAZENDA || "";
+        const featFundo = feat.properties.FUNDO_AGR || "";
+        if (referenceFazenda) {
+           if (featFaz === referenceFazenda && featFundo === referenceFundo) {
+              totalArea += parseBrazilianFloat(feat.properties?.AREA);
+           }
+        } else {
+           totalArea += parseBrazilianFloat(feat.properties?.AREA);
+        }
       });
     }
 
@@ -1122,7 +1166,18 @@ function PostLoginScreen({ onLogout }) {
                   ["talhao", "Talhão atual", "Grava apenas no talhão selecionado."],
                   ["selecionados", "Selecionados", "Usa a seleção múltipla do mapa."],
                   ["filtro", "Filtro atual", "Aplica a todos os talhões no filtro atual."],
-                  ["fazenda", "Fazenda inteira", "Aplica aos talhões da fazenda após confirmação."]
+                  ["fazenda", "Fazenda inteira", (() => {
+                     let fazName = "Aplica a todos os talhões desta fazenda.";
+                     if (selectedTalhao && selectedTalhao.properties?.FAZENDA) {
+                        fazName = `Aplica aos talhões da fazenda ${selectedTalhao.properties.FAZENDA}.`;
+                     } else if (selectedTalhoes.length > 0) {
+                        const first = enhancedGeoJson?.features?.find(f => f.id === selectedTalhoes[0]);
+                        if (first && first.properties?.FAZENDA) {
+                           fazName = `Aplica aos talhões da fazenda ${first.properties.FAZENDA}.`;
+                        }
+                     }
+                     return fazName;
+                  })()]
                 ].map(([key, title, sub]) => (
                   <button
                     key={key}
@@ -1496,8 +1551,9 @@ function PostLoginScreen({ onLogout }) {
 
               {/* Tap Info Panel */}
               {selectedTalhoes.length > 0 && (
-                <div className="absolute top-28 sm:top-4 left-4 sm:left-auto right-4 w-auto sm:w-[340px] rounded-3xl border overflow-hidden z-20 shadow-2xl flex flex-col" style={{ background: "rgba(23, 29, 43, 0.95)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(16px)" }}>
-                  <div className="px-5 py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                <div className="absolute bottom-0 sm:bottom-auto sm:top-4 left-0 sm:left-auto right-0 sm:right-4 w-full sm:w-[340px] rounded-t-[28px] sm:rounded-3xl border-t sm:border overflow-hidden z-30 shadow-[0_-10px_40px_rgba(0,0,0,0.4)] sm:shadow-2xl flex flex-col" style={{ background: "rgba(23, 29, 43, 0.95)", borderColor: "rgba(255,255,255,0.08)", backdropFilter: "blur(20px)" }}>
+                  <div className="w-12 h-1.5 rounded-full mx-auto mt-2 sm:hidden" style={{ background: "rgba(255,255,255,0.2)" }} />
+                  <div className="px-5 py-3 sm:py-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
                     <div>
                       <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: palette.text2 }}>{selectedTalhoes.length > 1 ? "TALHÕES" : "TALHÃO"}</div>
                       <div className="text-[20px] font-bold mt-1 text-white">{selectedTalhoes.length > 1 ? `${selectedTalhoes.length} Selecionados` : (selectedTalhao?.properties?.TALHAO || "N/A")}</div>
@@ -1511,7 +1567,7 @@ function PostLoginScreen({ onLogout }) {
                   </div>
 
                   {!infoCollapsed && (
-                    <div className="p-4 grid grid-cols-2 gap-3 overflow-y-auto" style={{ maxHeight: "calc(100vh - 200px)" }}>
+                    <div className="p-4 grid grid-cols-2 gap-3 overflow-y-auto max-h-[45vh] sm:max-h-[calc(100vh-200px)]">
                       {[
                       { label: "Fazenda", value: selectedTalhoes.length > 1 ? "Múltiplas" : (selectedTalhao?.properties?.FAZENDA || "N/A") },
                       { label: "Variedade", value: selectedTalhoes.length > 1 ? "Múltiplas" : (selectedTalhao?.properties?.VARIEDADE || "N/A") },
@@ -1585,9 +1641,9 @@ function PostLoginScreen({ onLogout }) {
                 </div>
               )}
 
-              <div className="absolute left-4 bottom-4 right-4 sm:right-auto z-20 flex flex-col gap-3 items-start">
+              <div className="absolute left-4 bottom-4 right-4 sm:right-auto z-20 flex flex-col gap-3 items-start transition-all duration-300" style={{ bottom: selectedTalhoes.length > 0 && window.innerWidth < 640 ? (infoCollapsed ? '90px' : '50vh') : '1rem' }}>
                 {!legendCollapsed ? (
-                  <div className="w-full sm:w-[250px] max-w-[calc(100vw-2rem)] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
+                  <div className="w-auto sm:w-[250px] max-w-[calc(100vw-2rem)] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
                     <div className="px-4 pt-4 pb-2 flex items-center justify-between">
                       <div className="font-bold text-[15px]">Estágios de corte</div>
                       <div className="flex gap-2">
@@ -1617,7 +1673,7 @@ function PostLoginScreen({ onLogout }) {
                 )}
 
                 {!summaryCollapsed ? (
-                  <div className="w-full sm:w-[420px] max-w-[calc(100vw-2rem)] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
+                  <div className="w-auto sm:w-[420px] max-w-[calc(100vw-2rem)] rounded-[22px] border overflow-hidden" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", boxShadow: "0 10px 30px rgba(0,0,0,0.24)", backdropFilter: "blur(16px)" }}>
                     <div className="px-4 pt-4 pb-2 flex items-center justify-between">
                       <div>
                         <div className="text-[11px] uppercase font-bold tracking-[0.08em]" style={{ color: "#c6d1dc" }}>Resumo</div>
