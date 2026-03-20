@@ -160,11 +160,17 @@ export default function TopNavbar({
 
           <AnimatePresence>
             {notificationsOpen && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} className="absolute right-0 mt-3 w-[320px] rounded-3xl border overflow-hidden shadow-2xl z-40" style={{ background: "rgba(14,16,20,0.96)", borderColor: "rgba(255,255,255,0.08)" }}>
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 8 }}
+                className="absolute right-0 mt-3 w-[90vw] sm:w-[320px] max-w-[320px] rounded-3xl border overflow-hidden shadow-2xl z-40"
+                style={{ background: "rgba(14,16,20,0.96)", borderColor: "rgba(255,255,255,0.08)" }}
+              >
                 <div className="px-4 py-3 border-b font-semibold" style={{ borderColor: "rgba(255,255,255,0.08)" }}>Notificações</div>
-                <div className="p-3 space-y-2">
-                  {notifications.map((item) => (
-                    <div key={item.title} className="rounded-2xl border p-3" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.06)" }}>
+                <div className="p-3 space-y-2 max-h-[60vh] overflow-y-auto">
+                  {notifications.map((item, index) => (
+                    <div key={index} className="rounded-2xl border p-3" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.06)" }}>
                       <div className="font-medium">{item.title}</div>
                       <div className="text-sm mt-1" style={{ color: palette.text2 }}>{item.text}</div>
                     </div>
