@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import Map, { Source, Layer } from "react-map-gl";
 import * as turf from "@turf/turf";
 import { palette } from "../../constants/theme";
@@ -42,16 +42,22 @@ export default function EstimativaMap({
   selectedTalhoes,
   selectedTalhao
 }) {
+  const previousGeoJsonBbox = useRef("");
 
-  // Realiza o zoom adaptativo assim que o JSON filtrado for atualizado e desenhado no mapa
+  // Realiza o zoom adaptativo APENAS quando os polígonos filtrados mudam,
+  // e não quando eles mudam de cor (propriedades).
   useEffect(() => {
     if (enhancedGeoJson && enhancedGeoJson.features.length > 0 && mapRef.current) {
       try {
         const [minLng, minLat, maxLng, maxLat] = turf.bbox(enhancedGeoJson);
-        mapRef.current.fitBounds(
-          [[minLng, minLat], [maxLng, maxLat]],
-          { padding: 40, duration: 1000 }
-        );
+        const bboxString = `${minLng},${minLat},${maxLng},${maxLat}`;
+        if (bboxString !== previousGeoJsonBbox.current) {
+          previousGeoJsonBbox.current = bboxString;
+          mapRef.current.fitBounds(
+            [[minLng, minLat], [maxLng, maxLat]],
+            { padding: 40, duration: 1000 }
+          );
+        }
       } catch (err) {
         console.error("Error calculating bounds from enhancedGeoJson:", err);
       }

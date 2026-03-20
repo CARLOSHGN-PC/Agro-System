@@ -259,6 +259,7 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
         }
       }
 
+      // Batch saving
       await Promise.all(talhoesToSave.map(async (feat) => {
         const uniqueTalhaoId = getUniqueTalhaoId(feat);
         let areaToSave;
@@ -302,8 +303,8 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
       }
 
       setEstimateOpen(false);
-      // Forçamos o refetch local para colorir o mapa imediatamente sem esperar o sync
-      refetchEstimates();
+      // AWAIT the refetch so that the state updates before we finish, ensuring React re-renders.
+      await refetchEstimates();
 
       return { success: true, scope: scope };
     } catch (err) {
