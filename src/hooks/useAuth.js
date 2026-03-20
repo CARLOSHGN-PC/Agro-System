@@ -17,30 +17,44 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
  * @returns {Object} { logged (bool), isInitializing (bool), handleLogout (function) }
  */
 export function useAuth() {
+  // `logged` agora representa se a interface foi "desbloqueada" pelo usuário através da tela de login,
+  // seja por hash offline ou login real online. Não destrói a sessão nativa do Firebase.
   const [logged, setLogged] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
-    // Inscreve-se nas mudanças de estado de autenticação.
+    // Nós apenas aguardamos o Firebase inicializar seu estado interno para sabermos se ele já
+    // estava autenticado ou não. Não forçamos signOut() aqui porque isso mataria a sessão
+    // offline, impedindo o envio do sync queue pro Firestore quando a internet voltar.
+    // Em vez disso, a variável `logged` inicia como false, exibindo a LoginScreen.
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setLogged(!!user);
-      setIsInitializing(false); // Uma vez resolvido o callback inicial, paramos de mostrar a tela de carregamento.
+      // Note que intencionalmente não definimos setLogged(true) aqui.
+      // O usuário sempre tem que passar pela tela de login ao abrir o app para provar que é ele (ou offline com hash).
+      setIsInitializing(false);
     });
 
-    // Limpa o listener quando o componente raiz desmontar.
     return () => unsubscribe();
   }, []);
 
   /**
-   * Executa o log-out via Firebase SDK.
+   * Esta função é chamada pela LoginScreen quando a senha é confirmada
+   * (seja localmente via hash offline, seja via login online bem sucedido).
+   */
+  const forceLoginState = () => {
+      setLogged(true);
+  };
+
+  /**
+   * Executa o log-out.
    */
   const handleLogout = async () => {
     try {
       await signOut(auth);
+      setLogged(false);
     } catch (error) {
       console.error("Erro ao sair", error);
     }
   };
 
-  return { logged, isInitializing, handleLogout };
+  return { logged, isInitializing, handleLogout, forceLoginState };
 }

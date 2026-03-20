@@ -19,14 +19,18 @@ import { doc, setDoc, addDoc, collection, serverTimestamp } from "firebase/fires
 // Aumenta o tempo do retry
 const MAX_RETRIES = 5;
 
+// Variável de controle para evitar múltiplas instâncias de sync rodando ao mesmo tempo.
+let isSyncing = false;
+
 // Executa e desocupa a fila inteira.
 export const processQueue = async () => {
-    // Se não houver internet base, não prosseguimos com o processamento.
-    if (!navigator.onLine) {
-        console.log("Offline, pulando fila...");
+    // Se não houver internet base ou já estiver rodando, abortamos para não duplicar requisições.
+    if (!navigator.onLine || isSyncing) {
+        if (!navigator.onLine) console.log("Offline, pulando fila...");
         return;
     }
 
+    isSyncing = true;
     try {
         // Pega somente tarefas que estão 'pending' e ordene pelas mais velhas primeiro.
         const pendingTasks = await db.syncQueue
@@ -85,8 +89,14 @@ export const processQueue = async () => {
         }
 
         console.log("Processamento da fila de sincronização finalizado.");
+
+        // Emite um evento customizado para o navegador informando que o sync rodou com sucesso.
+        // A UI vai escutar esse evento para atualizar os dados visuais automaticamente (mapa, tabelas, histórico).
+        window.dispatchEvent(new CustomEvent('sync-completed', { detail: { count: pendingTasks.length } }));
     } catch (err) {
         console.error("Erro critico processando fila:", err);
+    } finally {
+        isSyncing = false;
     }
 };
 
@@ -95,6 +105,21 @@ export const processQueue = async () => {
  * quando a conexão voltar.
  */
 export const enqueueTask = async (type, targetCollection, documentId, payload) => {
+    // Se for um update em um mesmo documento, removemos a tarefa antiga pendente
+    // para não encher a fila com atualizações obsoletas e sobrepor dados.
+    if (type === 'createOrUpdate' && documentId) {
+        const existingTasks = await db.syncQueue
+            .where('[type+documentId]') // Necessita de index
+            .equals([type, documentId])
+            .toArray();
+
+        for (const t of existingTasks) {
+            if (t.status === 'pending') {
+                await db.syncQueue.delete(t.id);
+            }
+        }
+    }
+
     await db.syncQueue.add({
         type, // ex: 'createOrUpdate' ou 'addHistory'
         targetCollection, // ex: 'estimativas_safra'
@@ -118,4 +143,12 @@ if (typeof window !== "undefined") {
         console.log("Internet restaurada! Reprocessando pendências.");
         processQueue();
     });
+
+    // Tentativa inicial no momento do carregamento do app (startup), caso tenha sido
+    // fechado enquanto offline e reaberto enquanto online.
+    setTimeout(() => {
+        if (navigator.onLine) {
+            processQueue();
+        }
+    }, 2000); // pequeno delay pra garantir que auth do firebase resolveu
 }

@@ -94,6 +94,25 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
     loadInitialData();
   }, [currentCompanyId, currentSafra]);
 
+  // Listener para o evento global de sincronização completa
+  useEffect(() => {
+    const handleSyncCompleted = (e) => {
+      // Se ocorreu uma sincronização com sucesso no background (ex: a internet voltou),
+      // recarregamos a lista de estimativas e forçamos a atualização da interface silenciosamente.
+      if (e.detail && e.detail.count > 0) {
+        refetchEstimates();
+
+        // Se o modal de histórico estiver aberto para o mesmo talhão sendo visualizado,
+        // pode ser interessante também re-puxar o histórico (aqui opcional para simplificar).
+        if (historyOpen && selectedTalhao) {
+            openHistory(selectedTalhao);
+        }
+      }
+    };
+    window.addEventListener('sync-completed', handleSyncCompleted);
+    return () => window.removeEventListener('sync-completed', handleSyncCompleted);
+  }, [currentCompanyId, currentSafra, currentRodada, historyOpen]); // dependências atualizadas para garantir que os refetchs peguem o state atual
+
   // Efeito isolado para quando a `currentRodada` mudar. Ele esvazia a tela e busca as estimativas novas.
   useEffect(() => {
     if (!geoJsonData) return; // Se mapa não existe, não faz fetch da troca de rodada

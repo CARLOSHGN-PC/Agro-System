@@ -31,7 +31,7 @@ db.version(2).stores({
 
   // Fila de sincronização. Tudo que falhar em ir pro Firebase fica aqui aguardando.
   // Pode conter ações de criação ('create'), update ou delete.
-  syncQueue: '++id, type, targetCollection, documentId, payload, status, retryCount, createdAt'
+  syncQueue: '++id, type, targetCollection, documentId, payload, status, retryCount, createdAt, [type+documentId]'
 });
 
 export default db;

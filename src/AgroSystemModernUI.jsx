@@ -27,7 +27,7 @@ import PostLoginScreen from "./components/layout/PostLoginScreen";
  */
 export default function AgroSystemModernUI() {
   // Inicializamos o listener do Firebase Auth de maneira isolada num Custom Hook.
-  const { logged, isInitializing, handleLogout } = useAuth();
+  const { logged, isInitializing, handleLogout, forceLoginState } = useAuth();
 
   // Exibição do "Splash Screen" animado enquanto aguardamos o resolvedor de sessão
   // do Firebase garantir se existe um token salvo na memória do navegador.
@@ -52,7 +52,7 @@ export default function AgroSystemModernUI() {
         </motion.div>
       ) : (
         <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <LoginScreen />
+          <LoginScreen onLoginSuccess={forceLoginState} />
         </motion.div>
       )}
     </AnimatePresence>
