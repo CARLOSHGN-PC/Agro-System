@@ -49,15 +49,13 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
    * 2. Todas as estimativas do Firestore atreladas àquela safra.
    */
   const loadInitialData = async () => {
+    // Busca dados localmente primeiro para ser offline-first e instantâneo
     const [resMap, resEstAll] = await Promise.all([
       fetchLatestGeoJson(currentCompanyId),
-      // Como o getAllEstimates com 3 params filtra pela rodada,
-      // Passamos o terceiro null para pular o filtro no service (precisamos ajustar lá)
-      // Ou apenas não informamos. O Firebase SDK v9 ignora where() com undefined.
       getAllEstimates(currentCompanyId, currentSafra, null)
     ]);
 
-    if (resMap.error) {
+    if (resMap.error && resMap.source !== 'local_fallback') {
       showError("Erro ao carregar mapa", resMap.error);
     } else if (resMap.data) {
       const featuresWithIds = resMap.data.features.map((f, i) => ({
@@ -73,7 +71,6 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
     if (resEstAll.success) {
        const allData = resEstAll.data;
 
-       // Descobre todas as rodadas unicas ja estimadas
        const distinctRodadas = new Set(["Rodada 1"]);
        allData.forEach(e => {
          if (e.rodada) distinctRodadas.add(e.rodada);
@@ -85,11 +82,9 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
 
        setAvailableRodadas(arrRodadas);
 
-       // Por padrao ativa a maior rodada existente
        const highestRodada = arrRodadas[arrRodadas.length - 1];
        setCurrentRodada(highestRodada);
 
-       // Agora guarda APENAS as estimativas dessa rodada no estado global pra colorir o mapa
        const filtered = allData.filter(e => (e.rodada || "Rodada 1") === highestRodada);
        setAllEstimates(filtered);
     }
@@ -251,7 +246,7 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
           toneladasToSave = indvToneladas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
-        const res = await saveEstimate(currentCompanyId, currentSafra, uniqueTalhaoId, {
+        const payload = {
           fundo_agricola: feat.properties.FUNDO_AGR || "N/A",
           fazenda: feat.properties.FAZENDA || "N/A",
           variedade: feat.properties.VARIEDADE || "N/A",
@@ -260,12 +255,23 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
           toneladas: toneladasToSave,
           responsavel: "Carlos", // Mock user name
           rodada: currentRodada
-        });
+        };
+
+        // Agora isso retorna sucesso imediatamente, gravando localmente no Dexie!
+        const res = await saveEstimate(currentCompanyId, currentSafra, uniqueTalhaoId, payload);
         if (res.success) successCount++;
       }));
 
-      showSuccess("Sucesso!", `Estimativa salva com sucesso para ${successCount} talhões!`);
+      // Adicionamos uma verificação visual do modo offline
+      if (!navigator.onLine) {
+         showSuccess("Offline: Salvo localmente!", `A estimativa de ${successCount} talhões foi guardada e será sincronizada assim que você tiver internet.`);
+      } else {
+         showSuccess("Sucesso!", `Estimativa salva com sucesso para ${successCount} talhões!`);
+      }
+
       setEstimateOpen(false);
+      // Forçamos o refetch local para colorir o mapa imediatamente sem esperar o sync
+      refetchEstimates();
 
       return { success: true, scope: scope };
     } catch (err) {
