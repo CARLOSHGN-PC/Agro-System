@@ -7,3 +7,6 @@
 
   ➜  Local:   http://localhost:5173/Agro-System/
   ➜  Network: use --host to expose
+11:53:53 AM [vite] hmr update /src/AgroSystemModernUI.jsx, /src/index.css
+11:54:07 AM [vite] hmr update /src/AgroSystemModernUI.jsx, /src/index.css
+11:54:44 AM [vite] hmr update /src/AgroSystemModernUI.jsx, /src/index.css
