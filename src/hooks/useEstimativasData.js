@@ -24,9 +24,11 @@ import { getFazendaName, getUniqueTalhaoId } from "../utils/geoHelpers";
  * @param {Function} setActiveModule - Roteador global para ir pra tela de config se o mapa não existir.
  */
 export function useEstimativasData(currentCompanyId, currentSafra, setActiveModule) {
-  // Dados brutos
+  // Configuração e Dados
   const [geoJsonData, setGeoJsonData] = useState(null);
   const [allEstimates, setAllEstimates] = useState([]);
+  const [currentRodada, setCurrentRodada] = useState("Rodada 1");
+  const [availableRodadas, setAvailableRodadas] = useState(["Rodada 1"]);
 
   // Modais de histórico e Form de Salvamento
   const [currentEstimate, setCurrentEstimate] = useState(null);
@@ -47,9 +49,12 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
    * 2. Todas as estimativas do Firestore atreladas àquela safra.
    */
   const loadInitialData = async () => {
-    const [resMap, resEst] = await Promise.all([
+    const [resMap, resEstAll] = await Promise.all([
       fetchLatestGeoJson(currentCompanyId),
-      getAllEstimates(currentCompanyId, currentSafra)
+      // Como o getAllEstimates com 3 params filtra pela rodada,
+      // Passamos o terceiro null para pular o filtro no service (precisamos ajustar lá)
+      // Ou apenas não informamos. O Firebase SDK v9 ignora where() com undefined.
+      getAllEstimates(currentCompanyId, currentSafra, null)
     ]);
 
     if (resMap.error) {
@@ -65,8 +70,28 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
       setActiveModule("configuracao");
     }
 
-    if (resEst.success) {
-      setAllEstimates(resEst.data);
+    if (resEstAll.success) {
+       const allData = resEstAll.data;
+
+       // Descobre todas as rodadas unicas ja estimadas
+       const distinctRodadas = new Set(["Rodada 1"]);
+       allData.forEach(e => {
+         if (e.rodada) distinctRodadas.add(e.rodada);
+       });
+
+       const arrRodadas = Array.from(distinctRodadas).sort((a,b) => {
+         return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
+       });
+
+       setAvailableRodadas(arrRodadas);
+
+       // Por padrao ativa a maior rodada existente
+       const highestRodada = arrRodadas[arrRodadas.length - 1];
+       setCurrentRodada(highestRodada);
+
+       // Agora guarda APENAS as estimativas dessa rodada no estado global pra colorir o mapa
+       const filtered = allData.filter(e => (e.rodada || "Rodada 1") === highestRodada);
+       setAllEstimates(filtered);
     }
   };
 
@@ -74,12 +99,36 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
     loadInitialData();
   }, [currentCompanyId, currentSafra]);
 
+  // Efeito isolado para quando a `currentRodada` mudar. Ele esvazia a tela e busca as estimativas novas.
+  useEffect(() => {
+    if (!geoJsonData) return; // Se mapa não existe, não faz fetch da troca de rodada
+
+    const fetchNovaRodada = async () => {
+      const res = await getAllEstimates(currentCompanyId, currentSafra, currentRodada);
+      if (res.success) {
+        setAllEstimates(res.data);
+      }
+    };
+    fetchNovaRodada();
+  }, [currentRodada]);
+
   /**
-   * Recarrega manualemente a lista de estimativas global após algo ser salvo.
+   * Recarrega manualmente a lista de estimativas global da rodada atual após algo ser salvo.
    */
   const refetchEstimates = async () => {
-    const res = await getAllEstimates(currentCompanyId, currentSafra);
+    const res = await getAllEstimates(currentCompanyId, currentSafra, currentRodada);
     if (res.success) setAllEstimates(res.data);
+  };
+
+  /**
+   * Cria uma nova rodada baseada no estado de rodadas disponíveis, e já seta ela como ativa,
+   * limpando automaticamente o visual do mapa.
+   */
+  const createNewRodada = () => {
+    const nextNumber = availableRodadas.length + 1;
+    const newName = `Rodada ${nextNumber}`;
+    setAvailableRodadas(prev => [...prev, newName]);
+    setCurrentRodada(newName);
   };
 
   /**
@@ -100,7 +149,10 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
     });
 
     try {
-      const res = await getEstimate(currentCompanyId, currentSafra, uniqueTalhaoId);
+      // Quando preenche o modal, verifica se já existe estimate pra _esta_ rodada.
+      // Se não, o form aparece vazio. Mas se quiser a ultima versão como preenchimento,
+      // ele apenas puxará da atual que está sendo visualizada.
+      const res = await getEstimate(currentCompanyId, currentSafra, uniqueTalhaoId, currentRodada);
       if (res.success && res.data) {
         setCurrentEstimate(res.data);
         setFormEstimativa({
@@ -123,7 +175,8 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
     if (!selectedTalhao) return;
     setHistoryOpen(true);
     const uniqueTalhaoId = getUniqueTalhaoId(selectedTalhao);
-    const res = await getEstimateHistory(currentCompanyId, currentSafra, uniqueTalhaoId);
+    // O histórico a gente puxa de TODAS AS RODADAS da safra para a pessoa ter o controle geral no modal
+    const res = await getEstimateHistory(currentCompanyId, currentSafra, uniqueTalhaoId, null);
     if (res.success) {
       setEstimateHistory(res.data);
     }
@@ -205,7 +258,8 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
           area: areaToSave,
           tch: formEstimativa.tch,
           toneladas: toneladasToSave,
-          responsavel: "Carlos" // Mock user name
+          responsavel: "Carlos", // Mock user name
+          rodada: currentRodada
         });
         if (res.success) successCount++;
       }));
@@ -294,6 +348,10 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
   return {
     geoJsonData,
     setGeoJsonData,
+    currentRodada,
+    setCurrentRodada,
+    availableRodadas,
+    createNewRodada,
     allEstimates,
     refetchEstimates,
     currentEstimate,

@@ -15,7 +15,9 @@ const COLLECTION_HISTORICO = "estimativas_safra_historico";
  */
 export const saveEstimate = async (companyId, safra, talhaoId, estimateData) => {
   try {
-    const estimateDocId = `${companyId}_${safra.replace('/', '-')}_${talhaoId}`;
+    // Agora o documento inclui a rodada na chave primária, se ela existir, senão usa a string 'Rodada_1'.
+    const rodadaKey = estimateData.rodada ? String(estimateData.rodada).replace(/ /g, '_') : 'Rodada_1';
+    const estimateDocId = `${companyId}_${safra.replace('/', '-')}_${rodadaKey}_${talhaoId}`;
     const estimateRef = doc(firestore, COLLECTION_ESTIMATIVAS, estimateDocId);
 
     // Check if it exists to increment version
@@ -56,12 +58,21 @@ export const saveEstimate = async (companyId, safra, talhaoId, estimateData) => 
 /**
  * Gets all estimates for a specific company and harvest.
  */
-export const getAllEstimates = async (companyId, safra) => {
+export const getAllEstimates = async (companyId, safra, rodada = null) => {
   try {
-    const q = query(
-      collection(firestore, COLLECTION_ESTIMATIVAS),
+    let constraints = [
       where("companyId", "==", companyId),
       where("safra", "==", safra)
+    ];
+
+    // Se "rodada" foi fornecida, filtra. Se for null, puxa todas pra descobrir o escopo geral da Safra.
+    if (rodada) {
+      constraints.push(where("rodada", "==", rodada));
+    }
+
+    const q = query(
+      collection(firestore, COLLECTION_ESTIMATIVAS),
+      ...constraints
     );
     const querySnapshot = await getDocs(q);
     const estimates = [];
@@ -78,9 +89,10 @@ export const getAllEstimates = async (companyId, safra) => {
 /**
  * Gets the current estimate for a specific talhão and harvest.
  */
-export const getEstimate = async (companyId, safra, talhaoId) => {
+export const getEstimate = async (companyId, safra, talhaoId, rodada = "Rodada 1") => {
   try {
-    const estimateDocId = `${companyId}_${safra.replace('/', '-')}_${talhaoId}`;
+    const rodadaKey = String(rodada).replace(/ /g, '_');
+    const estimateDocId = `${companyId}_${safra.replace('/', '-')}_${rodadaKey}_${talhaoId}`;
     const estimateRef = doc(firestore, COLLECTION_ESTIMATIVAS, estimateDocId);
     const estimateSnap = await getDoc(estimateRef);
 
@@ -97,13 +109,21 @@ export const getEstimate = async (companyId, safra, talhaoId) => {
 /**
  * Gets the entire history of estimates for a specific talhão and harvest.
  */
-export const getEstimateHistory = async (companyId, safra, talhaoId) => {
+export const getEstimateHistory = async (companyId, safra, talhaoId, rodada = null) => {
   try {
-    const q = query(
-      collection(firestore, COLLECTION_HISTORICO),
+    let constraints = [
       where("companyId", "==", companyId),
       where("safra", "==", safra),
       where("talhaoId", "==", talhaoId)
+    ];
+
+    if (rodada) {
+      constraints.push(where("rodada", "==", rodada));
+    }
+
+    const q = query(
+      collection(firestore, COLLECTION_HISTORICO),
+      ...constraints
     );
 
     const querySnapshot = await getDocs(q);

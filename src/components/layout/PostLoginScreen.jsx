@@ -190,6 +190,10 @@ export default function PostLoginScreen({ onLogout }) {
 
               {/* Os painéis flutuantes em cima do mapa (Título, Legend, Talhões selecionados) */}
               <EstimativaPanels
+                currentRodada={estData.currentRodada}
+                setCurrentRodada={estData.setCurrentRodada}
+                availableRodadas={estData.availableRodadas}
+                createNewRodada={estData.createNewRodada}
                 setFiltersOpen={mapFilters.setFiltersOpen}
                 selectedTalhoes={selectedTalhoes}
                 selectedTalhao={selectedTalhao}
