@@ -131,11 +131,7 @@ export const processQueue = async () => {
             }
         }
 
-        console.log("Processamento da fila de sincronização finalizado.");
-
-        // Emite um evento customizado para o navegador informando que o sync rodou com sucesso.
-        // A UI vai escutar esse evento para atualizar os dados visuais automaticamente (mapa, tabelas, histórico).
-        window.dispatchEvent(new CustomEvent('sync-completed', { detail: { count: pendingTasks.length } }));
+        console.log("Lote(s) de sincronização finalizado(s).");
     } catch (err) {
         console.error("Erro critico processando fila:", err);
     } finally {
@@ -147,16 +143,20 @@ export const processQueue = async () => {
         // o lote anterior (que pode demorar devido aos delays e chunks), novas tarefas foram adicionadas na fila
         // com status 'pending'.
         // Por que ele existe: Resolve o bug onde a interface de usuário (ex: TopNavbar) ficava travada em "Sincronizando..."
-        // infinitamente. Se o usuário salvar dados enquanto o `isSyncing` for `true`, o `enqueueTask` insere os dados
-        // na fila mas não consegue rodar o `processQueue` porque ele aborta no início. Sem esta verificação no `finally`,
-        // os dados novos ficariam presos em 'pending' até o app ser reiniciado ou a internet cair e voltar.
+        // infinitamente.
         try {
             const remainingTasksCount = await db.syncQueue.where('status').equals('pending').count();
             if (remainingTasksCount > 0) {
                 console.log(`Há ${remainingTasksCount} tarefas adicionadas durante a sincronização. Reprocessando a fila...`);
                 // O que este bloco faz: Chama o processQueue recursivamente/novamente se houverem pendências.
-                // Por que ele existe: Para limpar a fila completamente em uma única "sessão" de internet antes de desligar a UI de sync.
+                // Por que ele existe: Para limpar a fila completamente em uma única "sessão" de internet.
                 processQueue();
+            } else {
+                // O que este bloco faz: Emite o evento final 'sync-completed' apenas quando ABSOLUTAMENTE toda a fila acabou.
+                // Por que ele existe: Impede que o TopNavbar dispare 10 alertas de sucesso seguidos para o usuário ao salvar
+                // muitos dados em rajada (reestimar lote, por exemplo). O alerta de sucesso só deve aparecer uma vez, no final.
+                console.log("Fila de sincronização zerada por completo. Emitindo evento final.");
+                window.dispatchEvent(new CustomEvent('sync-completed', { detail: { count: pendingTasks.length } }));
             }
         } catch (checkErr) {
             console.error("Erro ao verificar pendências remanescentes no finally:", checkErr);
