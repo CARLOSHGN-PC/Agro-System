@@ -139,7 +139,28 @@ export const processQueue = async () => {
     } catch (err) {
         console.error("Erro critico processando fila:", err);
     } finally {
+        // O que este bloco faz: Libera o lock de sincronização para permitir novas execuções.
+        // Por que ele existe: Garante que, independentemente de sucesso ou falha, o processo possa ser rodado novamente.
         isSyncing = false;
+
+        // O que este bloco faz: Verifica no banco de dados local se, durante o tempo que estivemos sincronizando
+        // o lote anterior (que pode demorar devido aos delays e chunks), novas tarefas foram adicionadas na fila
+        // com status 'pending'.
+        // Por que ele existe: Resolve o bug onde a interface de usuário (ex: TopNavbar) ficava travada em "Sincronizando..."
+        // infinitamente. Se o usuário salvar dados enquanto o `isSyncing` for `true`, o `enqueueTask` insere os dados
+        // na fila mas não consegue rodar o `processQueue` porque ele aborta no início. Sem esta verificação no `finally`,
+        // os dados novos ficariam presos em 'pending' até o app ser reiniciado ou a internet cair e voltar.
+        try {
+            const remainingTasksCount = await db.syncQueue.where('status').equals('pending').count();
+            if (remainingTasksCount > 0) {
+                console.log(`Há ${remainingTasksCount} tarefas adicionadas durante a sincronização. Reprocessando a fila...`);
+                // O que este bloco faz: Chama o processQueue recursivamente/novamente se houverem pendências.
+                // Por que ele existe: Para limpar a fila completamente em uma única "sessão" de internet antes de desligar a UI de sync.
+                processQueue();
+            }
+        } catch (checkErr) {
+            console.error("Erro ao verificar pendências remanescentes no finally:", checkErr);
+        }
     }
 };
 
