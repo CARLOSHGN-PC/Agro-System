@@ -85,6 +85,9 @@ export function useMapFilters(geoJsonData, allEstimates) {
    * Constrói uma nova versão do GeoJSON apenas com as features (polígonos)
    * que passam nos 'appliedFilters'. E também injeta flags lógicas `_is_estimated`.
    */
+  // Ocultamos os IDs via visibleGeoJson lá na ponta (no Map), então aqui construimos o base com todos os properties necessários.
+  // Para colorir com azul aberto, precisaremos do idsAbertosSet, que não mora aqui, mas como nós passamos o feature.id lá pro Map
+  // também podemos injetar a property `_has_open_ordem` lá via Match do mapbox ou injetar aqui. No caso do Mapbox Match (no Map) é mais limpo.
   const enhancedGeoJson = useMemo(() => {
     if (!geoJsonData) return null;
 

@@ -18,6 +18,8 @@ import EstimativaModals from "../../modules/estimativas/EstimativaModals";
 import { useEstimativasData } from "../../hooks/useEstimativasData";
 import { useMapFilters } from "../../hooks/useMapFilters";
 import { useMapSummary } from "../../hooks/useMapSummary";
+import { useOrdensCorte } from "../../hooks/estimativas/useOrdensCorte";
+import { useOrdemCorteMapState } from "../../hooks/estimativas/useOrdemCorteMapState";
 
 /**
  * PostLoginScreen.jsx
@@ -67,6 +69,25 @@ export default function PostLoginScreen({ onLogout }) {
 
   // 3. Gerencia o painel de Resumo e a Legenda baseando-se no que está ativo
   const mapSummary = useMapSummary(mapFilters.enhancedGeoJson, estData.allEstimates);
+
+  // 4. Gerencia as Ordens de Corte
+  const ordensState = useOrdensCorte(currentCompanyId, currentSafra);
+  const ordensMapState = useOrdemCorteMapState(ordensState.vinculosSafra);
+
+  // 5. Injeta a flag visual _has_open_ordem no GeoJSON sem quebrar o hook useMapFilters
+  const mapboxGeoJson = React.useMemo(() => {
+     if (!mapFilters.enhancedGeoJson) return null;
+     return {
+        ...mapFilters.enhancedGeoJson,
+        features: mapFilters.enhancedGeoJson.features.map(f => ({
+            ...f,
+            properties: {
+                ...f.properties,
+                _has_open_ordem: ordensMapState.idsAbertosSet.has(f.id)
+            }
+        }))
+     };
+  }, [mapFilters.enhancedGeoJson, ordensMapState.idsAbertosSet]);
 
   // Removemos mock de notificações
   // const notificationsMock = [...]
@@ -190,7 +211,7 @@ export default function PostLoginScreen({ onLogout }) {
               {/* O componente de renderização pura do WebGL via Mapbox */}
               <EstimativaMap
                 mapRef={mapRef}
-                enhancedGeoJson={mapFilters.enhancedGeoJson}
+                enhancedGeoJson={mapboxGeoJson}
                 onMapClick={onMapClick}
                 setHoveredTalhao={setHoveredTalhao}
                 showLabels={showLabels}
@@ -198,6 +219,8 @@ export default function PostLoginScreen({ onLogout }) {
                 isMultiSelectMode={isMultiSelectMode}
                 selectedTalhoes={selectedTalhoes}
                 selectedTalhao={selectedTalhao}
+                idsAbertosSet={ordensMapState.idsAbertosSet}
+                idsOcultosSet={ordensMapState.idsOcultosSet}
               />
 
               <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(5,5,5,0.14), rgba(5,5,5,0.08) 20%, rgba(5,5,5,0.18) 100%)" }} />
@@ -229,6 +252,10 @@ export default function PostLoginScreen({ onLogout }) {
                 summaryCollapsed={mapSummary.summaryCollapsed}
                 setSummaryCollapsed={mapSummary.setSummaryCollapsed}
                 summaryData={mapSummary.summaryData}
+
+                vinculosSafra={ordensState.vinculosSafra}
+                companyId={currentCompanyId}
+                safra={currentSafra}
               />
             </>
           ) : (

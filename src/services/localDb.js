@@ -17,7 +17,7 @@ export const db = new Dexie('AgroSystemLocalDB');
 
 // Definição do schema e versão atual. Se você alterar isso, mude a versão.
 // Cada store recebe como string suas chaves, `&` significa chave única.
-db.version(3).stores({
+db.version(4).stores({
   // Tabela para guardar os arquivos pesados de Mapas (GeoJSON) que não podem baixar toda hora.
   // 'id' será no formato "empresaId_safra" pra puxar rápido.
   mapData: '&id, companyId, updatedAt',
@@ -35,7 +35,15 @@ db.version(3).stores({
 
   // Tabela de Notificações. Guarda o histórico de alertas do sistema (sucesso, erro, avisos).
   // Serve para a central de notificações persistente do TopNavbar.
-  notifications: '++id, title, type, isRead, createdAt'
+  notifications: '++id, title, type, isRead, createdAt',
+
+  // Tabela mestre para as Ordens de Corte (O cabeçalho da ordem).
+  // Permite consultar rápido todas as ordens de uma safra.
+  ordensCorte: '&id, companyId, safra, status, syncStatus, [companyId+safra], [companyId+safra+status]',
+
+  // Tabela pivô/vínculo entre Ordem de Corte e Talhão.
+  // Permite consultar rápido em qual ordem um talhão está vinculado.
+  ordensCorteTalhoes: '&id, companyId, safra, talhaoId, ordemCorteId, status, syncStatus, [companyId+safra], [companyId+safra+talhaoId], [companyId+safra+talhaoId+status]'
 });
 
 export default db;
