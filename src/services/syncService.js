@@ -22,6 +22,10 @@ const MAX_RETRIES = 5;
 // Variável de controle para evitar múltiplas instâncias de sync rodando ao mesmo tempo.
 let isSyncing = false;
 
+// O que este bloco faz: Variável global que acumula quantos documentos foram sincronizados com sucesso em uma única "sessão" de internet antes da fila esvaziar.
+// Por que ele existe: Para evitar que o app dispare vários alertas "Sincronização Concluída" (ex: "20", "40", "1500" itens) quando o usuário salva muitos dados (ex: reestimar 2000 talhões de uma vez). O alerta só aparecerá 1 vez com o total real de tudo.
+let accumulatedSyncCount = 0;
+
 // Executa e desocupa a fila inteira.
 export const processQueue = async () => {
     // Se não houver internet base ou já estiver rodando, abortamos para não duplicar requisições.
@@ -107,6 +111,10 @@ export const processQueue = async () => {
                     // Por que ele existe: Se chegamos até aqui, a tarefa concluiu sem erros no servidor, então ela deve sumir da memória do celular.
                     await db.syncQueue.delete(task.id);
 
+                    // O que este bloco faz: Incrementa o contador de sincronizações bem sucedidas da sessão atual em 1 toda vez que algo for limpo da fila com sucesso.
+                    // Por que ele existe: Permite acumular o total real (ex: 2000 talhões) para mostrar em uma única notificação no final em vez de disparar várias a cada lote que acaba.
+                    accumulatedSyncCount++;
+
                 } catch (error) {
                     // O que este bloco faz: Captura qualquer falha que o Firebase retornar para essa promise individual.
                     // Por que ele existe: Para não quebrar o `Promise.all` dos outros itens do lote (se 1 falha, não deve matar o resto em um erro genérico).
@@ -131,11 +139,7 @@ export const processQueue = async () => {
             }
         }
 
-        console.log("Processamento da fila de sincronização finalizado.");
-
-        // Emite um evento customizado para o navegador informando que o sync rodou com sucesso.
-        // A UI vai escutar esse evento para atualizar os dados visuais automaticamente (mapa, tabelas, histórico).
-        window.dispatchEvent(new CustomEvent('sync-completed', { detail: { count: pendingTasks.length } }));
+        console.log("Lote(s) de sincronização finalizado(s).");
     } catch (err) {
         console.error("Erro critico processando fila:", err);
     } finally {
@@ -147,16 +151,26 @@ export const processQueue = async () => {
         // o lote anterior (que pode demorar devido aos delays e chunks), novas tarefas foram adicionadas na fila
         // com status 'pending'.
         // Por que ele existe: Resolve o bug onde a interface de usuário (ex: TopNavbar) ficava travada em "Sincronizando..."
-        // infinitamente. Se o usuário salvar dados enquanto o `isSyncing` for `true`, o `enqueueTask` insere os dados
-        // na fila mas não consegue rodar o `processQueue` porque ele aborta no início. Sem esta verificação no `finally`,
-        // os dados novos ficariam presos em 'pending' até o app ser reiniciado ou a internet cair e voltar.
+        // infinitamente.
         try {
             const remainingTasksCount = await db.syncQueue.where('status').equals('pending').count();
             if (remainingTasksCount > 0) {
                 console.log(`Há ${remainingTasksCount} tarefas adicionadas durante a sincronização. Reprocessando a fila...`);
                 // O que este bloco faz: Chama o processQueue recursivamente/novamente se houverem pendências.
-                // Por que ele existe: Para limpar a fila completamente em uma única "sessão" de internet antes de desligar a UI de sync.
+                // Por que ele existe: Para limpar a fila completamente em uma única "sessão" de internet antes de desligar a UI de sync e sem disparar notificação prematura.
                 processQueue();
+            } else {
+                // O que este bloco faz: Emite o evento final 'sync-completed' apenas quando ABSOLUTAMENTE toda a fila acabou e SOMENTE se dados foram de fato sincronizados.
+                // Por que ele existe: Impede que o TopNavbar dispare 10 alertas de sucesso seguidos para o usuário ao salvar muitos dados em rajada (reestimar 2000 áreas).
+                // O alerta só aparece uma vez e com a quantidade total certa (`accumulatedSyncCount`), não o tamanho do lote ou iteração final.
+                if (accumulatedSyncCount > 0) {
+                    console.log(`Fila de sincronização zerada por completo. Emitindo evento final com total acumulado: ${accumulatedSyncCount}`);
+                    window.dispatchEvent(new CustomEvent('sync-completed', { detail: { count: accumulatedSyncCount } }));
+
+                    // O que este bloco faz: Zera o contador de acumulação após exibir a notificação.
+                    // Por que ele existe: Para a próxima vez que a internet cair ou o usuário for salvar algo, a contagem recomece do zero em vez de somar ad infinitum.
+                    accumulatedSyncCount = 0;
+                }
             }
         } catch (checkErr) {
             console.error("Erro ao verificar pendências remanescentes no finally:", checkErr);
