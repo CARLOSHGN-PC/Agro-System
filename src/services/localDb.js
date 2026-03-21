@@ -17,7 +17,7 @@ export const db = new Dexie('AgroSystemLocalDB');
 
 // Definição do schema e versão atual. Se você alterar isso, mude a versão.
 // Cada store recebe como string suas chaves, `&` significa chave única.
-db.version(2).stores({
+db.version(3).stores({
   // Tabela para guardar os arquivos pesados de Mapas (GeoJSON) que não podem baixar toda hora.
   // 'id' será no formato "empresaId_safra" pra puxar rápido.
   mapData: '&id, companyId, updatedAt',
@@ -31,7 +31,11 @@ db.version(2).stores({
 
   // Fila de sincronização. Tudo que falhar em ir pro Firebase fica aqui aguardando.
   // Pode conter ações de criação ('create'), update ou delete.
-  syncQueue: '++id, type, targetCollection, documentId, payload, status, retryCount, createdAt, [type+documentId]'
+  syncQueue: '++id, type, targetCollection, documentId, payload, status, retryCount, createdAt, [type+documentId]',
+
+  // Tabela de Notificações. Guarda o histórico de alertas do sistema (sucesso, erro, avisos).
+  // Serve para a central de notificações persistente do TopNavbar.
+  notifications: '++id, title, type, isRead, createdAt'
 });
 
 export default db;

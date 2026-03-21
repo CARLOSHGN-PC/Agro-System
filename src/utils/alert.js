@@ -1,5 +1,6 @@
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
+import { addNotification } from '../services/notificationService';
 
 const MySwal = withReactContent(Swal);
 
@@ -31,6 +32,9 @@ export const agroAlert = MySwal.mixin({
 });
 
 export const showSuccess = (title, text) => {
+  // Salva silenciosamente a notificação no painel do sino
+  addNotification(title, text, 'success');
+
   return agroAlert.fire({
     icon: 'success',
     title,
@@ -40,6 +44,9 @@ export const showSuccess = (title, text) => {
 };
 
 export const showError = (title, text) => {
+  // Salva silenciosamente o erro no painel do sino para referência futura
+  addNotification(title, text, 'error');
+
   return agroAlert.fire({
     icon: 'error',
     title,

@@ -26,7 +26,7 @@ export default function EstimativaModals({
   filtersOpen, setFiltersOpen,
 
   // Data props
-  currentSafra, scope, setScope,
+  currentSafra, currentRodada, allEstimates, scope, setScope,
   selectedTalhao, selectedTalhoes,
   enhancedGeoJson, geoJsonData,
   formEstimativa, setFormEstimativa,
@@ -52,7 +52,66 @@ export default function EstimativaModals({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope, selectedTalhao, selectedTalhoes, estimateOpen]);
 
+  // Regra de Negócio de Segurança:
+  // Verifica se na seleção/escopo atual existe ALGUM talhão que JÁ FOI ESTIMADO na "currentRodada".
+  // Se sim, o botão de salvar será bloqueado.
+  const isCurrentlyEstimated = React.useMemo(() => {
+    if (!estimateOpen) return false;
+
+    // Obter todos os IDs de talhão que estão englobados no `scope` atual
+    const scopeTalhoesIds = [];
+
+    if (scope === "talhao" && selectedTalhao) {
+      scopeTalhoesIds.push(selectedTalhao.properties.featureId);
+    } else if (scope === "selecionados" && selectedTalhoes.length > 0) {
+      scopeTalhoesIds.push(...selectedTalhoes);
+    } else if (scope === "filtro" && enhancedGeoJson) {
+      enhancedGeoJson.features.forEach(f => scopeTalhoesIds.push(f.properties.featureId));
+    } else if (scope === "fazenda" && geoJsonData) {
+      let refFazenda = "", refFundo = "";
+      if (selectedTalhao?.properties) {
+        refFazenda = selectedTalhao.properties.FAZENDA || "";
+        refFundo = selectedTalhao.properties.FUNDO_AGR || "";
+      } else if (selectedTalhoes.length > 0) {
+        const first = geoJsonData.features.find(f => f.id === selectedTalhoes[0]);
+        if (first?.properties) {
+          refFazenda = first.properties.FAZENDA || "";
+          refFundo = first.properties.FUNDO_AGR || "";
+        }
+      }
+
+      geoJsonData.features.forEach(feat => {
+        if (!refFazenda || (feat.properties.FAZENDA === refFazenda && feat.properties.FUNDO_AGR === refFundo)) {
+          scopeTalhoesIds.push(feat.properties.featureId);
+        }
+      });
+    }
+
+    // Compara se algum dos talhões neste escopo já existe no `allEstimates`
+    // (O useEstimativasData já filtra allEstimates pela currentRodada)
+    // Para comparar, precisamos converter os featureIds em UniqueTalhaoIds
+    const estimatedTalhaoIds = new Set(allEstimates.map(e => e.talhaoId));
+
+    for (const featureId of scopeTalhoesIds) {
+      // Procura a feature no mapa completo
+      const feat = geoJsonData?.features?.find(f => f.properties.featureId === featureId);
+      if (feat) {
+        const featFundo = feat.properties.FUNDO_AGR ? feat.properties.FUNDO_AGR.toString().trim() : 'N/A';
+        const featFazenda = feat.properties.FAZENDA ? feat.properties.FAZENDA.toString().trim() : 'N/A';
+        const featTalhao = feat.properties.TALHAO ? feat.properties.TALHAO.toString().trim() : 'N/A';
+        const uniqueId = `${featFundo}_${featFazenda}_${featTalhao}`;
+
+        if (estimatedTalhaoIds.has(uniqueId)) {
+          return true; // Encontrou pelo menos um, bloqueia
+        }
+      }
+    }
+
+    return false;
+  }, [estimateOpen, scope, selectedTalhao, selectedTalhoes, enhancedGeoJson, geoJsonData, allEstimates]);
+
   const handleSaveWrapper = async () => {
+    if (isCurrentlyEstimated) return; // Segurança extra
     await submitEstimate(selectedTalhoes, selectedTalhao, enhancedGeoJson);
   };
 
@@ -151,11 +210,18 @@ export default function EstimativaModals({
                 <label className="text-xs" style={{ color: palette.text2 }}>Observação</label>
                 <textarea placeholder="Ao salvar, cada reestimativa gera uma nova versão por safra sem apagar o histórico anterior." className="rounded-2xl border px-4 py-3 min-h-[110px] outline-none focus:border-yellow-500 transition-colors" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
               </div>
+
+              {isCurrentlyEstimated && (
+                <div className="rounded-2xl border p-4 text-sm font-medium text-red-400 bg-red-400/10" style={{ borderColor: "rgba(248,113,113,0.2)" }}>
+                   Atenção: A seleção atual (ou parte dela) já possui estimativa salva na rodada "{currentRodada}".
+                   Para alterar ou estimar novamente, crie uma nova reestimativa no painel principal.
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-3 px-5 py-4 border-t shrink-0" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
               <button className="rounded-xl border px-4 py-3 hover:bg-white/10 transition-colors" style={{ borderColor: "rgba(255,255,255,0.12)", background: "transparent" }} onClick={() => setEstimateOpen(false)}>Cancelar</button>
-              <button disabled={isSaving} className="rounded-xl px-4 py-3 transition-transform hover:scale-[1.02] disabled:opacity-50" style={{ background: "linear-gradient(135deg, #f59e0b, #f97316)", color: "white" }} onClick={handleSaveWrapper}>
-                {isSaving ? "Salvando..." : "Salvar estimativa"}
+              <button disabled={isSaving || isCurrentlyEstimated} className="rounded-xl px-4 py-3 transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed" style={{ background: "linear-gradient(135deg, #f59e0b, #f97316)", color: "white" }} onClick={handleSaveWrapper}>
+                {isSaving ? "Salvando..." : isCurrentlyEstimated ? "Já estimado nesta rodada" : "Salvar estimativa"}
               </button>
             </div>
           </motion.div>

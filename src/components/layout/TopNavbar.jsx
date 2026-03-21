@@ -1,9 +1,11 @@
 import React from "react";
 import { Leaf, Menu, Bell, User, CloudOff, CloudUpload, CheckCircle2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useLiveQuery } from "dexie-react-hooks";
 import { palette } from "../../constants/theme";
 import db from "../../services/localDb";
 import { showSuccess } from "../../utils/alert";
+import { markAllAsRead, clearAllNotifications } from "../../services/notificationService";
 
 /**
  * TopNavbar.jsx
@@ -30,7 +32,6 @@ export default function TopNavbar({
   setNotificationsOpen,
   profileOpen,
   setProfileOpen,
-  notifications = [],
   onLogout
 }) {
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
@@ -62,6 +63,29 @@ export default function TopNavbar({
       window.removeEventListener('sync-completed', handleSyncCompleted);
     };
   }, []);
+
+  // Carrega as notificações do Dexie local DB via hook reativo
+  const notifications = useLiveQuery(
+    () => db.notifications.orderBy('createdAt').reverse().toArray(),
+    []
+  ) || [];
+
+  // Contador em tempo real das notificações não lidas para o badge
+  const unreadCount = notifications.filter(n => n.isRead === 0).length;
+
+  // Função para marcar como lida e fechar o menu ao mesmo tempo, ou apenas abrir
+  const toggleNotifications = () => {
+    if (!notificationsOpen) {
+      // Ao abrir, se houver não lidas, marca todas como lidas
+      if (unreadCount > 0) {
+         markAllAsRead();
+      }
+      setNotificationsOpen(true);
+      setProfileOpen(false);
+    } else {
+      setNotificationsOpen(false);
+    }
+  };
 
   // Hook no banco Dexie para mostrar a fila pendente ao vivo no ícone de nuvem
   React.useEffect(() => {
@@ -142,19 +166,16 @@ export default function TopNavbar({
       <div className="flex items-center gap-2 sm:gap-3 relative">
         <div className="relative">
           <button
-            onClick={() => {
-              setNotificationsOpen((v) => !v);
-              setProfileOpen(false);
-            }}
+            onClick={toggleNotifications}
             className="w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center transition-colors hover:bg-white/5"
             style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)", color: palette.white }}
           >
             <Bell className="w-5 h-5" />
           </button>
 
-          {notifications.length > 0 && (
+          {unreadCount > 0 && (
              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: "#ef4444", color: "white" }}>
-                {notifications.length}
+                {unreadCount > 9 ? '9+' : unreadCount}
              </span>
           )}
 
@@ -164,17 +185,37 @@ export default function TopNavbar({
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 8 }}
-                className="absolute right-0 mt-3 w-[90vw] sm:w-[320px] max-w-[320px] rounded-3xl border overflow-hidden shadow-2xl z-40"
-                style={{ background: "rgba(14,16,20,0.96)", borderColor: "rgba(255,255,255,0.08)" }}
+                className="fixed top-16 right-0 w-full sm:absolute sm:right-0 sm:mt-3 sm:w-[360px] sm:max-w-[360px] sm:rounded-3xl border-b sm:border overflow-hidden shadow-2xl z-40 flex flex-col"
+                style={{ background: "rgba(14,16,20,0.96)", borderColor: "rgba(255,255,255,0.08)", maxHeight: "calc(100dvh - 4rem)" }}
               >
-                <div className="px-4 py-3 border-b font-semibold" style={{ borderColor: "rgba(255,255,255,0.08)" }}>Notificações</div>
-                <div className="p-3 space-y-2 max-h-[60vh] overflow-y-auto">
-                  {notifications.map((item, index) => (
-                    <div key={index} className="rounded-2xl border p-3" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.06)" }}>
-                      <div className="font-medium">{item.title}</div>
-                      <div className="text-sm mt-1" style={{ color: palette.text2 }}>{item.text}</div>
+                <div className="px-4 py-3 border-b flex items-center justify-between shrink-0" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                  <div className="font-semibold text-lg">Histórico do Sistema</div>
+                  {notifications.length > 0 && (
+                     <button onClick={clearAllNotifications} className="text-xs text-red-400 hover:text-red-300 transition-colors">
+                       Limpar tudo
+                     </button>
+                  )}
+                </div>
+                <div className="p-3 space-y-2 overflow-y-auto flex-1">
+                  {notifications.length === 0 ? (
+                    <div className="text-center py-8 text-sm" style={{ color: palette.text2 }}>
+                      Nenhuma notificação encontrada no sistema.
                     </div>
-                  ))}
+                  ) : (
+                    notifications.map((item) => (
+                      <div key={item.id} className="rounded-2xl border p-3" style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.06)" }}>
+                        <div className="flex items-center justify-between mb-1">
+                           <div className={`font-semibold text-sm ${item.type === 'error' ? 'text-red-400' : item.type === 'success' ? 'text-green-400' : 'text-white'}`}>
+                             {item.title}
+                           </div>
+                           <div className="text-[10px]" style={{ color: palette.text2 }}>
+                             {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                           </div>
+                        </div>
+                        <div className="text-sm" style={{ color: palette.text2 }}>{item.text}</div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </motion.div>
             )}
