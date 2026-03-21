@@ -95,6 +95,10 @@ export const processQueue = async () => {
                         // Atualiza o documento equivalente na memória local (Dexie) marcando como sincronizado se for da coleção principal.
                         if (task.targetCollection === "estimativas_safra") {
                              await db.estimativas.update(task.documentId, { syncStatus: "synced" });
+                        } else if (task.targetCollection === "ordens_corte") {
+                             await db.ordensCorte.update(task.documentId, { syncStatus: "synced" });
+                        } else if (task.targetCollection === "ordens_corte_talhoes") {
+                             await db.ordensCorteTalhoes.update(task.documentId, { syncStatus: "synced" });
                         }
                     } else if (task.type === 'addHistory') {
                         // Tira o id falso local e sobe só o conteúdo pro firebase criar um id gerado.

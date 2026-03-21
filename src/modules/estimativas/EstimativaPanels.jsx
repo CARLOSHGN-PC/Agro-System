@@ -3,6 +3,10 @@ import { ChevronDown, X, Pencil, History, Palette, PieChart } from "lucide-react
 import { palette } from "../../constants/theme";
 import { parseBrazilianFloat } from "../../utils/formatters";
 
+// Hook e Componente de Ordem de Corte injetados
+import { selecionarVinculoDoTalhao } from "./utils/ordemCorteSelectors";
+import { OrdemCorteActions } from "./components/OrdemCorteActions";
+
 /**
  * EstimativaPanels.jsx
  *
@@ -42,9 +46,18 @@ export default function EstimativaPanels({
   legendItems,
   summaryCollapsed,
   setSummaryCollapsed,
-  summaryData
+  summaryData,
+
+  // Props de Ordem de Corte
+  vinculosSafra = [],
+  companyId = '',
+  safra = ''
 }) {
   const [infoCollapsed, setInfoCollapsed] = useState(false);
+
+  // Calcula o Vínculo ativo apenas se houver 1 talhão selecionado, senão não mostra status da Ordem mista (para simplificar a UI).
+  // Múltiplos talhões poderão ABRIR nova ordem se não tiverem vínculo, mas não exibirão "status" detalhado misturado.
+  const vinculoAtivo = selectedTalhoes.length === 1 ? selecionarVinculoDoTalhao(selectedTalhoes[0], vinculosSafra) : null;
 
   return (
     <>
@@ -204,7 +217,19 @@ export default function EstimativaPanels({
                 </button>
               </div>
 
-              <div className="col-span-2 mt-1">
+              {/* Bloco Dinâmico Injetado - Ordem de Corte */}
+              <div className="col-span-2 mt-2">
+                 <OrdemCorteActions
+                      vinculoAtivo={vinculoAtivo}
+                      talhoesIds={selectedTalhoes}
+                      companyId={companyId}
+                      safra={safra}
+                      rodadaOrigem={currentRodada}
+                      usuario="Sistema" // Em um cenário real, pegaria do AuthContext
+                 />
+              </div>
+
+              <div className="col-span-2 mt-2">
                 <button
                   className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] border transition-colors hover:bg-white/5"
                   style={{ background: "transparent", borderColor: "rgba(255,255,255,0.12)", color: "#ffffff" }}

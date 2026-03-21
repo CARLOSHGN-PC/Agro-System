@@ -3,6 +3,8 @@ import Map, { Source, Layer } from "react-map-gl";
 import * as turf from "@turf/turf";
 import { palette } from "../../constants/theme";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { useMemo } from "react";
+import { ORDEM_CORTE_CORES } from "../../services/ordemCorte/ordemCorteConstants";
 
 const MAPBOX_TOKEN = "pk.eyJ1IjoiY2FybG9zaGduIiwiYSI6ImNtZDk0bXVxeTA0MTcyam9sb2h1dDhxaG8ifQ.uf0av4a0WQ9sxM1RcFYT2w";
 
@@ -40,9 +42,21 @@ const EstimativaMap = React.memo(function EstimativaMap({
   hoveredTalhao,
   isMultiSelectMode,
   selectedTalhoes,
-  selectedTalhao
+  selectedTalhao,
+  idsAbertosSet = new Set(),
+  idsOcultosSet = new Set()
 }) {
   const previousGeoJsonBbox = useRef("");
+
+  // Memoizamos os polígonos para excluir visualmente aqueles que estão com Ordem de Corte FECHADA
+  // Essa é a maneira de "ocultar sem deletar do banco nem do source original".
+  const visibleGeoJson = useMemo(() => {
+     if (!enhancedGeoJson) return null;
+     return {
+        ...enhancedGeoJson,
+        features: enhancedGeoJson.features.filter(f => !idsOcultosSet.has(f.id))
+     };
+  }, [enhancedGeoJson, idsOcultosSet]);
 
   // Realiza o zoom adaptativo APENAS quando os polígonos filtrados mudam,
   // e não quando eles mudam de cor (propriedades).
@@ -114,8 +128,8 @@ const EstimativaMap = React.memo(function EstimativaMap({
         }}
         onMouseLeave={() => setHoveredTalhao(null)}
       >
-        {enhancedGeoJson && (
-          <Source id="talhoes" type="geojson" data={enhancedGeoJson}>
+        {visibleGeoJson && (
+          <Source id="talhoes" type="geojson" data={visibleGeoJson}>
             <Layer
               id="talhoes-fill"
               type="fill"
@@ -126,6 +140,9 @@ const EstimativaMap = React.memo(function EstimativaMap({
                   "#eab308", // Bright yellow marking color for selected talhoes
                   ["boolean", ["feature-state", "hover"], false],
                   palette.goldLight,
+                  // Injeção da Ordem de Corte (Se a chave _has_open_ordem for true -> Pinta de Azul)
+                  ["boolean", ["get", "_has_open_ordem"], false],
+                  ORDEM_CORTE_CORES.AZUL_ABERTA,
                   ["boolean", ["get", "_is_estimated"], false],
                   [
                     "match",
