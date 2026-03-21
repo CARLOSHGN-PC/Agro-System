@@ -42,52 +42,94 @@ export const processQueue = async () => {
 
         console.log(`Iniciando sincronização de ${pendingTasks.length} tarefas.`);
 
-        // Se a fila for muito grande, o Promise.all executa todos os pushes do Firebase
-        // em paralelo, o que é absurdamente mais rápido do que fazer um loop "for...await" sequencial,
-        // destravando o sync instantaneamente.
-        await Promise.all(pendingTasks.map(async (task) => {
-            // Se já falhou muitas vezes, marca o status da queue como 'error'
-            if (task.retryCount >= MAX_RETRIES) {
-                await db.syncQueue.update(task.id, { status: 'error', errorMessage: 'Max retries reached' });
-                return;
-            }
+        /**
+         * NOVO BLOCO (Sincronização em Lotes)
+         * O que este bloco faz:
+         * Processa as requisições em lotes (chunks) em vez de jogar todas as promises
+         * de uma vez só no Firebase. Define um tamanho de lote (batchSize) e um delay entre lotes.
+         *
+         * Por que ele existe:
+         * O Promise.all maciço de antes travava o navegador e derrubava a conexão com o Firestore
+         * ao tentar enviar centenas/milhares de documentos simultâneos durante estimativas em massa.
+         * Lotes evitam timeout na fila e uso abusivo de CPU e banda.
+         */
+        const batchSize = 20; // Define quantos documentos processaremos por vez no Firebase para evitar limite de concorrência.
+        const chunkDelay = 500; // Define o tempo em milissegundos para dar "respiro" entre os lotes de execução.
 
-            try {
-                // De acordo com a ação mapeada, executa algo contra o Firebase
-                if (task.type === 'createOrUpdate') {
-                    const docRef = doc(firestore, task.targetCollection, task.documentId);
-                    // Retira os campos de controle locais pro firebase nao poluir
-                    const { syncStatus, ...firebasePayload } = task.payload;
+        // Loop iterativo que percorre a fila total fatiando-a de `batchSize` em `batchSize`.
+        for (let i = 0; i < pendingTasks.length; i += batchSize) {
+            // Pega o "pedaço" atual da fila com base no índice atual 'i' até 'i + batchSize'.
+            const currentChunk = pendingTasks.slice(i, i + batchSize);
 
-                    // Salva na coleção final
-                    await setDoc(docRef, { ...firebasePayload, updatedAt: serverTimestamp() }, { merge: true });
+            // Console de monitoramento: O que este bloco faz: informa o lote atual no console para logar o andamento.
+            // Por que ele existe: Útil para o desenvolvedor auditar e observar quantas tarefas já foram processadas sem o devtools travar.
+            console.log(`Processando lote de ${i} até ${i + currentChunk.length} de um total de ${pendingTasks.length}`);
 
-                    // Tenta atualizar o status no Dexie pra saber que já sincronizou
-                    if (task.targetCollection === "estimativas_safra") {
-                         await db.estimativas.update(task.documentId, { syncStatus: "synced" });
-                    }
-                } else if (task.type === 'addHistory') {
-                    const { localId, ...firebasePayload } = task.payload;
-                    await addDoc(collection(firestore, task.targetCollection), {
-                        ...firebasePayload,
-                        createdAt: serverTimestamp()
-                    });
+            // Executa apenas o lote atual em paralelo, aguardando que TODAS as promises desse lote finalizem antes de continuar o loop.
+            // Por que ele existe: Manter alguma concorrência é mais veloz que enviar sequencial, mas limitamos essa concorrência ao `batchSize`.
+            await Promise.all(currentChunk.map(async (task) => {
+                // O que este bloco faz: Verifica se a tarefa já atingiu o limite de retentativas.
+                // Por que ele existe: Evita ficar em um loop infinito que sempre falha e tranca a fila por dados malformados.
+                if (task.retryCount >= MAX_RETRIES) {
+                    await db.syncQueue.update(task.id, { status: 'error', errorMessage: 'Max retries reached' });
+                    return; // Retorna cedo e ignora essa tarefa.
                 }
 
-                // Tarefa foi processada com sucesso no Firebase: deleta ela da fila!
-                await db.syncQueue.delete(task.id);
+                try {
+                    // O que este bloco faz: Verifica qual o tipo da tarefa e mapeia para os comandos adequados do Firebase.
+                    // Por que ele existe: Centraliza a ação remota de salvar e atualizar histórico ou estimativa baseado na instrução registrada no Dexie.
+                    if (task.type === 'createOrUpdate') {
+                        // Cria a referência ao documento específico no Firestore.
+                        const docRef = doc(firestore, task.targetCollection, task.documentId);
 
-            } catch (error) {
-                console.error("Erro durante push da task", task.id, error);
+                        // Retira propriedades locais que não devem ir pro Firebase usando desestruturação
+                        const { syncStatus, ...firebasePayload } = task.payload;
 
-                // Se foi um problema de conexão, marcamos que tentou mais uma vez
-                const errorMsg = error.message || "Erro genérico";
-                await db.syncQueue.update(task.id, {
-                    retryCount: task.retryCount + 1,
-                    errorMessage: errorMsg
-                });
+                        // Tenta escrever no Firebase efetivamente usando merge para não apagar o que já existe de outro client.
+                        await setDoc(docRef, { ...firebasePayload, updatedAt: serverTimestamp() }, { merge: true });
+
+                        // Atualiza o documento equivalente na memória local (Dexie) marcando como sincronizado se for da coleção principal.
+                        if (task.targetCollection === "estimativas_safra") {
+                             await db.estimativas.update(task.documentId, { syncStatus: "synced" });
+                        }
+                    } else if (task.type === 'addHistory') {
+                        // Tira o id falso local e sobe só o conteúdo pro firebase criar um id gerado.
+                        const { localId, ...firebasePayload } = task.payload;
+
+                        // Faz um post puro pra coleção de histórico.
+                        await addDoc(collection(firestore, task.targetCollection), {
+                            ...firebasePayload,
+                            createdAt: serverTimestamp()
+                        });
+                    }
+
+                    // O que este bloco faz: Remove a tarefa da fila de sincronização do banco local.
+                    // Por que ele existe: Se chegamos até aqui, a tarefa concluiu sem erros no servidor, então ela deve sumir da memória do celular.
+                    await db.syncQueue.delete(task.id);
+
+                } catch (error) {
+                    // O que este bloco faz: Captura qualquer falha que o Firebase retornar para essa promise individual.
+                    // Por que ele existe: Para não quebrar o `Promise.all` dos outros itens do lote (se 1 falha, não deve matar o resto em um erro genérico).
+                    console.error("Erro durante push da task", task.id, error);
+
+                    // Pega a mensagem de erro literal para salvar e registrar.
+                    const errorMsg = error.message || "Erro genérico";
+
+                    // O que este bloco faz: Incrementa o número de tentativas e atualiza no Dexie.
+                    // Por que ele existe: Na próxima vez que a internet piscar, a função sabe que já tentou X vezes e aborta no limite configurado.
+                    await db.syncQueue.update(task.id, {
+                        retryCount: task.retryCount + 1,
+                        errorMessage: errorMsg
+                    });
+                }
+            }));
+
+            // O que este bloco faz: Introduz uma pausa artificial se ainda houver mais lotes para rodar.
+            // Por que ele existe: Permite que o EventLoop do navegador respire e os WebSockets não enfileirem tantas mensagens pendentes de ACK simultaneamente.
+            if (i + batchSize < pendingTasks.length) {
+                await new Promise(resolve => setTimeout(resolve, chunkDelay));
             }
-        }));
+        }
 
         console.log("Processamento da fila de sincronização finalizado.");
 
