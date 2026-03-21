@@ -89,19 +89,25 @@ export default function EstimativaModals({
 
     // Compara se algum dos talhões neste escopo já existe no `allEstimates`
     // (O useEstimativasData já filtra allEstimates pela currentRodada)
-    // Para comparar, precisamos converter os featureIds em UniqueTalhaoIds
+    // Para comparar, precisamos converter os featureIds em UniqueTalhaoIds (getUniqueTalhaoId do geoHelpers)
     const estimatedTalhaoIds = new Set(allEstimates.map(e => e.talhaoId));
 
     for (const featureId of scopeTalhoesIds) {
       // Procura a feature no mapa completo
       const feat = geoJsonData?.features?.find(f => f.properties.featureId === featureId);
       if (feat) {
-        const featFundo = feat.properties.FUNDO_AGR ? feat.properties.FUNDO_AGR.toString().trim() : 'N/A';
-        const featFazenda = feat.properties.FAZENDA ? feat.properties.FAZENDA.toString().trim() : 'N/A';
-        const featTalhao = feat.properties.TALHAO ? feat.properties.TALHAO.toString().trim() : 'N/A';
-        const uniqueId = `${featFundo}_${featFazenda}_${featTalhao}`;
+        // A lógica original não usava o _SEQ, porém o banco de dados armazena os IDs únicos via geoHelpers
+        // e ele acrescenta o '_SEQ${featureId}'!
+        const p = feat.properties;
+        const f_agr = p.FUNDO_AGR ? String(p.FUNDO_AGR).trim() : "N-A";
+        const faz = p.FAZENDA ? String(p.FAZENDA).trim() : "N-A";
+        const talhao = p.TALHAO ? String(p.TALHAO).trim() : `mock_${feat.id}`;
+        const uniqueIndex = p.featureId !== undefined ? p.featureId : feat.id;
 
-        if (estimatedTalhaoIds.has(uniqueId)) {
+        const rawId = `${f_agr}_${faz}_${talhao}_SEQ${uniqueIndex}`;
+        const finalUniqueId = rawId.replace(/\//g, '-').replace(/ /g, '_').toUpperCase();
+
+        if (estimatedTalhaoIds.has(finalUniqueId)) {
           return true; // Encontrou pelo menos um, bloqueia
         }
       }
