@@ -42,12 +42,14 @@ export const processQueue = async () => {
 
         console.log(`Iniciando sincronização de ${pendingTasks.length} tarefas.`);
 
-        for (const task of pendingTasks) {
+        // Se a fila for muito grande, o Promise.all executa todos os pushes do Firebase
+        // em paralelo, o que é absurdamente mais rápido do que fazer um loop "for...await" sequencial,
+        // destravando o sync instantaneamente.
+        await Promise.all(pendingTasks.map(async (task) => {
             // Se já falhou muitas vezes, marca o status da queue como 'error'
-            // Pra pessoa conseguir saber que algo travou.
             if (task.retryCount >= MAX_RETRIES) {
                 await db.syncQueue.update(task.id, { status: 'error', errorMessage: 'Max retries reached' });
-                continue;
+                return;
             }
 
             try {
@@ -79,14 +81,13 @@ export const processQueue = async () => {
                 console.error("Erro durante push da task", task.id, error);
 
                 // Se foi um problema de conexão, marcamos que tentou mais uma vez
-                // Problemas de PERMISSÃO no Firebase podem requerer intervenção manual
                 const errorMsg = error.message || "Erro genérico";
                 await db.syncQueue.update(task.id, {
                     retryCount: task.retryCount + 1,
                     errorMessage: errorMsg
                 });
             }
-        }
+        }));
 
         console.log("Processamento da fila de sincronização finalizado.");
 
