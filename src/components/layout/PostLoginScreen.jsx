@@ -68,6 +68,9 @@ export default function PostLoginScreen({ onLogout }) {
   // 3. Gerencia o painel de Resumo e a Legenda baseando-se no que está ativo
   const mapSummary = useMapSummary(mapFilters.enhancedGeoJson, estData.allEstimates);
 
+  // Removemos mock de notificações
+  // const notificationsMock = [...]
+
   /**
    * Handler de Clique no Mapa.
    * Aciona a inclusão/exclusão de IDs de talhões do vetor `selectedTalhoes`
@@ -107,7 +110,16 @@ export default function PostLoginScreen({ onLogout }) {
   };
 
   return (
-    <div className="h-[100dvh] relative overflow-hidden flex flex-col" style={{ background: `linear-gradient(160deg, ${palette.bg2} 0%, ${palette.tech} 60%, ${palette.tech2} 100%)`, color: palette.white }}>
+    <div
+      className="h-screen relative overflow-hidden flex flex-col"
+      style={{
+        // 100dvh garante altura real, safe-area-inset-bottom evita o map ficar atrás da barrinha de gesto de iPhones e Androids
+        height: "100dvh",
+        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        background: `linear-gradient(160deg, ${palette.bg2} 0%, ${palette.tech} 60%, ${palette.tech2} 100%)`,
+        color: palette.white
+      }}
+    >
       <AnimatedBackground />
       <GlowOrb className="top-[-70px] right-[-70px] bg-yellow-300/20" size={260} delay={0.2} />
       <GlowOrb className="bottom-[8%] left-[-60px] bg-blue-500/20" size={300} delay={0.8} />
@@ -144,6 +156,9 @@ export default function PostLoginScreen({ onLogout }) {
           filtersOpen={mapFilters.filtersOpen} setFiltersOpen={mapFilters.setFiltersOpen}
 
           currentSafra={currentSafra}
+          currentRodada={estData.currentRodada}
+          allEstimates={estData.allEstimates}
+
           scope={estData.scope} setScope={estData.setScope}
           selectedTalhao={selectedTalhao} selectedTalhoes={selectedTalhoes}
           enhancedGeoJson={mapFilters.enhancedGeoJson} geoJsonData={estData.geoJsonData}
@@ -166,7 +181,6 @@ export default function PostLoginScreen({ onLogout }) {
           setNotificationsOpen={setNotificationsOpen}
           profileOpen={profileOpen}
           setProfileOpen={setProfileOpen}
-          notifications={notificationsMock}
           onLogout={onLogout}
         />
 
