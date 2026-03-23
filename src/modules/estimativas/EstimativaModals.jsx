@@ -53,11 +53,10 @@ export default function EstimativaModals({
   }, [scope, selectedTalhao, selectedTalhoes, estimateOpen]);
 
   // Regra de Negócio de Segurança:
-  // Verifica se na seleção/escopo atual existe ALGUM talhão que JÁ FOI ESTIMADO na "currentRodada",
-  // ou se possui uma Ordem de Corte Aberta (em colheita).
+  // Verifica se na seleção/escopo atual existe ALGUM talhão que JÁ FOI ESTIMADO na "currentRodada".
   // Se sim, o botão de salvar será bloqueado.
-  const validationState = React.useMemo(() => {
-    if (!estimateOpen) return { isCurrentlyEstimated: false, isHarvesting: false };
+  const isCurrentlyEstimated = React.useMemo(() => {
+    if (!estimateOpen) return false;
 
     // Obter todos os IDs de talhão que estão englobados no `scope` atual
     const scopeTalhoesIds = [];
@@ -108,23 +107,17 @@ export default function EstimativaModals({
         const rawId = `${f_agr}_${faz}_${talhao}_SEQ${uniqueIndex}`;
         const finalUniqueId = rawId.replace(/\//g, '-').replace(/ /g, '_').toUpperCase();
 
-        if (feat.properties?._has_open_ordem) {
-          return { isCurrentlyEstimated: false, isHarvesting: true }; // Encontrou ordem aberta, bloqueia por colheita
-        }
-
         if (estimatedTalhaoIds.has(finalUniqueId)) {
-          return { isCurrentlyEstimated: true, isHarvesting: false }; // Encontrou pelo menos um estimado, bloqueia
+          return true; // Encontrou pelo menos um, bloqueia
         }
       }
     }
 
-    return { isCurrentlyEstimated: false, isHarvesting: false };
+    return false;
   }, [estimateOpen, scope, selectedTalhao, selectedTalhoes, enhancedGeoJson, geoJsonData, allEstimates]);
 
-  const { isCurrentlyEstimated, isHarvesting } = validationState;
-
   const handleSaveWrapper = async () => {
-    if (isCurrentlyEstimated || isHarvesting) return; // Segurança extra
+    if (isCurrentlyEstimated) return; // Segurança extra
     await submitEstimate(selectedTalhoes, selectedTalhao, enhancedGeoJson);
   };
 
@@ -224,23 +217,17 @@ export default function EstimativaModals({
                 <textarea placeholder="Ao salvar, cada reestimativa gera uma nova versão por safra sem apagar o histórico anterior." className="rounded-2xl border px-4 py-3 min-h-[110px] outline-none focus:border-yellow-500 transition-colors" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
               </div>
 
-              {isCurrentlyEstimated && !isHarvesting && (
+              {isCurrentlyEstimated && (
                 <div className="rounded-2xl border p-4 text-sm font-medium text-red-400 bg-red-400/10" style={{ borderColor: "rgba(248,113,113,0.2)" }}>
                    Atenção: A seleção atual (ou parte dela) já possui estimativa salva na rodada "{currentRodada}".
                    Para alterar ou estimar novamente, crie uma nova reestimativa no painel principal.
                 </div>
               )}
-              {isHarvesting && (
-                <div className="rounded-2xl border p-4 text-sm font-medium text-red-400 bg-red-400/10" style={{ borderColor: "rgba(248,113,113,0.2)" }}>
-                   Atenção: A seleção atual possui uma Ordem de Corte aberta (Em colheita).
-                   Não é possível reestimar talhões que já estão sendo colhidos.
-                </div>
-              )}
             </div>
             <div className="flex justify-end gap-3 px-5 py-4 border-t shrink-0" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
               <button className="rounded-xl border px-4 py-3 hover:bg-white/10 transition-colors" style={{ borderColor: "rgba(255,255,255,0.12)", background: "transparent" }} onClick={() => setEstimateOpen(false)}>Cancelar</button>
-              <button disabled={isSaving || isCurrentlyEstimated || isHarvesting} className="rounded-xl px-4 py-3 transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed" style={{ background: "linear-gradient(135deg, #f59e0b, #f97316)", color: "white" }} onClick={handleSaveWrapper}>
-                {isSaving ? "Salvando..." : isHarvesting ? "Em colheita: Bloqueado" : isCurrentlyEstimated ? "Já estimado nesta rodada" : (currentRodada === "Estimativa" ? "Salvar estimativa" : "Salvar reestimativa")}
+              <button disabled={isSaving || isCurrentlyEstimated} className="rounded-xl px-4 py-3 transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed" style={{ background: "linear-gradient(135deg, #f59e0b, #f97316)", color: "white" }} onClick={handleSaveWrapper}>
+                {isSaving ? "Salvando..." : isCurrentlyEstimated ? "Já estimado nesta rodada" : "Salvar estimativa"}
               </button>
             </div>
           </motion.div>
