@@ -194,40 +194,28 @@ export default function EstimativaPanels({
               ))}
 
               <div className="col-span-2 grid grid-cols-2 gap-3 mt-2">
-                {(() => {
-                   let hasEstimated = false;
-                   let isHarvesting = false;
-                   selectedTalhoes.forEach(id => {
-                      const feat = enhancedGeoJson?.features?.find(f => f.id === id);
-                      if (feat) {
-                          if (feat.properties?._is_estimated) hasEstimated = true;
-                          if (feat.properties?._has_open_ordem) isHarvesting = true;
-                      }
-                   });
-
-                   // Determina texto: se já está estimado na rodada atual OU estamos em uma reestimativa.
-                   const actionText = (hasEstimated || currentRodada !== "Estimativa") ? "Reestimar" : "Estimar";
-
-                   return (
-                     <button
-                       className={`rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] ${isHarvesting ? 'opacity-50 cursor-not-allowed' : ''}`}
-                       style={{ background: isHarvesting ? "rgba(255,255,255,0.1)" : "#22c55e", color: isHarvesting ? palette.text2 : "#ffffff" }}
-                       disabled={isHarvesting}
-                       title={isHarvesting ? "Talhões em colheita (Ordem Aberta) não podem ser reestimados" : ""}
-                       onClick={() => {
-                         if (selectedTalhoes.length > 1) {
-                           setScope("selecionados");
-                         } else {
-                           setScope("talhao");
-                         }
-                         setEstimateOpen(true);
-                       }}
-                     >
-                       <Pencil className="w-4 h-4" />
-                       {isHarvesting ? "Em Colheita" : actionText}
-                     </button>
-                   );
-                })()}
+                <button
+                  className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02]"
+                  style={{ background: "#22c55e", color: "#ffffff" }}
+                  onClick={() => {
+                    if (selectedTalhoes.length > 1) {
+                      setScope("selecionados");
+                    } else {
+                      setScope("talhao");
+                    }
+                    setEstimateOpen(true);
+                  }}
+                >
+                  <Pencil className="w-4 h-4" />
+                  {(() => {
+                     let hasEstimated = false;
+                     selectedTalhoes.forEach(id => {
+                        const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+                        if (feat && feat.properties?._is_estimated) hasEstimated = true;
+                     });
+                     return hasEstimated ? "Reestimar" : "Estimar";
+                  })()}
+                </button>
                 <button
                   onClick={() => openHistory(selectedTalhao)}
                   disabled={selectedTalhoes.length > 1}
