@@ -55,9 +55,12 @@ export default function EstimativaPanels({
 }) {
   const [infoCollapsed, setInfoCollapsed] = useState(false);
 
-  // Calcula o Vínculo ativo apenas se houver 1 talhão selecionado, senão não mostra status da Ordem mista (para simplificar a UI).
-  // Múltiplos talhões poderão ABRIR nova ordem se não tiverem vínculo, mas não exibirão "status" detalhado misturado.
-  const vinculoAtivo = selectedTalhoes.length === 1 ? selecionarVinculoDoTalhao(selectedTalhoes[0], vinculosSafra) : null;
+  // O que este bloco faz: Calcula o vínculo ativo que vai ditar o botão de ABRIR ou FECHAR.
+  // Se o usuário selecionou 1 ou múltiplos talhões, pegamos o vínculo do "último" clicado (ou do primeiro da lista)
+  // para ditar qual Ordem estamos operando. Assim o botão "Fechar X talhões da Ordem" aparece corretamente
+  // mesmo quando temos uma seleção múltipla no mapa.
+  // Por que ele existe: Para não trancar a UI e permitir que o usuário feche 5 talhões de uma mesma Ordem de uma vez só.
+  const vinculoAtivo = selectedTalhoes.length > 0 ? selecionarVinculoDoTalhao(selectedTalhoes[selectedTalhoes.length - 1], vinculosSafra) : null;
 
   return (
     <>

@@ -62,10 +62,14 @@ export const abrirOrdemCorte = async (companyId, safra, talhaoIds, rodadaOrigem,
     }
 };
 
-export const fecharOrdemCorte = async (ordemCorteId, usuario) => {
+export const fecharOrdemCorte = async (ordemCorteId, talhoesIdsDesejados, usuario) => {
     try {
-        // O repositório lida com buscar os detalhes e dar o update + sync.
-        await repo.fecharOrdemCorte(ordemCorteId, usuario);
+        if (!talhoesIdsDesejados || talhoesIdsDesejados.length === 0) {
+            return { success: false, message: "Nenhum talhão selecionado para fechar." };
+        }
+
+        // O repositório lida com buscar os detalhes, filtrar os que vão fechar e checar se deve fechar o mestre.
+        await repo.fecharOrdemCorte(ordemCorteId, talhoesIdsDesejados, usuario);
         return { success: true };
     } catch (err) {
         console.error("Falha orquestrando fechamento de Ordem:", err);

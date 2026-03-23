@@ -21,5 +21,8 @@ export const ORDEM_CORTE_COLECOES = {
 };
 
 export const ORDEM_CORTE_CORES = {
-    AZUL_ABERTA: '#3b82f6', // Tailwind blue-500
+    // O que este bloco faz: Define uma cor ciano/neon muito forte e opaca para talhões em ordem aberta.
+    // Por que ele existe: O usuário relatou que o mapa de satélite já possui tons azuis normais.
+    // Uma cor extremamente brilhante (#00e1ff) destaca os polígonos da Ordem de Corte imediatamente.
+    AZUL_ABERTA: '#00e1ff', // Ciano vibrante
 };
