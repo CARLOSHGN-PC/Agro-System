@@ -1,3 +1,5 @@
+import { firestore } from '../firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import db from '../localDb';
 import { enqueueTask } from '../syncService';
 import { ORDEM_CORTE_STATUS, ORDEM_CORTE_COLECOES } from './ordemCorteConstants';
@@ -106,4 +108,112 @@ export const getVinculosDaSafra = async (companyId, safra) => {
         .where('[companyId+safra]')
         .equals([companyId, safra])
         .toArray();
+};
+
+/**
+ * onSnapshot para Ordens (Cabeçalhos)
+ * O que este bloco faz: Escuta ao vivo no Firebase e joga pro Dexie
+ */
+export const subscribeToOrdensRealtime = (companyId, safra, onUpdateCallback) => {
+    if (!navigator.onLine) return () => {};
+
+    const q = query(
+        collection(firestore, ORDEM_CORTE_COLECOES.MESTRE),
+        where("companyId", "==", companyId),
+        where("safra", "==", safra)
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        let hasChanges = false;
+        const updates = [];
+
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added" || change.type === "modified") {
+                const fbData = change.doc.data();
+                hasChanges = true;
+
+                updates.push(async () => {
+                    const existing = await db.ordensCorte.get(change.doc.id);
+                    if (!existing || existing.syncStatus === 'synced') {
+                        await db.ordensCorte.put({
+                            id: change.doc.id,
+                            ...fbData,
+                            syncStatus: 'synced'
+                        });
+                    }
+                });
+            } else if (change.type === "removed") {
+                hasChanges = true;
+                updates.push(async () => {
+                    const existing = await db.ordensCorte.get(change.doc.id);
+                    if (existing && existing.syncStatus !== 'pending') {
+                        await db.ordensCorte.delete(change.doc.id);
+                    }
+                });
+            }
+        });
+
+        if (hasChanges) {
+            await Promise.all(updates.map(u => u()));
+            if (onUpdateCallback) onUpdateCallback();
+        }
+    }, (error) => {
+        console.warn("Ordens Realtime sync lost:", error);
+    });
+
+    return unsubscribe;
+};
+
+/**
+ * onSnapshot para Vinculos (Talhoes)
+ * O que este bloco faz: Escuta ao vivo os fechamentos parciais no FB e atualiza o mapa dos outros devices na hora.
+ */
+export const subscribeToVinculosRealtime = (companyId, safra, onUpdateCallback) => {
+    if (!navigator.onLine) return () => {};
+
+    const q = query(
+        collection(firestore, ORDEM_CORTE_COLECOES.VINCULO),
+        where("companyId", "==", companyId),
+        where("safra", "==", safra)
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        let hasChanges = false;
+        const updates = [];
+
+        snapshot.docChanges().forEach((change) => {
+            if (change.type === "added" || change.type === "modified") {
+                const fbData = change.doc.data();
+                hasChanges = true;
+
+                updates.push(async () => {
+                    const existing = await db.ordensCorteTalhoes.get(change.doc.id);
+                    if (!existing || existing.syncStatus === 'synced') {
+                        await db.ordensCorteTalhoes.put({
+                            id: change.doc.id,
+                            ...fbData,
+                            syncStatus: 'synced'
+                        });
+                    }
+                });
+            } else if (change.type === "removed") {
+                hasChanges = true;
+                updates.push(async () => {
+                    const existing = await db.ordensCorteTalhoes.get(change.doc.id);
+                    if (existing && existing.syncStatus !== 'pending') {
+                        await db.ordensCorteTalhoes.delete(change.doc.id);
+                    }
+                });
+            }
+        });
+
+        if (hasChanges) {
+            await Promise.all(updates.map(u => u()));
+            if (onUpdateCallback) onUpdateCallback();
+        }
+    }, (error) => {
+        console.warn("Vinculos Realtime sync lost:", error);
+    });
+
+    return unsubscribe;
 };
