@@ -134,37 +134,48 @@ export const subscribeToOrdensRealtime = (companyId, safra, onUpdateCallback) =>
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
+        // O que este bloco faz: Processa lotes ("bulk") de registros sincronizados do Firestore em uma única transação no IndexedDB local.
+        // Por que ele existe: Evita travamento na tela de celulares fracos, que ocorriam ao tentar iterar centenas de Promises de .put() individualmente na re-renderização.
         let hasChanges = false;
-        const updates = [];
+        const toAddOrUpdate = [];
+        const toDeleteIds = [];
 
         snapshot.docChanges().forEach((change) => {
+            hasChanges = true;
             if (change.type === "added" || change.type === "modified") {
                 const fbData = change.doc.data();
-                hasChanges = true;
-
-                updates.push(async () => {
-                    const existing = await db.ordensCorte.get(change.doc.id);
-                    if (!existing || existing.syncStatus === 'synced') {
-                        await db.ordensCorte.put({
-                            id: change.doc.id,
-                            ...fbData,
-                            syncStatus: 'synced'
-                        });
-                    }
+                toAddOrUpdate.push({
+                    id: change.doc.id,
+                    ...fbData,
+                    syncStatus: 'synced'
                 });
             } else if (change.type === "removed") {
-                hasChanges = true;
-                updates.push(async () => {
-                    const existing = await db.ordensCorte.get(change.doc.id);
-                    if (existing && existing.syncStatus !== 'pending') {
-                        await db.ordensCorte.delete(change.doc.id);
-                    }
-                });
+                toDeleteIds.push(change.doc.id);
             }
         });
 
         if (hasChanges) {
-            await Promise.all(updates.map(u => u()));
+            const allAffectedIds = [...toAddOrUpdate.map(i => i.id), ...toDeleteIds];
+            const existingRecords = await db.ordensCorte.bulkGet(allAffectedIds);
+
+            const existingMap = {};
+            existingRecords.forEach(record => {
+                if (record) existingMap[record.id] = record;
+            });
+
+            const finalPuts = toAddOrUpdate.filter(item => {
+                const existing = existingMap[item.id];
+                return !existing || existing.syncStatus === 'synced';
+            });
+
+            const finalDeletes = toDeleteIds.filter(id => {
+                const existing = existingMap[id];
+                return existing && existing.syncStatus !== 'pending';
+            });
+
+            if (finalPuts.length > 0) await db.ordensCorte.bulkPut(finalPuts);
+            if (finalDeletes.length > 0) await db.ordensCorte.bulkDelete(finalDeletes);
+
             if (onUpdateCallback) onUpdateCallback();
         }
     }, (error) => {
@@ -188,37 +199,48 @@ export const subscribeToVinculosRealtime = (companyId, safra, onUpdateCallback) 
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
+        // O que este bloco faz: Processa lotes ("bulk") de Vínculos sincronizados do Firestore em uma única transação no IndexedDB local.
+        // Por que ele existe: Evita travamento na tela de celulares fracos, que ocorriam ao tentar iterar centenas de Promises de .put() individualmente.
         let hasChanges = false;
-        const updates = [];
+        const toAddOrUpdate = [];
+        const toDeleteIds = [];
 
         snapshot.docChanges().forEach((change) => {
+            hasChanges = true;
             if (change.type === "added" || change.type === "modified") {
                 const fbData = change.doc.data();
-                hasChanges = true;
-
-                updates.push(async () => {
-                    const existing = await db.ordensCorteTalhoes.get(change.doc.id);
-                    if (!existing || existing.syncStatus === 'synced') {
-                        await db.ordensCorteTalhoes.put({
-                            id: change.doc.id,
-                            ...fbData,
-                            syncStatus: 'synced'
-                        });
-                    }
+                toAddOrUpdate.push({
+                    id: change.doc.id,
+                    ...fbData,
+                    syncStatus: 'synced'
                 });
             } else if (change.type === "removed") {
-                hasChanges = true;
-                updates.push(async () => {
-                    const existing = await db.ordensCorteTalhoes.get(change.doc.id);
-                    if (existing && existing.syncStatus !== 'pending') {
-                        await db.ordensCorteTalhoes.delete(change.doc.id);
-                    }
-                });
+                toDeleteIds.push(change.doc.id);
             }
         });
 
         if (hasChanges) {
-            await Promise.all(updates.map(u => u()));
+            const allAffectedIds = [...toAddOrUpdate.map(i => i.id), ...toDeleteIds];
+            const existingRecords = await db.ordensCorteTalhoes.bulkGet(allAffectedIds);
+
+            const existingMap = {};
+            existingRecords.forEach(record => {
+                if (record) existingMap[record.id] = record;
+            });
+
+            const finalPuts = toAddOrUpdate.filter(item => {
+                const existing = existingMap[item.id];
+                return !existing || existing.syncStatus === 'synced';
+            });
+
+            const finalDeletes = toDeleteIds.filter(id => {
+                const existing = existingMap[id];
+                return existing && existing.syncStatus !== 'pending';
+            });
+
+            if (finalPuts.length > 0) await db.ordensCorteTalhoes.bulkPut(finalPuts);
+            if (finalDeletes.length > 0) await db.ordensCorteTalhoes.bulkDelete(finalDeletes);
+
             if (onUpdateCallback) onUpdateCallback();
         }
     }, (error) => {
