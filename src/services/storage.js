@@ -40,8 +40,10 @@ export const fetchLatestGeoJson = async (companyId = "empresa_default") => {
       }
   } catch (err) {
       console.error("Erro critico ao ler mapa do IndexedDB. Tentando recuperar...", err);
-      // Se Dexie falhar (cache corrompido), força baixar de novo
+      // Se Dexie falhar (cache corrompido), força baixar de novo limpando o cache corrompido
       cachedData = null;
+      localTimestamp = 0;
+      await db.mapData.delete(`${companyId}_default`).catch(() => {});
   }
 
   // 2. VERIFICAÇÃO DE REDE EM BACKGROUND (Se online, baixa mapa novo)
@@ -66,9 +68,10 @@ export const fetchLatestGeoJson = async (companyId = "empresa_default") => {
                 const latestRef = latestItem.itemRef;
 
                 // Verificação otimizada: Apenas faz o download pesado se o timestamp do arquivo
-                // no Firebase for MAIOR que o timestamp do mapa que temos localmente.
-                if (latestItem.timestamp > localTimestamp) {
-                    console.log(`Nova versão do mapa detectada (${latestItem.timestamp} > ${localTimestamp}). Baixando...`);
+                // no Firebase for MAIOR que o timestamp do mapa que temos localmente,
+                // OU se não temos cache nenhum (cachedData nulo).
+                if (!cachedData || latestItem.timestamp > localTimestamp) {
+                    console.log(`Nova versão do mapa detectada ou sem cache. Baixando...`);
                     const url = await getDownloadURL(latestRef);
                     const response = await fetch(url);
                     if (response.ok) {
@@ -90,6 +93,7 @@ export const fetchLatestGeoJson = async (companyId = "empresa_default") => {
                     }
                 } else {
                     console.log(`Mapa local já está atualizado (${localTimestamp}). Nenhuma ação necessária.`);
+                    return cachedData; // Retorna o cache se nenhuma ação for necessária
                 }
             }
          } catch (error) {

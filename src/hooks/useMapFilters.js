@@ -62,23 +62,33 @@ export function useMapFilters(geoJsonData, allEstimates) {
       const corte = p.ECORTE ? String(p.ECORTE).trim() : "";
       const talhao = p.TALHAO ? String(p.TALHAO).trim() : "";
 
-      let matchesFrente = true;
-      let matchesFazenda = true;
-      let matchesVariedade = true;
-      let matchesCorte = true;
-
-      // Restringe as opções dependendo das seleções de nível superior já preenchidas no "draft" (filters)
-      // Fazenda -> Frente -> Variedade -> Corte -> Talhao
-      if (filters.fazenda && filters.fazenda !== "all" && fazendaName !== filters.fazenda) matchesFazenda = false;
-      if (filters.frente && filters.frente !== "all" && frente !== filters.frente) matchesFrente = false;
-      if (filters.variedade && filters.variedade !== "all" && variedade !== filters.variedade) matchesVariedade = false;
-      if (filters.corte && filters.corte !== "all" && corte !== filters.corte) matchesCorte = false;
-
+      // 1. A Fazenda é o nível mais alto. Ela sempre aparece (mas talvez filtrada por outras coisas no futuro, se quisermos).
+      // Por enquanto, mostra todas as fazendas disponíveis no mapa.
       if (fazendaName) fazendasSet.add(fazendaName);
-      if (frente && matchesFazenda) frentesSet.add(frente);
-      if (variedade && matchesFazenda && matchesFrente) variedadesSet.add(variedade);
-      if (corte && matchesFazenda && matchesFrente && matchesVariedade) cortesSet.add(corte);
-      if (talhao && matchesFazenda && matchesFrente && matchesVariedade && matchesCorte) talhoesSet.add(talhao);
+
+      // 2. A Frente de Serviço é o segundo nível. Só mostra frentes que PERTENCEM à fazenda selecionada.
+      const matchesFazenda = !filters.fazenda || filters.fazenda === "all" || fazendaName === filters.fazenda;
+      if (frente && matchesFazenda) {
+         frentesSet.add(frente);
+      }
+
+      // 3. A Variedade é o terceiro nível. Só mostra variedades que pertencem à frente e fazenda selecionadas.
+      const matchesFrente = !filters.frente || filters.frente === "all" || frente === filters.frente;
+      if (variedade && matchesFazenda && matchesFrente) {
+         variedadesSet.add(variedade);
+      }
+
+      // 4. O Corte (Estágio) é o quarto nível.
+      const matchesVariedade = !filters.variedade || filters.variedade === "all" || variedade === filters.variedade;
+      if (corte && matchesFazenda && matchesFrente && matchesVariedade) {
+         cortesSet.add(corte);
+      }
+
+      // 5. O Talhão é o quinto nível.
+      const matchesCorte = !filters.corte || filters.corte === "all" || corte === filters.corte;
+      if (talhao && matchesFazenda && matchesFrente && matchesVariedade && matchesCorte) {
+         talhoesSet.add(talhao);
+      }
     });
 
     return {
