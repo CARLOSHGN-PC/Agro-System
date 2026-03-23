@@ -57,13 +57,18 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
 
     if (resMap.error && resMap.source !== 'local_fallback') {
       showError("Erro ao carregar mapa", resMap.error);
-    } else if (resMap.data) {
-      const featuresWithIds = resMap.data.features.map((f, i) => ({
-        ...f,
-        id: i,
-        properties: { ...f.properties, featureId: i }
-      }));
-      setGeoJsonData({ ...resMap.data, features: featuresWithIds });
+    } else if (resMap.data && resMap.data.features) {
+      try {
+        const featuresWithIds = resMap.data.features.map((f, i) => ({
+          ...f,
+          id: i,
+          properties: { ...f.properties, featureId: i }
+        }));
+        setGeoJsonData({ ...resMap.data, features: featuresWithIds });
+      } catch (err) {
+        console.error("Erro ao parsear features do mapa:", err);
+        showError("Erro no Mapa", "Ocorreu um erro ao processar o arquivo de mapa baixado. O cache será limpo. Recarregue a página.");
+      }
     } else {
       setActiveModule("configuracao");
     }

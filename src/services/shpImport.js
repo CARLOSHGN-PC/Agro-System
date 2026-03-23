@@ -52,6 +52,12 @@ export const importShapefile = async (files, companyId = "empresa_default") => {
     const processedPath = `${companyId}/mapas/processados/geojson_${timestamp}.json`;
     const geoJsonUrl = await uploadJson(processedPath, geoJson);
 
+    // 5. Force UI to fetch the newly uploaded map via CustomEvent
+    // This tells the app that a new map was just uploaded and it needs to fetch it
+    setTimeout(() => {
+       window.dispatchEvent(new CustomEvent('map-updated', { detail: { companyId } }));
+    }, 1000);
+
     return {
       success: true,
       geoJson,
