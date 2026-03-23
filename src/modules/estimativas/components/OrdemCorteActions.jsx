@@ -20,6 +20,7 @@ import { OrdemCorteInfo } from './OrdemCorteInfo';
 export const OrdemCorteActions = ({
     vinculoAtivo, // Pode ser null se não tiver ordem, ou o objeto do vinculo
     talhoesIds, // Array de string (IDs que estão selecionados no mapa)
+    hasUnestimatedTalhao, // Boolean indicando se pelo menos 1 talhão não está estimado na camada/rodada atual
     companyId,
     safra,
     rodadaOrigem,
@@ -28,6 +29,10 @@ export const OrdemCorteActions = ({
     const { handleAbrirOrdem, handleFecharOrdem, isProcessing } = useOrdemCorteActions();
 
     const onAbrirClick = async () => {
+         // O que este bloco faz: Se por um hack o botão for clicado, bloqueia na camada de UI também.
+         // Por que ele existe: Regra de negócio exigindo que você não pode cortar o que ainda não estimou naquela camada.
+         if (hasUnestimatedTalhao) return;
+
          await handleAbrirOrdem({
              companyId,
              safra,
@@ -54,11 +59,19 @@ export const OrdemCorteActions = ({
             {!vinculoAtivo || vinculoAtivo.status === ORDEM_CORTE_STATUS.FECHADA ? (
                  <button
                     onClick={onAbrirClick}
-                    disabled={isProcessing || talhoesIds.length === 0}
-                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600 bg-blue-500 text-white shadow-lg"
+                    disabled={isProcessing || talhoesIds.length === 0 || hasUnestimatedTalhao}
+                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-white shadow-lg ${
+                        hasUnestimatedTalhao
+                            ? 'bg-gray-600 hover:bg-gray-600'
+                            : 'bg-blue-500 hover:bg-blue-600'
+                    }`}
                  >
                     <Layers className="w-5 h-5" />
-                    <span>Abrir Ordem de Corte</span>
+                    <span>
+                        {hasUnestimatedTalhao
+                            ? 'Estime para abrir Ordem'
+                            : 'Abrir Ordem de Corte'}
+                    </span>
                  </button>
             ) : vinculoAtivo.status === ORDEM_CORTE_STATUS.ABERTA ? (
                  <button
