@@ -109,42 +109,60 @@ export const subscribeToEstimatesRealtime = (companyId, safra, onUpdateCallback)
     const q = query(collection(firestore, COLLECTION_ESTIMATIVAS), ...constraints);
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
+        // O que este bloco faz: Agrupa todas as mudanças (adições, edições, remoções) em arrays
+        // para processá-las em lote (bulk) no IndexedDB de uma vez só, em vez de gerar milhares de promises de .put() e .get() isolados.
+        // Por que ele existe: Processadores de celular sofriam engasgos e congelamentos severos na tela ao tentar sincronizar 2000
+        // talhões de uma vez através de conexões em tempo real, enquanto o PC aguentava a carga assíncrona bruta. O "Bulk" resolve isso.
         let hasChanges = false;
-        const updates = [];
+
+        const toAddOrUpdate = [];
+        const toDeleteIds = [];
 
         snapshot.docChanges().forEach((change) => {
+            hasChanges = true;
             if (change.type === "added" || change.type === "modified") {
                 const fbData = change.doc.data();
-                hasChanges = true;
-
-                updates.push(async () => {
-                    const existing = await db.estimativas.get(change.doc.id);
-                    // Sobrescreve apenas se for um registro novo ou se não tiver um status "pending"
-                    // (para evitar que o snapshot destrua a fila offline atual do próprio dispositivo)
-                    if (!existing || existing.syncStatus === 'synced') {
-                        await db.estimativas.put({
-                            id: change.doc.id,
-                            ...fbData,
-                            syncStatus: 'synced',
-                            updatedAt: fbData.updatedAt?.toDate()?.toISOString() || new Date().toISOString()
-                        });
-                    }
+                toAddOrUpdate.push({
+                    id: change.doc.id,
+                    ...fbData,
+                    syncStatus: 'synced',
+                    updatedAt: fbData.updatedAt?.toDate()?.toISOString() || new Date().toISOString()
                 });
             } else if (change.type === "removed") {
-                hasChanges = true;
-                updates.push(async () => {
-                    const existing = await db.estimativas.get(change.doc.id);
-                    // Deleta o registro localmente, mas previne deletar se tiver um envio pending
-                    if (existing && existing.syncStatus !== 'pending') {
-                        await db.estimativas.delete(change.doc.id);
-                    }
-                });
+                toDeleteIds.push(change.doc.id);
             }
         });
 
         if (hasChanges) {
-            await Promise.all(updates.map(u => u()));
-            // Quando terminar de atualizar o Dexie, avisa o React que os dados mudaram!
+            // O que este bloco faz: Lê todos os IDs afetados de uma vez no banco para verificar quem está com "status pending" (dados não salvos do próprio celular).
+            // Por que ele existe: Para proteger o celular de ter seus próprios dados (ainda sem internet/na fila) esmagados pelo servidor.
+            const allAffectedIds = [...toAddOrUpdate.map(item => item.id), ...toDeleteIds];
+
+            // Se o lote for muito grande (ex: carregamento inicial vazio do banco de 2000), o bulkGet pode devolver undefined para IDs que não existem, o que é esperado e tratado.
+            const existingRecords = await db.estimativas.bulkGet(allAffectedIds);
+
+            // Cria um dicionário de busca super rápido para os registros existentes
+            const existingMap = {};
+            existingRecords.forEach(record => {
+                if (record) existingMap[record.id] = record;
+            });
+
+            // Filtra os arrays finais considerando a regra de proteção "pending"
+            const finalPuts = toAddOrUpdate.filter(item => {
+                const existing = existingMap[item.id];
+                return !existing || existing.syncStatus === 'synced';
+            });
+
+            const finalDeletes = toDeleteIds.filter(id => {
+                const existing = existingMap[id];
+                return existing && existing.syncStatus !== 'pending';
+            });
+
+            // Executa as transações massivas de uma única vez no IndexedDB do navegador.
+            if (finalPuts.length > 0) await db.estimativas.bulkPut(finalPuts);
+            if (finalDeletes.length > 0) await db.estimativas.bulkDelete(finalDeletes);
+
+            // Quando terminar de atualizar o Dexie (em menos de 100ms até pra celulares), avisa o React que os dados mudaram!
             onUpdateCallback();
         }
     }, (error) => {
