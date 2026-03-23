@@ -62,6 +62,13 @@ export default function EstimativaPanels({
   // Por que ele existe: Para não trancar a UI e permitir que o usuário feche 5 talhões de uma mesma Ordem de uma vez só.
   const vinculoAtivo = selectedTalhoes.length > 0 ? selecionarVinculoDoTalhao(selectedTalhoes[selectedTalhoes.length - 1], vinculosSafra) : null;
 
+  // O que este bloco faz: Verifica se dentre os talhões selecionados no mapa, pelo menos UM não está estimado.
+  // Por que ele existe: Porque as regras de negócio dizem que não se pode abrir uma Ordem de Corte para um talhão que não foi estimado naquela rodada.
+  const hasUnestimatedTalhao = selectedTalhoes.some(id => {
+      const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+      return feat && !feat.properties?._is_estimated;
+  });
+
   return (
     <>
       {/* Título e Botão de Filtro - Top Left */}
@@ -225,6 +232,7 @@ export default function EstimativaPanels({
                  <OrdemCorteActions
                       vinculoAtivo={vinculoAtivo}
                       talhoesIds={selectedTalhoes}
+                      hasUnestimatedTalhao={hasUnestimatedTalhao}
                       companyId={companyId}
                       safra={safra}
                       rodadaOrigem={currentRodada}
