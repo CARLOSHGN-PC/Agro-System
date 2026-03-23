@@ -66,16 +66,21 @@ export const fecharOrdemCorte = async (ordemCorteId, talhoesSelecionadosIds, usu
     // 3. Fechamos individualmente cada Vínculo da lista de selecionados
     for (const v of vinculosParaFechar) {
         // O que este bloco faz: Modifica o "status" e a "data de fechamento" daquele talhão para FECHADA e reenvia ao Firebase.
-        await db.ordensCorteTalhoes.update(v.id, {
+        // Damos um "clone" manual do objeto v (o Vínculo) com as novas propriedades para garantir
+        // que o "enqueueTask" não envie "undefined" ou falhe caso o Dexie demore para processar a linha do .update()
+        const novoStatus = {
             status: ORDEM_CORTE_STATUS.FECHADA,
             closedAt,
             updatedAt: closedAt,
             syncStatus: 'pending'
-        });
+        };
 
-        // Colocamos o vínculo isolado na fila de Sync para a nuvem
-        const updatedV = await db.ordensCorteTalhoes.get(v.id);
-        if(updatedV) await enqueueTask('createOrUpdate', ORDEM_CORTE_COLECOES.VINCULO, updatedV.id, updatedV);
+        await db.ordensCorteTalhoes.update(v.id, novoStatus);
+
+        // Colocamos o vínculo isolado na fila de Sync para a nuvem injetando as vars diretamente.
+        // Assim, é 100% de certeza que o Firebase vai receber { status: FECHADA } no payload.
+        const payloadAtualizado = { ...v, ...novoStatus };
+        await enqueueTask('createOrUpdate', ORDEM_CORTE_COLECOES.VINCULO, v.id, payloadAtualizado);
     }
 
     // 4. Buscamos de novo a lista completa de vínculos no DB local para verificar o "resto".
@@ -89,17 +94,22 @@ export const fecharOrdemCorte = async (ordemCorteId, talhoesSelecionadosIds, usu
 
     // 5. Se não sobrou nenhum talhão ABERTO, fechamos também o Cabeçalho da Ordem ("Mestre").
     if (restantesAbertos.length === 0) {
-        await db.ordensCorte.update(ordemCorteId, {
+        const novosDadosMestre = {
             status: ORDEM_CORTE_STATUS.FECHADA,
             closedAt,
             closedBy: usuario || 'Sistema',
             updatedAt: closedAt,
             syncStatus: 'pending'
-        });
+        };
 
-        // Põe a Ordem Mestre (Cabeçalho) na fila de sync
-        const updatedOrdem = await db.ordensCorte.get(ordemCorteId);
-        if(updatedOrdem) await enqueueTask('createOrUpdate', ORDEM_CORTE_COLECOES.MESTRE, updatedOrdem.id, updatedOrdem);
+        await db.ordensCorte.update(ordemCorteId, novosDadosMestre);
+
+        // Põe a Ordem Mestre (Cabeçalho) na fila de sync recuperando a base
+        const ordemBase = await db.ordensCorte.get(ordemCorteId);
+        if (ordemBase) {
+            const payloadMestreAtualizado = { ...ordemBase, ...novosDadosMestre };
+            await enqueueTask('createOrUpdate', ORDEM_CORTE_COLECOES.MESTRE, ordemCorteId, payloadMestreAtualizado);
+        }
     }
 };
 

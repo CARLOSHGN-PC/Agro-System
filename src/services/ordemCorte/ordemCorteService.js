@@ -2,6 +2,7 @@ import * as repo from './ordemCorteRepository';
 import { buildNovaOrdemCorte, buildVinculoOrdemTalhao } from './ordemCorteMapper';
 import { validatePodeAbrirOrdem } from './ordemCorteRules';
 import { formatarCodigoOrdem } from '../../modules/estimativas/utils/ordemCorteHelpers';
+import { processQueue } from '../syncService';
 
 /**
  * ordemCorteService.js
@@ -70,6 +71,12 @@ export const fecharOrdemCorte = async (ordemCorteId, talhoesIdsDesejados, usuari
 
         // O repositório lida com buscar os detalhes, filtrar os que vão fechar e checar se deve fechar o mestre.
         await repo.fecharOrdemCorte(ordemCorteId, talhoesIdsDesejados, usuario);
+
+        // Garante que a fila do background inicie imediatamente após o repository confirmar o enfileiramento (enqueueTask)
+        if (navigator.onLine) {
+            processQueue();
+        }
+
         return { success: true };
     } catch (err) {
         console.error("Falha orquestrando fechamento de Ordem:", err);
