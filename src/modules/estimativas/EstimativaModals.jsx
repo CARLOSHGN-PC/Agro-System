@@ -290,32 +290,32 @@ export default function EstimativaModals({
             </div>
             <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto flex-1">
               <div className="flex flex-col gap-2">
-                <label className="text-xs" style={{ color: palette.text2 }}>Frente de Serviço</label>
+                <label className="text-xs" style={{ color: palette.text2 }}>Fundo agrícola / Fazenda</label>
                 <div className="relative">
                   <select
-                    value={filters.frente}
-                    onChange={(e) => setFilters({...filters, frente: e.target.value, fazenda: "", variedade: "", corte: "", talhao: ""})}
+                    value={filters.fazenda}
+                    onChange={(e) => setFilters({...filters, fazenda: e.target.value, frente: "", variedade: "", corte: "", talhao: ""})}
                     className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none focus:border-yellow-500 transition-colors"
                     style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }}
                   >
-                    <option value="" style={{ color: "black" }}>Todas as Frentes</option>
-                    {filterOptions.frentes?.map(f => <option key={f} value={f} style={{ color: "black" }}>{f}</option>)}
+                    <option value="" style={{ color: "black" }}>Todas as Fazendas</option>
+                    {filterOptions.fazendas.map(f => <option key={f} value={f} style={{ color: "black" }}>{f}</option>)}
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: palette.text2 }} />
                 </div>
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-xs" style={{ color: palette.text2 }}>Fundo agrícola / Fazenda</label>
+                <label className="text-xs" style={{ color: palette.text2 }}>Frente de Serviço</label>
                 <div className="relative">
                   <select
-                    value={filters.fazenda}
-                    onChange={(e) => setFilters({...filters, fazenda: e.target.value, variedade: "", corte: "", talhao: ""})}
+                    value={filters.frente}
+                    onChange={(e) => setFilters({...filters, frente: e.target.value, variedade: "", corte: "", talhao: ""})}
                     className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none focus:border-yellow-500 transition-colors"
                     style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }}
                   >
-                    <option value="" style={{ color: "black" }}>Todas as Fazendas</option>
-                    {filterOptions.fazendas.map(f => <option key={f} value={f} style={{ color: "black" }}>{f}</option>)}
+                    <option value="" style={{ color: "black" }}>Todas as Frentes</option>
+                    {filterOptions.frentes?.map(f => <option key={f} value={f} style={{ color: "black" }}>{f}</option>)}
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: palette.text2 }} />
                 </div>

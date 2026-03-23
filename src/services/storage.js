@@ -39,7 +39,9 @@ export const fetchLatestGeoJson = async (companyId = "empresa_default") => {
           // Retornamos os dados cacheados na hora. Não amarramos o retorno inicial à internet.
       }
   } catch (err) {
-      console.warn("Erro ao buscar mapa local do Dexie", err);
+      console.error("Erro critico ao ler mapa do IndexedDB. Tentando recuperar...", err);
+      // Se Dexie falhar (cache corrompido), força baixar de novo
+      cachedData = null;
   }
 
   // 2. VERIFICAÇÃO DE REDE EM BACKGROUND (Se online, baixa mapa novo)
@@ -112,7 +114,12 @@ export const fetchLatestGeoJson = async (companyId = "empresa_default") => {
          // Se já tínhamos cache, baixamos do Firebase apenas em "background" de forma assíncrona,
          // e se ele baixar algo novo, fica lá gravado pro próximo F5 do usuário.
          // Isso evita a tela branca de carregamento!
-         fetchFromRemote().catch(e => console.warn(e));
+
+         // Desacoplando o fetch background do event loop principal para evitar delays no Dexie
+         setTimeout(() => {
+             fetchFromRemote().catch(e => console.warn("Background map sync failed:", e));
+         }, 1000);
+
          return { data: cachedData, error: null, source: 'local' };
      }
   }
