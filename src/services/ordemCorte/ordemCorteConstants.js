@@ -21,8 +21,8 @@ export const ORDEM_CORTE_COLECOES = {
 };
 
 export const ORDEM_CORTE_CORES = {
-    // O que este bloco faz: Define uma cor ciano/neon muito forte e opaca para talhões em ordem aberta.
-    // Por que ele existe: O usuário relatou que o mapa de satélite já possui tons azuis normais.
-    // Uma cor extremamente brilhante (#00e1ff) destaca os polígonos da Ordem de Corte imediatamente.
-    AZUL_ABERTA: '#00e1ff', // Ciano vibrante
+    // O que este bloco faz: Define uma cor Azul Puro saturada e muito forte para os talhões em Ordem Aberta.
+    // Por que ele existe: A pedido do usuário, o azul precisa se destacar fortemente (como caneta/neon escuro)
+    // para não se misturar nem parecer rios/lagoas no satélite.
+    AZUL_ABERTA: '#0022ff', // Azul Puro/Saturado e brilhante
 };
