@@ -93,23 +93,18 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" style={{ backdropFilter: "blur(6px)" }}>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/55 backdrop-blur-sm">
         <motion.div
           initial={{ opacity: 0, y: 14, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 10, scale: 0.98 }}
-          className="w-full max-w-[620px] max-h-[90vh] flex flex-col rounded-[26px] overflow-hidden border shadow-[0_10px_30px_rgba(0,0,0,0.28)]"
+          className="w-full max-w-[920px] max-h-[90vh] flex flex-col rounded-[26px] overflow-hidden border shadow-[0_10px_30px_rgba(0,0,0,0.28)]"
           style={{ background: "#111a2d", borderColor: "rgba(255,255,255,0.12)" }}
         >
           <div className="flex items-start justify-between gap-3 px-5 py-4 border-b shrink-0" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
-            <div className="flex items-center gap-3">
-               <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
-                 <Layers className="w-5 h-5" />
-               </div>
-               <div>
-                 <h2 className="text-[22px] font-semibold text-white leading-tight">Abrir Ordem de Corte</h2>
-                 <p className="text-sm mt-1" style={{ color: palette.text2 }}>{talhoesCount} talhão(ões) selecionado(s)</p>
-               </div>
+            <div>
+              <h2 className="text-[22px] font-semibold text-white leading-tight">Abrir Ordem de Corte</h2>
+              <p className="text-sm mt-1" style={{ color: palette.text2 }}>Preencha os dados abaixo para vincular {talhoesCount} talhão(ões) à nova ordem.</p>
             </div>
             <button
               onClick={onClose}
@@ -121,19 +116,19 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
           </div>
 
           <div className="p-5 flex flex-col gap-4 overflow-y-auto flex-1">
-             <div className="flex flex-col gap-2">
-               <label className="text-xs" style={{ color: palette.text2 }}>Frente de Serviço</label>
-               <input
-                 type="text"
-                 value={frenteServico}
-                 onChange={handleFrenteChange}
-                 placeholder="Ex: FRENTE 1"
-                 className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none focus:border-yellow-500 transition-colors text-white"
-                 style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)" }}
-               />
-             </div>
+             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                 <div className="flex flex-col gap-2">
+                   <label className="text-xs" style={{ color: palette.text2 }}>Frente de Serviço</label>
+                   <input
+                     type="text"
+                     value={frenteServico}
+                     onChange={handleFrenteChange}
+                     placeholder="Ex: FRENTE 1"
+                     className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none focus:border-yellow-500 transition-colors text-white"
+                     style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)" }}
+                   />
+                 </div>
 
-             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                  <div className="flex flex-col gap-2">
                    <label className="text-xs" style={{ color: palette.text2 }}>Tipo de Cana</label>
                    <select
@@ -147,6 +142,7 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
                      <option value="Bicada" style={{ color: "black" }}>Bicada</option>
                    </select>
                  </div>
+
                  <div className="flex flex-col gap-2">
                    <label className="text-xs" style={{ color: palette.text2 }}>Tipo de Colheita</label>
                    <select
@@ -159,21 +155,23 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
                      <option value="Mecanizada" style={{ color: "black" }}>Mecanizada</option>
                    </select>
                  </div>
+
+                 <div className="flex flex-col gap-2">
+                   <label className="text-xs" style={{ color: palette.text2 }}>Matrícula</label>
+                   <input
+                     type="text"
+                     value={matricula}
+                     onChange={(e) => setMatricula(e.target.value)}
+                     placeholder="Matrícula"
+                     className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none focus:border-yellow-500 transition-colors text-white"
+                     style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)" }}
+                   />
+                 </div>
              </div>
 
-             <div className="flex flex-col gap-2">
-               <label className="text-xs" style={{ color: palette.text2 }}>Matrícula</label>
-               <input
-                 type="text"
-                 value={matricula}
-                 onChange={(e) => setMatricula(e.target.value)}
-                 placeholder="Digite a matrícula"
-                 className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none focus:border-yellow-500 transition-colors text-white"
-                 style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)" }}
-               />
-               <div className="text-xs mt-1 pl-1 flex items-center h-4" style={{ color: palette.text2 }}>
-                  {isSearchingMatricula ? "Buscando..." : (matricula ? `Nome: ${nomeColaborador}` : "")}
-               </div>
+             {/* Feedback de nome abaixo da matrícula */}
+             <div className="text-xs mt-[-8px] pl-1 flex items-center h-4" style={{ color: palette.text2 }}>
+                {isSearchingMatricula ? "Buscando colaborador..." : (matricula ? `Colaborador: ${nomeColaborador}` : "")}
              </div>
           </div>
 
@@ -189,7 +187,7 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
               onClick={handleSubmit}
               disabled={!frenteServico || !matricula}
               className="rounded-xl px-4 py-3 transition-transform hover:scale-[1.02] text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" }}
+              style={{ background: `linear-gradient(135deg, ${palette.gold} 0%, ${palette.goldLight} 100%)`, color: palette.bg }}
             >
               Confirmar e Abrir
             </button>

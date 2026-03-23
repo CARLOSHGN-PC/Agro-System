@@ -68,16 +68,17 @@ export function useMapFilters(geoJsonData, allEstimates) {
       let matchesCorte = true;
 
       // Restringe as opções dependendo das seleções de nível superior já preenchidas no "draft" (filters)
-      if (filters.frente && filters.frente !== "all" && frente !== filters.frente) matchesFrente = false;
+      // Fazenda -> Frente -> Variedade -> Corte -> Talhao
       if (filters.fazenda && filters.fazenda !== "all" && fazendaName !== filters.fazenda) matchesFazenda = false;
+      if (filters.frente && filters.frente !== "all" && frente !== filters.frente) matchesFrente = false;
       if (filters.variedade && filters.variedade !== "all" && variedade !== filters.variedade) matchesVariedade = false;
       if (filters.corte && filters.corte !== "all" && corte !== filters.corte) matchesCorte = false;
 
-      if (frente) frentesSet.add(frente);
-      if (fazendaName && matchesFrente) fazendasSet.add(fazendaName);
-      if (variedade && matchesFrente && matchesFazenda) variedadesSet.add(variedade);
-      if (corte && matchesFrente && matchesFazenda && matchesVariedade) cortesSet.add(corte);
-      if (talhao && matchesFrente && matchesFazenda && matchesVariedade && matchesCorte) talhoesSet.add(talhao);
+      if (fazendaName) fazendasSet.add(fazendaName);
+      if (frente && matchesFazenda) frentesSet.add(frente);
+      if (variedade && matchesFazenda && matchesFrente) variedadesSet.add(variedade);
+      if (corte && matchesFazenda && matchesFrente && matchesVariedade) cortesSet.add(corte);
+      if (talhao && matchesFazenda && matchesFrente && matchesVariedade && matchesCorte) talhoesSet.add(talhao);
     });
 
     return {
@@ -103,8 +104,8 @@ export function useMapFilters(geoJsonData, allEstimates) {
       const p = feature.properties || {};
       const fazendaName = getFazendaName(p);
 
-      if (appliedFilters.frente && (!p.FRENTE || String(p.FRENTE).trim() !== appliedFilters.frente)) return false;
       if (appliedFilters.fazenda && fazendaName !== appliedFilters.fazenda) return false;
+      if (appliedFilters.frente && (!p.FRENTE || String(p.FRENTE).trim() !== appliedFilters.frente)) return false;
       if (appliedFilters.variedade && (!p.VARIEDADE || String(p.VARIEDADE).trim() !== appliedFilters.variedade)) return false;
       if (appliedFilters.corte && (!p.ECORTE || String(p.ECORTE).trim() !== appliedFilters.corte)) return false;
       if (appliedFilters.talhao && (!p.TALHAO || String(p.TALHAO).trim() !== appliedFilters.talhao)) return false;
