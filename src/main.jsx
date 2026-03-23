@@ -7,6 +7,20 @@ import { registerSW } from "virtual:pwa-register";
 import Swal from "sweetalert2";
 import { palette } from "./constants/theme";
 
+// Ao inicializar a aplicação, pede ao navegador para NÃO APAGAR o cache offline
+// O que este bloco faz: Solicita persistência de armazenamento local (Dexie/IndexedDB).
+// Por que ele existe: O Android limpa caches de PWA para economizar espaço se o app
+// não pedir explicitamente para os dados serem persistentes. Isso faz o mapa "sumir" offline.
+if (navigator.storage && navigator.storage.persist) {
+  navigator.storage.persist().then((persistent) => {
+    if (persistent) {
+      console.log("Armazenamento persistente concedido pelo Android/Navegador.");
+    } else {
+      console.warn("Armazenamento persistente negado. O sistema pode limpar o mapa no futuro.");
+    }
+  });
+}
+
 // Ao inicializar a aplicação, se for ambiente PWA compatível, ele verifica atualizações.
 if ("serviceWorker" in navigator) {
   const updateSW = registerSW({

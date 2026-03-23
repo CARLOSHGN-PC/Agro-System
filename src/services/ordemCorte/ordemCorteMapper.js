@@ -24,7 +24,12 @@ export const buildNovaOrdemCorte = ({
     codigoVisual,
     talhaoIds,
     rodadaOrigem,
-    usuario
+    usuario,
+    frenteServico,
+    tipoCana,
+    tipoColheita,
+    matricula,
+    nomeColaborador
 }) => {
     const isoDate = new Date().toISOString();
     const ordemCorteId = `${companyId}_${safra.replace('/', '-')}_OC_${sequencial}`;
@@ -38,6 +43,11 @@ export const buildNovaOrdemCorte = ({
         status: ORDEM_CORTE_STATUS.ABERTA,
         talhaoIds,
         rodadaOrigem,
+        frenteServico: frenteServico || '',
+        tipoCana: tipoCana || '',
+        tipoColheita: tipoColheita || '',
+        matricula: matricula || '',
+        nomeColaborador: nomeColaborador || '',
         openedAt: isoDate,
         openedBy: usuario || 'Sistema',
         closedAt: null,

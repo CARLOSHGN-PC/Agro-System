@@ -1,9 +1,11 @@
 import React from 'react';
 import { Layers } from 'lucide-react';
+import { useState } from 'react';
 import { palette } from '../../../constants/theme';
 import { useOrdemCorteActions } from '../../../hooks/estimativas/useOrdemCorteActions';
 import { ORDEM_CORTE_STATUS } from '../../../services/ordemCorte/ordemCorteConstants';
 import { OrdemCorteInfo } from './OrdemCorteInfo';
+import { OrdemCorteFormModal } from './OrdemCorteFormModal';
 
 /**
  * OrdemCorteActions.jsx
@@ -27,19 +29,26 @@ export const OrdemCorteActions = ({
     usuario
 }) => {
     const { handleAbrirOrdem, handleFecharOrdem, isProcessing } = useOrdemCorteActions();
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const onAbrirClick = async () => {
+    const onAbrirClick = () => {
          // O que este bloco faz: Se por um hack o botão for clicado, bloqueia na camada de UI também.
          // Por que ele existe: Regra de negócio exigindo que você não pode cortar o que ainda não estimou naquela camada.
          if (hasUnestimatedTalhao) return;
 
-         await handleAbrirOrdem({
-             companyId,
-             safra,
-             talhaoIds: talhoesIds,
-             rodadaOrigem,
-             usuario
-         });
+         setIsModalOpen(true);
+    };
+
+    const handleConfirmarAbertura = async (dadosAdicionais) => {
+        setIsModalOpen(false);
+        await handleAbrirOrdem({
+            companyId,
+            safra,
+            talhaoIds: talhoesIds,
+            rodadaOrigem,
+            usuario,
+            formDadosAdicionais: dadosAdicionais
+        });
     };
 
     const onFecharClick = async () => {
@@ -83,6 +92,16 @@ export const OrdemCorteActions = ({
                     <span>Fechar {talhoesIds.length > 1 ? `${talhoesIds.length} talhões da Ordem` : 'talhão da Ordem'}</span>
                  </button>
             ) : null}
+
+            {isModalOpen && (
+                <OrdemCorteFormModal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    onConfirm={handleConfirmarAbertura}
+                    talhoesCount={talhoesIds.length}
+                    companyId={companyId}
+                />
+            )}
         </div>
     );
 };
