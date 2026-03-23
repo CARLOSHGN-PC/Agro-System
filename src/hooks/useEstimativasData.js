@@ -119,8 +119,27 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
         refetchEstimates();
     });
 
+    const handleMapUpdate = async (e) => {
+        if (e.detail?.companyId === currentCompanyId) {
+            console.log("Novo mapa detectado! Recarregando da memória local...");
+            const { data } = await fetchLatestGeoJson(currentCompanyId);
+            if (data) {
+                const featuresWithIds = data.features.map((f, i) => ({
+                  ...f,
+                  id: i,
+                  properties: { ...f.properties, featureId: i }
+                }));
+                setGeoJsonData({ ...data, features: featuresWithIds });
+                showSuccess("Mapa Atualizado", "Um novo shapefile foi identificado e atualizado automaticamente na sua tela!");
+            }
+        }
+    };
+
+    window.addEventListener('map-updated', handleMapUpdate);
+
     return () => {
         if (unsubscribeRealtime) unsubscribeRealtime();
+        window.removeEventListener('map-updated', handleMapUpdate);
     };
   }, [currentCompanyId, currentSafra]);
 

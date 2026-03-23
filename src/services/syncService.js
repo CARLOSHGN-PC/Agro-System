@@ -187,6 +187,32 @@ export const processQueue = async () => {
  * quando a conexão voltar.
  */
 export const enqueueTask = async (type, targetCollection, documentId, payload) => {
+    // Se estiver online, tenta enviar imediatamente pro Firebase SEM passar pela fila do Dexie.
+    // Isso resolve a lentidão de "salvar e ter que fechar e abrir" que estava retendo dados velhos.
+    if (navigator.onLine) {
+        try {
+            if (type === 'createOrUpdate') {
+                const docRef = doc(firestore, targetCollection, documentId);
+                const { syncStatus, ...firebasePayload } = payload;
+                await setDoc(docRef, { ...firebasePayload, updatedAt: serverTimestamp() }, { merge: true });
+
+                // Marca como sincronizado no payload local antes de prosseguir se o app for gravá-lo
+                payload.syncStatus = 'synced';
+            } else if (type === 'addHistory') {
+                const { localId, ...firebasePayload } = payload;
+                await addDoc(collection(firestore, targetCollection), {
+                    ...firebasePayload,
+                    createdAt: serverTimestamp()
+                });
+            }
+            // Sucesso! Retorna sem sujar a syncQueue.
+            return;
+        } catch (error) {
+            console.warn("Falha no envio direto. Caindo para fila offline...", error);
+            // Se falhar (ex: internet piscou), ele ignora e cai no código abaixo pra enfileirar.
+        }
+    }
+
     // Se for um update em um mesmo documento, removemos a tarefa antiga pendente
     // para não encher a fila com atualizações obsoletas e sobrepor dados.
     if (type === 'createOrUpdate' && documentId) {
@@ -212,11 +238,7 @@ export const enqueueTask = async (type, targetCollection, documentId, payload) =
         createdAt: new Date().toISOString()
     });
 
-    // Se a gente tá online nesse exato segundo que enfileirou, já tenta despachar.
-    // Isso é bom pois a fila acaba não crescendo.
-    if (navigator.onLine) {
-        processQueue();
-    }
+    // Como já tentamos online antes e falhou (ou estamos offline), não adianta chamar processQueue agora.
 };
 
 // Listeners Globais: Quando a rede voltar (evento do navegador), a gente reprocessa automaticamente!

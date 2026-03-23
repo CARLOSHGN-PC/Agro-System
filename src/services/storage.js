@@ -27,6 +27,7 @@ export const uploadJson = async (path, jsonObject) => {
 
 export const fetchLatestGeoJson = async (companyId = "empresa_default") => {
   let cachedData = null;
+  let localTimestamp = 0;
 
   // 1. OBTENÇÃO LOCAL (Sempre tenta ler o cache primeiro)
   // Isso garante que a UI nunca espere a nuvem se já houver um mapa baixado (verdadeiro Offline-First).
@@ -34,6 +35,7 @@ export const fetchLatestGeoJson = async (companyId = "empresa_default") => {
       const localMap = await db.mapData.get(`${companyId}_default`);
       if (localMap && localMap.geojson) {
           cachedData = JSON.parse(localMap.geojson);
+          localTimestamp = localMap.mapTimestamp || 0;
           // Retornamos os dados cacheados na hora. Não amarramos o retorno inicial à internet.
       }
   } catch (err) {
@@ -58,22 +60,34 @@ export const fetchLatestGeoJson = async (companyId = "empresa_default") => {
                 });
 
                 items.sort((a, b) => b.timestamp - a.timestamp);
-                const latestRef = items[0].itemRef;
+                const latestItem = items[0];
+                const latestRef = latestItem.itemRef;
 
-                const url = await getDownloadURL(latestRef);
-                const response = await fetch(url);
-                if (response.ok) {
-                    const json = await response.json();
+                // Verificação otimizada: Apenas faz o download pesado se o timestamp do arquivo
+                // no Firebase for MAIOR que o timestamp do mapa que temos localmente.
+                if (latestItem.timestamp > localTimestamp) {
+                    console.log(`Nova versão do mapa detectada (${latestItem.timestamp} > ${localTimestamp}). Baixando...`);
+                    const url = await getDownloadURL(latestRef);
+                    const response = await fetch(url);
+                    if (response.ok) {
+                        const json = await response.json();
 
-                    // ATUALIZAÇÃO DO CACHE: Salva/Sobrescreve no Dexie pra usar offline depois
-                    await db.mapData.put({
-                        id: `${companyId}_default`,
-                        companyId,
-                        geojson: JSON.stringify(json),
-                        updatedAt: new Date().toISOString()
-                    });
+                        // ATUALIZAÇÃO DO CACHE: Salva/Sobrescreve no Dexie pra usar offline depois
+                        await db.mapData.put({
+                            id: `${companyId}_default`,
+                            companyId,
+                            geojson: JSON.stringify(json),
+                            updatedAt: new Date().toISOString(),
+                            mapTimestamp: latestItem.timestamp
+                        });
 
-                    return json;
+                        // Dispara evento para o frontend avisar o usuário ou atualizar a tela
+                        window.dispatchEvent(new CustomEvent('map-updated', { detail: { companyId } }));
+
+                        return json;
+                    }
+                } else {
+                    console.log(`Mapa local já está atualizado (${localTimestamp}). Nenhuma ação necessária.`);
                 }
             }
          } catch (error) {

@@ -19,30 +19,15 @@ import { palette } from '../../constants/theme';
 export const useOrdemCorteActions = () => {
     const [isProcessing, setIsProcessing] = useState(false);
 
-    const handleAbrirOrdem = async ({ companyId, safra, talhaoIds, rodadaOrigem, usuario }) => {
+    const handleAbrirOrdem = async ({ companyId, safra, talhaoIds, rodadaOrigem, usuario, formDadosAdicionais }) => {
         if (!talhaoIds || talhaoIds.length === 0) {
             showError("Atenção", "Selecione ao menos um talhão no mapa para abrir uma Ordem de Corte.");
             return false;
         }
 
-        const confirm = await Swal.fire({
-            title: 'Abrir Ordem de Corte?',
-            text: `Isso irá vincular os ${talhaoIds.length} talhão(ões) selecionado(s) a uma nova Ordem, que ficarão azuis no mapa.`,
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonColor: palette.gold,
-            cancelButtonColor: '#ef4444',
-            confirmButtonText: 'Sim, Abrir',
-            cancelButtonText: 'Cancelar',
-            background: 'rgba(14,16,20,0.96)',
-            color: palette.white
-        });
-
-        if (!confirm.isConfirmed) return false;
-
         setIsProcessing(true);
         try {
-            const result = await abrirOrdemCorte(companyId, safra, talhaoIds, rodadaOrigem, usuario);
+            const result = await abrirOrdemCorte(companyId, safra, talhaoIds, rodadaOrigem, usuario, formDadosAdicionais);
 
             if (result.success) {
                 showSuccess("Sucesso!", `Ordem de Corte ${result.codigo} aberta e salva offline.`);

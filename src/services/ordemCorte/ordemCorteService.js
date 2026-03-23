@@ -17,7 +17,7 @@ import { processQueue } from '../syncService';
  * Nenhuma regra UI (React) entra aqui, garantindo pureza da camada.
  */
 
-export const abrirOrdemCorte = async (companyId, safra, talhaoIds, rodadaOrigem, usuario) => {
+export const abrirOrdemCorte = async (companyId, safra, talhaoIds, rodadaOrigem, usuario, formDadosAdicionais = {}) => {
     try {
         // Passo 1: Puxa todos os vínculos existentes dessa safra para passar na validação de regras.
         // Precisamos saber se qualquer ID do array 'talhaoIds' já tem algo ABERTO.
@@ -43,7 +43,12 @@ export const abrirOrdemCorte = async (companyId, safra, talhaoIds, rodadaOrigem,
             codigoVisual: codigoFormatado,
             talhaoIds,
             rodadaOrigem,
-            usuario
+            usuario,
+            frenteServico: formDadosAdicionais.frenteServico,
+            tipoCana: formDadosAdicionais.tipoCana,
+            tipoColheita: formDadosAdicionais.tipoColheita,
+            matricula: formDadosAdicionais.matricula,
+            nomeColaborador: formDadosAdicionais.nomeColaborador
         });
 
         // E constrói as filhas (Vínculos), que referenciam o pai.

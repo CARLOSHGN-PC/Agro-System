@@ -290,6 +290,22 @@ export default function EstimativaModals({
             </div>
             <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3 overflow-y-auto flex-1">
               <div className="flex flex-col gap-2">
+                <label className="text-xs" style={{ color: palette.text2 }}>Frente de Serviço</label>
+                <div className="relative">
+                  <select
+                    value={filters.frente}
+                    onChange={(e) => setFilters({...filters, frente: e.target.value, fazenda: "", variedade: "", corte: "", talhao: ""})}
+                    className="w-full rounded-2xl border px-4 py-3 outline-none appearance-none focus:border-yellow-500 transition-colors"
+                    style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }}
+                  >
+                    <option value="" style={{ color: "black" }}>Todas as Frentes</option>
+                    {filterOptions.frentes?.map(f => <option key={f} value={f} style={{ color: "black" }}>{f}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none" style={{ color: palette.text2 }} />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
                 <label className="text-xs" style={{ color: palette.text2 }}>Fundo agrícola / Fazenda</label>
                 <div className="relative">
                   <select
@@ -355,8 +371,8 @@ export default function EstimativaModals({
             </div>
             <div className="flex justify-end gap-3 px-5 py-4 border-t shrink-0" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
               <button className="rounded-xl border px-4 py-3 hover:bg-white/10 transition-colors" style={{ borderColor: "rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.06)" }} onClick={() => {
-                setFilters({fazenda: "", variedade: "", corte: "", talhao: ""});
-                setAppliedFilters({fazenda: "", variedade: "", corte: "", talhao: ""});
+                setFilters({frente: "", fazenda: "", variedade: "", corte: "", talhao: ""});
+                setAppliedFilters({frente: "", fazenda: "", variedade: "", corte: "", talhao: ""});
                 setFiltersOpen(false);
               }}>Limpar</button>
               <button className="rounded-xl px-4 py-3 transition-transform hover:scale-[1.02]" style={{ background: `linear-gradient(135deg, ${palette.gold} 0%, ${palette.goldLight} 100%)`, color: palette.bg }} onClick={() => {
