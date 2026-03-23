@@ -43,30 +43,27 @@ export const saveOrdemCorteAndVinculos = async (ordemPayload, vinculosPayload) =
     }
 };
 
-export const fecharOrdemCorte = async (ordemCorteId, usuario) => {
+export const fecharOrdemCorte = async (ordemCorteId, talhoesSelecionadosIds, usuario) => {
+    // O que este bloco faz: Atualiza os registros do banco local (Dexie) de apenas um ou mais talhões selecionados da ordem,
+    // fechando apenas os "Vínculos" deles. Se depois de fechar, nenhum outro talhão sobrar ABERTO na ordem, a Ordem Mestre
+    // também é fechada.
+    // Por que ele existe: Permite ao usuário colher e fechar parte da Ordem de Corte em dias diferentes sem encerrar toda a ordem e
+    // garante que os talhões fechados já sumam/fiquem ocultos do mapa imediatamente, independentemente se o resto da ordem continua viva.
+
     const closedAt = new Date().toISOString();
 
-    // Atualiza a tabela Mestre (Ordem) localmente no Dexie
-    await db.ordensCorte.update(ordemCorteId, {
-        status: ORDEM_CORTE_STATUS.FECHADA,
-        closedAt,
-        closedBy: usuario || 'Sistema',
-        updatedAt: closedAt,
-        syncStatus: 'pending'
-    });
-
-    // Obtém o payload atualizado da tabela mestre e enfileira pro sync service Firebase
-    const updatedOrdem = await db.ordensCorte.get(ordemCorteId);
-    if(updatedOrdem) await enqueueTask('createOrUpdate', ORDEM_CORTE_COLECOES.MESTRE, updatedOrdem.id, updatedOrdem);
-
-    // Identifica e atualiza todos os Vínculos associados localmente no Dexie
-    const vinculos = await db.ordensCorteTalhoes
+    // 1. Busca TODOS os vínculos desta Ordem (Para filtrar na memória quem é que o usuário quer fechar).
+    const todosVinculosDaOrdem = await db.ordensCorteTalhoes
         .where('ordemCorteId')
         .equals(ordemCorteId)
         .toArray();
 
-    for (const v of vinculos) {
-        // Altera status local e grava offline
+    // 2. Filtramos apenas os vínculos que batem com os IDs de talhão que o usuário mandou fechar.
+    const vinculosParaFechar = todosVinculosDaOrdem.filter(v => talhoesSelecionadosIds.includes(v.talhaoId));
+
+    // 3. Fechamos individualmente cada Vínculo da lista de selecionados
+    for (const v of vinculosParaFechar) {
+        // O que este bloco faz: Modifica o "status" e a "data de fechamento" daquele talhão para FECHADA e reenvia ao Firebase.
         await db.ordensCorteTalhoes.update(v.id, {
             status: ORDEM_CORTE_STATUS.FECHADA,
             closedAt,
@@ -74,9 +71,33 @@ export const fecharOrdemCorte = async (ordemCorteId, usuario) => {
             syncStatus: 'pending'
         });
 
-        // Pega versão atualizada pós-update local e agenda no Firebase
+        // Colocamos o vínculo isolado na fila de Sync para a nuvem
         const updatedV = await db.ordensCorteTalhoes.get(v.id);
         if(updatedV) await enqueueTask('createOrUpdate', ORDEM_CORTE_COLECOES.VINCULO, updatedV.id, updatedV);
+    }
+
+    // 4. Buscamos de novo a lista completa de vínculos no DB local para verificar o "resto".
+    const vinculosPosUpdate = await db.ordensCorteTalhoes
+        .where('ordemCorteId')
+        .equals(ordemCorteId)
+        .toArray();
+
+    // O que este bloco faz: Conta quantos talhões dessa ordem ainda estão ABERTOS.
+    const restantesAbertos = vinculosPosUpdate.filter(v => v.status === ORDEM_CORTE_STATUS.ABERTA);
+
+    // 5. Se não sobrou nenhum talhão ABERTO, fechamos também o Cabeçalho da Ordem ("Mestre").
+    if (restantesAbertos.length === 0) {
+        await db.ordensCorte.update(ordemCorteId, {
+            status: ORDEM_CORTE_STATUS.FECHADA,
+            closedAt,
+            closedBy: usuario || 'Sistema',
+            updatedAt: closedAt,
+            syncStatus: 'pending'
+        });
+
+        // Põe a Ordem Mestre (Cabeçalho) na fila de sync
+        const updatedOrdem = await db.ordensCorte.get(ordemCorteId);
+        if(updatedOrdem) await enqueueTask('createOrUpdate', ORDEM_CORTE_COLECOES.MESTRE, updatedOrdem.id, updatedOrdem);
     }
 };
 

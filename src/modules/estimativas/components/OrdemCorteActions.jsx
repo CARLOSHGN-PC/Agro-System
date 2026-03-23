@@ -39,7 +39,10 @@ export const OrdemCorteActions = ({
 
     const onFecharClick = async () => {
          if (!vinculoAtivo) return;
-         await handleFecharOrdem(vinculoAtivo.ordemCorteId, vinculoAtivo.ordemCodigo, usuario);
+         // O que este bloco faz: Passa todos os talhões IDs atualmente selecionados no mapa
+         // para a função de fechamento, para o sistema não fechar toda a ordem 01, mas sim
+         // apenas as partes da ordem 01 que o usuário clicou.
+         await handleFecharOrdem(vinculoAtivo.ordemCorteId, vinculoAtivo.ordemCodigo, talhoesIds, usuario);
     };
 
     return (
@@ -60,11 +63,11 @@ export const OrdemCorteActions = ({
             ) : vinculoAtivo.status === ORDEM_CORTE_STATUS.ABERTA ? (
                  <button
                     onClick={onFecharClick}
-                    disabled={isProcessing}
+                    disabled={isProcessing || talhoesIds.length === 0}
                     className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-600 bg-red-500 text-white shadow-lg"
                  >
                     <Layers className="w-5 h-5" />
-                    <span>Fechar Ordem de Corte</span>
+                    <span>Fechar {talhoesIds.length > 1 ? `${talhoesIds.length} talhões da Ordem` : 'talhão da Ordem'}</span>
                  </button>
             ) : null}
         </div>

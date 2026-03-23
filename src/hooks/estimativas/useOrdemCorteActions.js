@@ -60,10 +60,16 @@ export const useOrdemCorteActions = () => {
         }
     };
 
-    const handleFecharOrdem = async (ordemCorteId, codigoVisual, usuario) => {
+    const handleFecharOrdem = async (ordemCorteId, codigoVisual, talhoesIdsDesejados, usuario) => {
+        const numTalhoes = talhoesIdsDesejados.length;
+        if (numTalhoes === 0) {
+            showError("Atenção", "Selecione ao menos um talhão da ordem para fechá-la.");
+            return false;
+        }
+
         const confirm = await Swal.fire({
             title: 'Fechar Ordem de Corte?',
-            text: `Tem certeza que deseja fechar a Ordem ${codigoVisual}? Os talhões vinculados a ela ficarão ocultos do mapa nesta safra.`,
+            text: `Você está prestes a fechar ${numTalhoes} talhão(ões) da Ordem ${codigoVisual}. ${numTalhoes > 1 ? 'Eles ficarão ocultos' : 'Ele ficará oculto'} do mapa nesta safra.`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: palette.gold,
@@ -78,11 +84,11 @@ export const useOrdemCorteActions = () => {
 
         setIsProcessing(true);
         try {
-             // Apenas chama o método do repo orquestrador passando a data atual no servidor (simulada em UTC ou locale string no repo)
-             const result = await fecharOrdemCorte(ordemCorteId, usuario);
+             // Apenas chama o método do repo orquestrador passando os IDs desejados a fechar e o usuário autenticado
+             const result = await fecharOrdemCorte(ordemCorteId, talhoesIdsDesejados, usuario);
 
              if (result.success) {
-                 showSuccess("Ordem Fechada!", `A ordem ${codigoVisual} foi encerrada com sucesso.`);
+                 showSuccess("Ordem Atualizada!", `${numTalhoes} talhão(ões) da ordem ${codigoVisual} encerrado(s) com sucesso.`);
                  return true;
              } else {
                  showError("Falha ao fechar", result.message);
@@ -90,7 +96,7 @@ export const useOrdemCorteActions = () => {
              }
         } catch (err) {
              console.error(err);
-             showError("Erro do Sistema", "Ocorreu um problema ao fechar a Ordem.");
+             showError("Erro do Sistema", "Ocorreu um problema ao fechar partes da Ordem.");
              return false;
         } finally {
              setIsProcessing(false);
