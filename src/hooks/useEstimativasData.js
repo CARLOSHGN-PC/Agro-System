@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { fetchLatestGeoJson } from "../services/storage";
 import { saveEstimate, getEstimate, getEstimateHistory, getAllEstimates, subscribeToEstimatesRealtime } from "../services/estimativa";
 import { showError, showSuccess } from "../utils/alert";
@@ -29,6 +29,12 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
   const [allEstimates, setAllEstimates] = useState([]);
   const [currentRodada, setCurrentRodada] = useState("Estimativa");
   const [availableRodadas, setAvailableRodadas] = useState(["Estimativa"]);
+
+  // Referência mutável para a currentRodada, usada para evitar stale closures (ex: no listener do onSnapshot)
+  const currentRodadaRef = React.useRef(currentRodada);
+  useEffect(() => {
+    currentRodadaRef.current = currentRodada;
+  }, [currentRodada]);
 
   // Modais de histórico e Form de Salvamento
   const [currentEstimate, setCurrentEstimate] = useState(null);
@@ -120,8 +126,9 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
     // Se o usuário salvar no celular, o Firestore será atualizado, o snapshot avisará,
     // o Dexie será atualizado em background e o `refetchEstimates` será chamado, repintando o mapa!
     const unsubscribeRealtime = subscribeToEstimatesRealtime(currentCompanyId, currentSafra, () => {
-        // Usa uma flag temporária para evitar que a promisse polua algo se desmontar rápido
-        refetchEstimates();
+        // Quando o onSnapshot for disparado, usamos a rodada atual lida pela Referência (currentRodadaRef),
+        // em vez da variável do state que foi "presa" no closure no momento de montagem do componente.
+        refetchEstimatesByRef();
     });
 
     const handleMapUpdate = async (e) => {
@@ -183,6 +190,16 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
    */
   const refetchEstimates = async () => {
     const res = await getAllEstimates(currentCompanyId, currentSafra, currentRodada);
+    if (res.success) setAllEstimates(res.data);
+  };
+
+  /**
+   * Recarrega manualmente usando a referência da rodada atual.
+   * Por que ela existe: Evita o "Stale Closure Bug" no callback de eventos como onSnapshot
+   * que fariam a UI voltar acidentalmente para a primeira rodada "Estimativa".
+   */
+  const refetchEstimatesByRef = async () => {
+    const res = await getAllEstimates(currentCompanyId, currentSafra, currentRodadaRef.current);
     if (res.success) setAllEstimates(res.data);
   };
 
