@@ -52,21 +52,55 @@ class RelatorioEstimativaRepository {
             results = results.filter(item => filters.cortes.includes(item.corte || item.ecorte));
         }
 
-        // Filtros de Data
-        // Nota: Assumindo que as datas no Firestore estão salvas como timestamps ou strings YYYY-MM-DD
+        // Filtros de Data (Estimativa)
         if (filters.dataEstimativaInicio) {
-             results = results.filter(item => {
-                 const d = new Date(item.dataEstimativa);
-                 const f = new Date(filters.dataEstimativaInicio);
-                 return d >= f;
-             });
+            results = results.filter(item => {
+                if (!item.dataEstimativa) return false;
+                const d = new Date(item.dataEstimativa);
+                const f = new Date(filters.dataEstimativaInicio);
+                return d >= f;
+            });
         }
         if (filters.dataEstimativaFim) {
-             results = results.filter(item => {
-                 const d = new Date(item.dataEstimativa);
-                 const f = new Date(filters.dataEstimativaFim);
-                 return d <= f;
-             });
+            results = results.filter(item => {
+                if (!item.dataEstimativa) return false;
+                const d = new Date(item.dataEstimativa);
+                const f = new Date(filters.dataEstimativaFim);
+                // Ajusta para o final do dia
+                f.setUTCHours(23, 59, 59, 999);
+                return d <= f;
+            });
+        }
+
+        // Filtros de Data (Reestimativa)
+        if (filters.dataReestimativaInicio) {
+            results = results.filter(item => {
+                if (!item.dataReestimativa) return false;
+                const d = new Date(item.dataReestimativa);
+                const f = new Date(filters.dataReestimativaInicio);
+                return d >= f;
+            });
+        }
+        if (filters.dataReestimativaFim) {
+            results = results.filter(item => {
+                if (!item.dataReestimativa) return false;
+                const d = new Date(item.dataReestimativa);
+                const f = new Date(filters.dataReestimativaFim);
+                // Ajusta para o final do dia
+                f.setUTCHours(23, 59, 59, 999);
+                return d <= f;
+            });
+        }
+
+        // Filtro de Situação (Estimativa vs Reestimativa)
+        if (filters.situacao) {
+            if (filters.situacao === 'SOMENTE_ESTIMATIVA') {
+                // Considerando que 'Reestimativa' possui um contador de versão ou status
+                results = results.filter(item => !item.dataReestimativa || item.rodadaKey === 'Estimativa');
+            } else if (filters.situacao === 'SOMENTE_REESTIMATIVA') {
+                results = results.filter(item => item.dataReestimativa || (item.rodadaKey && item.rodadaKey.startsWith('Reestimativa')));
+            }
+            // AMBOS traz tudo, então não há filtro adicional
         }
 
         return results;
