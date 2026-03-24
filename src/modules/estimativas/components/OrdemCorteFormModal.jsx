@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { palette } from '../../../constants/theme';
 import { Layers } from 'lucide-react';
 import db from '../../../services/localDb';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { firestore } from '../../../services/firebase';
 
 export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, companyId }) => {
@@ -45,18 +45,30 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
     }
     setIsSearchingMatricula(true);
     try {
-      // Tenta buscar no Firebase na coleção 'colaboradores'
       if (navigator.onLine) {
-         const docRef = doc(firestore, `colaboradores_${companyId}`, mat);
-         const docSnap = await getDoc(docRef);
-         if (docSnap.exists()) {
-             setNomeColaborador(docSnap.data().nome);
+         // Tenta buscar no Firebase na coleção 'profissionais' onde o companyId e a matricula batem.
+         const profissionaisRef = collection(firestore, 'profissionais');
+         const q = query(
+           profissionaisRef,
+           where('companyId', '==', companyId),
+           where('matricula', '==', mat)
+         );
+         const querySnapshot = await getDocs(q);
+
+         if (!querySnapshot.empty) {
+             // Pega o primeiro documento que der match
+             const docData = querySnapshot.docs[0].data();
+             setNomeColaborador(docData.nomeCompleto || docData.nome || 'Nome Indisponível');
          } else {
              setNomeColaborador('Não encontrado');
          }
       } else {
-          // Quando estiver offline, busca do Dexie na tabela de profissionais.
-          const profissional = await db.profissionais.where({ matricula: mat }).first();
+          // Quando estiver offline, busca do Dexie na tabela de profissionais filtrando companyId tbm por segurança.
+          const profissional = await db.profissionais
+            .where({ matricula: mat })
+            .filter(p => p.companyId === companyId)
+            .first();
+
           if (profissional) {
             setNomeColaborador(profissional.nomeCompleto || profissional.nome || 'Encontrado Local');
           } else {
@@ -64,7 +76,7 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
           }
       }
     } catch (err) {
-      console.error(err);
+      console.error('Erro ao buscar colaborador:', err);
       setNomeColaborador('Erro na busca');
     } finally {
       setIsSearchingMatricula(false);
