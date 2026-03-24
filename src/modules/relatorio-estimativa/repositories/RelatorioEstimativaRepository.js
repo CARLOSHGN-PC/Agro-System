@@ -35,8 +35,12 @@ class RelatorioEstimativaRepository {
 
         // Filtro por Tipo de Propriedade
         if (filters.tipoPropriedade && filters.tipoPropriedade.length > 0 && !filters.tipoPropriedade.includes('TODAS')) {
-            // Supondo que o frontend salve como string normalizada na collection
-            results = results.filter(item => filters.tipoPropriedade.includes((item.tipoPropriedade || '').toUpperCase()));
+            // No app, itens sem tipoPropriedade geralmente são assumidos como 'PROPRIA' no service.
+            // Precisamos garantir que não os filtremos caso 'PROPRIA' esteja selecionado.
+            results = results.filter(item => {
+                const tipo = (item.tipoPropriedade || 'PROPRIA').toUpperCase();
+                return filters.tipoPropriedade.includes(tipo);
+            });
         }
 
         // Filtro por Propriedades/Fazendas/Talhões/Cortes/Variedades
