@@ -216,6 +216,10 @@ export default function PostLoginScreen({ onLogout }) {
             <div className="absolute inset-0 z-10 overflow-hidden bg-black/20">
               <CadastroProfissionalPage companyId={currentCompanyId} />
             </div>
+          ) : activeModule === "relatorioEstimativa" ? (
+            <div className="absolute inset-0 z-10 overflow-auto bg-black/20">
+              <RelatorioEstimativaPage />
+            </div>
           ) : activeModule === "estimativa" ? (
             <>
               {/* O componente de renderização pura do WebGL via Mapbox */}

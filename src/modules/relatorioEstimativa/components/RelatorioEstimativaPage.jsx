@@ -3,19 +3,15 @@ import { motion } from 'framer-motion';
 import { FileText, Download, FileSpreadsheet } from 'lucide-react';
 import { palette } from '../../../constants/theme';
 import { exportarRelatorioEstimativa } from '../services/relatorioEstimativaService';
-import { showSuccess, showError } from '../../../utils/alert'; // Wrapper customizado do SweetAlert2
+import { showSuccess, showError } from '../../../utils/alert';
 
 /**
  * RelatorioEstimativaPage.jsx
  *
  * O que este bloco faz:
  * Renderiza a interface principal do Módulo de Relatórios de Estimativa.
- * Permite ao usuário configurar os filtros (Safra, Unidade, Propriedade, Cortes)
- * e selecionar o modelo de saída desejado (Por Corte ou Por Fazenda/Talhão).
- *
- * Por que ele existe:
- * Para coletar os inputs do usuário e enviá-los de forma estruturada para o backend
- * processar a geração dos arquivos PDF ou Excel de forma remota.
+ * Coleta filtros refinados do usuário (Safra, Fazendas, Datas, Situação, Modelo)
+ * e aciona a exportação em PDF ou Excel.
  */
 export default function RelatorioEstimativaPage() {
   const [isLoadingPdf, setIsLoadingPdf] = useState(false);
@@ -25,6 +21,13 @@ export default function RelatorioEstimativaPage() {
   const [filtros, setFiltros] = useState({
     safra: '2025/2026',
     tipoPropriedade: 'TODAS', // 'PROPRIA', 'PARCERIA', 'ARRENDADA', 'TODAS'
+    fazenda: '',
+    talhao: '',
+    dataEstimativaInicio: '',
+    dataEstimativaFim: '',
+    dataReestimativaInicio: '',
+    dataReestimativaFim: '',
+    situacao: 'AMBOS', // 'SOMENTE_ESTIMATIVA', 'SOMENTE_REESTIMATIVA', 'AMBOS'
     agruparPor: 'CORTE',
     tipoRelatorio: 'POR_CORTE', // 'POR_CORTE', 'POR_FAZENDA_TALHAO'
   });
@@ -42,17 +45,41 @@ export default function RelatorioEstimativaPage() {
     if (formato === 'EXCEL') setIsLoadingExcel(true);
 
     try {
-      // O payload deve respeitar o schema do Zod no backend
+      // Montagem inteligente do payload
       const payload = {
         safra: filtros.safra,
         tipoRelatorio: filtros.tipoRelatorio,
         formatoSaida: formato,
-        // O campo 'tipoPropriedade' no backend espera array.
         tipoPropriedade: filtros.tipoPropriedade === 'TODAS'
                          ? ['PROPRIA', 'PARCERIA', 'ARRENDADA']
                          : [filtros.tipoPropriedade],
-        agruparPor: filtros.agruparPor
+        agruparPor: filtros.agruparPor,
       };
+
+      // Adicionar condicionais se foram preenchidos
+      if (filtros.fazenda.trim() !== '') {
+        // Supondo que o usuário digite IDs separados por vírgula ou apenas o nome,
+        // mas a API espera ids numéricos ou string no array.
+        // Aqui enviamos apenas a string pro array pra facilitar.
+        payload.fazendaIds = [filtros.fazenda.trim()];
+      }
+
+      if (filtros.talhao.trim() !== '') {
+        payload.talhaoIds = [filtros.talhao.trim()];
+      }
+
+      if (filtros.dataEstimativaInicio) payload.dataEstimativaInicio = filtros.dataEstimativaInicio;
+      if (filtros.dataEstimativaFim) payload.dataEstimativaFim = filtros.dataEstimativaFim;
+
+      if (filtros.dataReestimativaInicio) payload.dataReestimativaInicio = filtros.dataReestimativaInicio;
+      if (filtros.dataReestimativaFim) payload.dataReestimativaFim = filtros.dataReestimativaFim;
+
+      if (filtros.situacao === 'SOMENTE_ESTIMATIVA') {
+        payload.somenteComReestimativa = false;
+        // Caso precisasse, enviaríamos a flag pro back.
+      } else if (filtros.situacao === 'SOMENTE_REESTIMATIVA') {
+        payload.somenteComReestimativa = true;
+      }
 
       await exportarRelatorioEstimativa(payload);
 
@@ -67,9 +94,15 @@ export default function RelatorioEstimativaPage() {
     }
   };
 
+  const InputStyle = {
+    background: 'rgba(255,255,255,0.04)',
+    borderColor: 'rgba(255,255,255,0.1)',
+    color: palette.white
+  };
+
   return (
     <div className="flex-1 h-full overflow-y-auto p-4 sm:p-8" style={{ color: palette.white }}>
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-5xl mx-auto space-y-8 pb-20">
 
         {/* Header do Módulo */}
         <div className="flex items-center gap-4 border-b pb-4" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
@@ -86,18 +119,17 @@ export default function RelatorioEstimativaPage() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="rounded-3xl p-6 sm:p-8 border shadow-2xl relative overflow-hidden"
+          className="rounded-3xl p-6 sm:p-8 border shadow-2xl relative overflow-hidden space-y-8"
           style={{
             background: 'linear-gradient(180deg, rgba(20,30,48,0.7), rgba(36,59,85,0.7))',
             borderColor: 'rgba(212,175,55,0.2)',
             backdropFilter: 'blur(20px)'
           }}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-
-            {/* Filtros Básicos */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold" style={{ color: palette.gold }}>Filtros</h3>
+          {/* SEÇÃO: FILTROS GERAIS */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: palette.gold }}>Filtros de Propriedade</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
 
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs font-medium uppercase opacity-60 ml-1">Safra</label>
@@ -105,12 +137,8 @@ export default function RelatorioEstimativaPage() {
                   name="safra"
                   value={filtros.safra}
                   onChange={handleChange}
-                  className="w-full h-12 rounded-2xl px-4 text-sm font-medium border focus:ring-2 outline-none transition-all appearance-none"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    color: palette.white
-                  }}
+                  className="w-full h-11 rounded-xl px-3 text-sm font-medium border focus:ring-2 outline-none transition-all appearance-none"
+                  style={InputStyle}
                 >
                   <option value="2024/2025" style={{ background: palette.bgDark }}>2024/2025</option>
                   <option value="2025/2026" style={{ background: palette.bgDark }}>2025/2026</option>
@@ -119,77 +147,175 @@ export default function RelatorioEstimativaPage() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-medium uppercase opacity-60 ml-1">Tipo de Propriedade</label>
+                <label className="text-xs font-medium uppercase opacity-60 ml-1">Tipo de Prop. </label>
                 <select
                   name="tipoPropriedade"
                   value={filtros.tipoPropriedade}
                   onChange={handleChange}
-                  className="w-full h-12 rounded-2xl px-4 text-sm font-medium border focus:ring-2 outline-none transition-all appearance-none"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    borderColor: 'rgba(255,255,255,0.1)',
-                    color: palette.white
-                  }}
+                  className="w-full h-11 rounded-xl px-3 text-sm font-medium border focus:ring-2 outline-none transition-all appearance-none"
+                  style={InputStyle}
                 >
-                  <option value="TODAS" style={{ background: palette.bgDark }}>Todas as Propriedades</option>
+                  <option value="TODAS" style={{ background: palette.bgDark }}>Todas</option>
                   <option value="PROPRIA" style={{ background: palette.bgDark }}>Própria</option>
                   <option value="PARCERIA" style={{ background: palette.bgDark }}>Parceria</option>
                   <option value="ARRENDADA" style={{ background: palette.bgDark }}>Arrendada</option>
                 </select>
               </div>
-            </div>
 
-            {/* Configurações do Relatório */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold" style={{ color: palette.gold }}>Modelo de Relatório</h3>
-
-              <div className="flex flex-col gap-3">
-                <label
-                  className="flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all hover:bg-white/5"
-                  style={{
-                    borderColor: filtros.tipoRelatorio === 'POR_CORTE' ? palette.gold : 'rgba(255,255,255,0.1)',
-                    background: filtros.tipoRelatorio === 'POR_CORTE' ? 'rgba(212,175,55,0.08)' : 'transparent'
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="tipoRelatorio"
-                    value="POR_CORTE"
-                    checked={filtros.tipoRelatorio === 'POR_CORTE'}
-                    onChange={handleChange}
-                    className="w-4 h-4 accent-yellow-600"
-                  />
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-sm">Modelo A - Agrupado por Corte</span>
-                    <span className="text-xs opacity-60">Consolidado por Tipo de Propriedade e Corte.</span>
-                  </div>
-                </label>
-
-                <label
-                  className="flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all hover:bg-white/5"
-                  style={{
-                    borderColor: filtros.tipoRelatorio === 'POR_FAZENDA_TALHAO' ? palette.gold : 'rgba(255,255,255,0.1)',
-                    background: filtros.tipoRelatorio === 'POR_FAZENDA_TALHAO' ? 'rgba(212,175,55,0.08)' : 'transparent'
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="tipoRelatorio"
-                    value="POR_FAZENDA_TALHAO"
-                    checked={filtros.tipoRelatorio === 'POR_FAZENDA_TALHAO'}
-                    onChange={handleChange}
-                    className="w-4 h-4 accent-yellow-600"
-                  />
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-sm">Modelo B - Fazenda e Talhão</span>
-                    <span className="text-xs opacity-60">Analítico, exibindo a variação talhão a talhão.</span>
-                  </div>
-                </label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium uppercase opacity-60 ml-1">Fazenda</label>
+                <input
+                  type="text"
+                  name="fazenda"
+                  placeholder="Nome ou ID"
+                  value={filtros.fazenda}
+                  onChange={handleChange}
+                  className="w-full h-11 rounded-xl px-3 text-sm font-medium border focus:ring-2 outline-none transition-all"
+                  style={InputStyle}
+                />
               </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium uppercase opacity-60 ml-1">Talhão</label>
+                <input
+                  type="text"
+                  name="talhao"
+                  placeholder="Ex: 001"
+                  value={filtros.talhao}
+                  onChange={handleChange}
+                  className="w-full h-11 rounded-xl px-3 text-sm font-medium border focus:ring-2 outline-none transition-all"
+                  style={InputStyle}
+                />
+              </div>
+
             </div>
           </div>
 
-          {/* Botões de Ação */}
+          <div className="h-px w-full" style={{ background: 'rgba(255,255,255,0.05)' }} />
+
+          {/* SEÇÃO: FILTROS DE PERÍODO */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: palette.gold }}>Período & Situação</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium uppercase opacity-60 ml-1">Est. Inicial</label>
+                <input
+                  type="date"
+                  name="dataEstimativaInicio"
+                  value={filtros.dataEstimativaInicio}
+                  onChange={handleChange}
+                  className="w-full h-11 rounded-xl px-3 text-sm font-medium border focus:ring-2 outline-none transition-all cursor-pointer"
+                  style={{...InputStyle, colorScheme: 'dark'}}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium uppercase opacity-60 ml-1">Est. Final</label>
+                <input
+                  type="date"
+                  name="dataEstimativaFim"
+                  value={filtros.dataEstimativaFim}
+                  onChange={handleChange}
+                  className="w-full h-11 rounded-xl px-3 text-sm font-medium border focus:ring-2 outline-none transition-all cursor-pointer"
+                  style={{...InputStyle, colorScheme: 'dark'}}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium uppercase opacity-60 ml-1">Reest. Inicial</label>
+                <input
+                  type="date"
+                  name="dataReestimativaInicio"
+                  value={filtros.dataReestimativaInicio}
+                  onChange={handleChange}
+                  className="w-full h-11 rounded-xl px-3 text-sm font-medium border focus:ring-2 outline-none transition-all cursor-pointer"
+                  style={{...InputStyle, colorScheme: 'dark'}}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium uppercase opacity-60 ml-1">Reest. Final</label>
+                <input
+                  type="date"
+                  name="dataReestimativaFim"
+                  value={filtros.dataReestimativaFim}
+                  onChange={handleChange}
+                  className="w-full h-11 rounded-xl px-3 text-sm font-medium border focus:ring-2 outline-none transition-all cursor-pointer"
+                  style={{...InputStyle, colorScheme: 'dark'}}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium uppercase opacity-60 ml-1">Situação</label>
+                <select
+                  name="situacao"
+                  value={filtros.situacao}
+                  onChange={handleChange}
+                  className="w-full h-11 rounded-xl px-3 text-sm font-medium border focus:ring-2 outline-none transition-all appearance-none"
+                  style={InputStyle}
+                >
+                  <option value="AMBOS" style={{ background: palette.bgDark }}>Ambos</option>
+                  <option value="SOMENTE_ESTIMATIVA" style={{ background: palette.bgDark }}>Somente Est.</option>
+                  <option value="SOMENTE_REESTIMATIVA" style={{ background: palette.bgDark }}>Somente Reest.</option>
+                </select>
+              </div>
+
+            </div>
+          </div>
+
+          <div className="h-px w-full" style={{ background: 'rgba(255,255,255,0.05)' }} />
+
+          {/* SEÇÃO: MODELO DE RELATÓRIO */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: palette.gold }}>Modelo de Relatório</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              <label
+                className="flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all hover:bg-white/5"
+                style={{
+                  borderColor: filtros.tipoRelatorio === 'POR_CORTE' ? palette.gold : 'rgba(255,255,255,0.1)',
+                  background: filtros.tipoRelatorio === 'POR_CORTE' ? 'rgba(212,175,55,0.08)' : 'transparent'
+                }}
+              >
+                <input
+                  type="radio"
+                  name="tipoRelatorio"
+                  value="POR_CORTE"
+                  checked={filtros.tipoRelatorio === 'POR_CORTE'}
+                  onChange={handleChange}
+                  className="w-5 h-5 accent-yellow-600"
+                />
+                <div className="flex flex-col">
+                  <span className="font-semibold text-sm">Modelo A - Agrupado por Corte</span>
+                  <span className="text-xs opacity-60">Consolidado por Tipo de Propriedade e Corte.</span>
+                </div>
+              </label>
+
+              <label
+                className="flex items-center gap-3 p-4 rounded-2xl border cursor-pointer transition-all hover:bg-white/5"
+                style={{
+                  borderColor: filtros.tipoRelatorio === 'POR_FAZENDA_TALHAO' ? palette.gold : 'rgba(255,255,255,0.1)',
+                  background: filtros.tipoRelatorio === 'POR_FAZENDA_TALHAO' ? 'rgba(212,175,55,0.08)' : 'transparent'
+                }}
+              >
+                <input
+                  type="radio"
+                  name="tipoRelatorio"
+                  value="POR_FAZENDA_TALHAO"
+                  checked={filtros.tipoRelatorio === 'POR_FAZENDA_TALHAO'}
+                  onChange={handleChange}
+                  className="w-5 h-5 accent-yellow-600"
+                />
+                <div className="flex flex-col">
+                  <span className="font-semibold text-sm">Modelo B - Fazenda e Talhão</span>
+                  <span className="text-xs opacity-60">Analítico, exibindo a variação talhão a talhão.</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* BOTÕES */}
           <div className="mt-8 pt-6 border-t flex flex-col sm:flex-row items-center justify-end gap-4 relative z-10" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
             <button
               onClick={() => handleExportar('PDF')}
@@ -200,9 +326,9 @@ export default function RelatorioEstimativaPage() {
               {isLoadingPdf ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <Download className="w-4 h-4" />
+                <FileText className="w-5 h-5" />
               )}
-              Exportar PDF
+              Gerar Relatório PDF
             </button>
 
             <button
@@ -214,11 +340,12 @@ export default function RelatorioEstimativaPage() {
               {isLoadingExcel ? (
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <FileSpreadsheet className="w-4 h-4" />
+                <FileSpreadsheet className="w-5 h-5" />
               )}
-              Exportar Excel
+              Gerar Relatório Excel
             </button>
           </div>
+
         </motion.div>
       </div>
     </div>
