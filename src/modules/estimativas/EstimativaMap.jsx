@@ -211,9 +211,9 @@ const EstimativaMap = React.memo(function EstimativaMap({
                   "text-allow-overlap": false
                 }}
                 paint={{
-                  "text-color": "#ffffff",
+                  "text-color": "#000000",
                   "text-halo-color": "#000000",
-                  "text-halo-width": 1.5
+                  "text-halo-width": 1.6
                 }}
               />
             )}
