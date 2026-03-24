@@ -51,11 +51,11 @@ const EstimativaMap = React.memo(function EstimativaMap({
   // Memoizamos os polígonos para excluir visualmente aqueles que estão com Ordem de Corte FECHADA
   // Essa é a maneira de "ocultar sem deletar do banco nem do source original".
   const visibleGeoJson = useMemo(() => {
-     if (!enhancedGeoJson) return null;
-     return {
-        ...enhancedGeoJson,
-        features: enhancedGeoJson.features.filter(f => !idsOcultosSet.has(f.id))
-     };
+    if (!enhancedGeoJson) return null;
+    return {
+      ...enhancedGeoJson,
+      features: enhancedGeoJson.features.filter(f => !idsOcultosSet.has(f.id))
+    };
   }, [enhancedGeoJson, idsOcultosSet]);
 
   // Realiza o zoom adaptativo APENAS quando os polígonos filtrados mudam,
@@ -147,18 +147,18 @@ const EstimativaMap = React.memo(function EstimativaMap({
                   [
                     "match",
                     ["get", "_normalized_ecorte"],
-                    "1º corte", "#ff2d6f",
-                    "2º corte", "#5ad15a",
-                    "3º corte", "#f5e11c",
-                    "4º corte", "#4a7dff",
-                    "5º corte", "#f58231",
-                    "6º corte", "#a43cf0",
-                    "7º corte", "#42d4f4",
-                    "8º corte", "#e642f4",
-                    "9º corte", "#c4f35a",
-                    "10º corte", "#f4a3c1",
-                    "11º corte", "#6bc5c5",
-                    "#d1d5db" // Default fallback color
+                    "1º corte", "#ff0000",
+                    "2º corte", "#00ff00",
+                    "3º corte", "#ffe600",
+                    "4º corte", "#2f416d",
+                    "5º corte", "#ff6a00",
+                    "6º corte", "#9500ff",
+                    "7º corte", "#00d0ff",
+                    "8º corte", "#ea00ff",
+                    "9º corte", "#b3ff00",
+                    "10º corte", "#ff005d",
+                    "11º corte", "#00ffff",
+                    "#6e6e6e" // Default fallback color
                   ],
                   "transparent" // Polígonos sem estimativa continuam invisíveis
                 ],
