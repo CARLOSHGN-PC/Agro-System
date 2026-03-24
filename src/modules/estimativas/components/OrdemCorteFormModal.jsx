@@ -54,9 +54,13 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
              setNomeColaborador('Não encontrado');
          }
       } else {
-          // Quando estiver offline, idealmente deveria buscar do Dexie se existir uma tabela de colaboradores.
-          // Para esta versão, marcaremos como offline/não verificado.
-          setNomeColaborador('Offline (Não é possível verificar)');
+          // Quando estiver offline, busca do Dexie na tabela de profissionais.
+          const profissional = await db.profissionais.where({ matricula: mat }).first();
+          if (profissional) {
+            setNomeColaborador(profissional.nomeCompleto || profissional.nome || 'Encontrado Local');
+          } else {
+            setNomeColaborador('Não encontrado');
+          }
       }
     } catch (err) {
       console.error(err);
