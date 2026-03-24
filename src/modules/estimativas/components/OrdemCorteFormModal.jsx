@@ -34,6 +34,10 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
   };
 
   const buscarColaborador = async (mat) => {
+    /**
+     * O que este bloco faz: Busca o nome do colaborador no Firebase ou localDb caso a matrícula seja inserida.
+     * Por que ele existe: Para validar a matrícula do colaborador antes de permitir a abertura da ordem de corte.
+     */
     if (!mat) {
       setNomeColaborador('');
       return;
@@ -47,10 +51,12 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
          if (docSnap.exists()) {
              setNomeColaborador(docSnap.data().nome);
          } else {
-             setNomeColaborador('Não encontrado (Será criado)');
+             setNomeColaborador('Não encontrado');
          }
       } else {
-          setNomeColaborador('Offline (Será criado/sincronizado)');
+          // Quando estiver offline, idealmente deveria buscar do Dexie se existir uma tabela de colaboradores.
+          // Para esta versão, marcaremos como offline/não verificado.
+          setNomeColaborador('Offline (Não é possível verificar)');
       }
     } catch (err) {
       console.error(err);
@@ -67,26 +73,27 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
     return () => clearTimeout(delayDebounceFn);
   }, [matricula, companyId]);
 
+  const isValidMatricula = () => {
+    /**
+     * O que este bloco faz: Valida se a matrícula informada é válida e se o colaborador foi encontrado no banco.
+     * Por que ele existe: Para evitar que o usuário abra uma ordem de corte sem uma matrícula de um colaborador que já exista.
+     */
+    if (!matricula) return false;
+    if (isSearchingMatricula) return false;
+    if (nomeColaborador === 'Não encontrado' || nomeColaborador === 'Erro na busca' || !nomeColaborador) return false;
+    return true;
+  };
 
   const handleSubmit = async () => {
-     let finalNomeColaborador = nomeColaborador;
-
-     // Cria o colaborador se não existir (ou se offline, force prompt pra não sujar o BD)
-     if (nomeColaborador === 'Não encontrado (Será criado)' || nomeColaborador === 'Offline (Será criado/sincronizado)') {
-         const nomeNovo = prompt("Digite o nome do novo colaborador para a matrícula " + matricula + ":");
-         if (nomeNovo) {
-             finalNomeColaborador = nomeNovo;
-             // Se estiver online, já salva na nuvem. Se offline, só anexa no payload pra ordem e depois lidamos.
-             if (navigator.onLine) {
-                 await setDoc(doc(firestore, `colaboradores_${companyId}`, matricula), { nome: nomeNovo });
-             }
-         } else {
-             // Opcional: Impedir avanço se o usuário cancelar o prompt
-             return;
-         }
+     /**
+      * O que este bloco faz: Emite a confirmação com os dados da Ordem de Corte apenas se a matrícula for válida.
+      * Por que ele existe: É a ação principal para concluir o formulário da modal.
+      */
+     if (!isValidMatricula()) {
+       return;
      }
 
-     onConfirm({ frenteServico, tipoCana, tipoColheita, matricula, nomeColaborador: finalNomeColaborador });
+     onConfirm({ frenteServico, tipoCana, tipoColheita, matricula, nomeColaborador });
   };
 
   // Renderiza apenas se estiver aberto
@@ -103,13 +110,13 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
           initial={{ opacity: 0, y: 14, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 10, scale: 0.98 }}
-          className="w-full max-w-[920px] max-h-[90vh] flex flex-col rounded-[26px] overflow-hidden border shadow-[0_10px_30px_rgba(0,0,0,0.28)]"
+          className="w-full max-w-[500px] max-h-[90vh] flex flex-col rounded-[26px] overflow-hidden border shadow-[0_10px_30px_rgba(0,0,0,0.28)]"
           style={{ background: "#111a2d", borderColor: "rgba(255,255,255,0.12)" }}
         >
           <div className="flex items-start justify-between gap-3 px-5 py-4 border-b shrink-0" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
             <div>
               <h2 className="text-[22px] font-semibold text-white leading-tight">Abrir Ordem de Corte</h2>
-              <p className="text-sm mt-1" style={{ color: palette.text2 }}>Preencha os dados abaixo para vincular {talhoesCount} talhão(ões) à nova ordem.</p>
+              <p className="text-sm mt-1" style={{ color: palette.text2 }}>Preencha os dados para vincular {talhoesCount} talhão(ões).</p>
             </div>
             <button
               onClick={onClose}
@@ -121,7 +128,7 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
           </div>
 
           <div className="p-5 flex flex-col gap-4 overflow-y-auto flex-1">
-             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+             <div className="flex flex-col gap-4">
                  <div className="flex flex-col gap-2">
                    <label className="text-xs" style={{ color: palette.text2 }}>Frente de Serviço</label>
                    <input
@@ -178,6 +185,11 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
              <div className="text-xs mt-[-8px] pl-1 flex items-center h-4" style={{ color: palette.text2 }}>
                 {isSearchingMatricula ? "Buscando colaborador..." : (matricula ? `Colaborador: ${nomeColaborador}` : "")}
              </div>
+             {nomeColaborador === 'Não encontrado' && (
+               <div className="text-xs mt-[-8px] pl-1 text-red-400">
+                 Matrícula não cadastrada no sistema. Fale com seu gestor.
+               </div>
+             )}
           </div>
 
           <div className="flex justify-end gap-3 px-5 py-4 border-t shrink-0" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
@@ -190,7 +202,7 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
             </button>
             <button
               onClick={handleSubmit}
-              disabled={!frenteServico || !matricula}
+              disabled={!frenteServico || !isValidMatricula()}
               className="rounded-xl px-4 py-3 transition-transform hover:scale-[1.02] text-white font-bold disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: `linear-gradient(135deg, ${palette.gold} 0%, ${palette.goldLight} 100%)`, color: palette.bg }}
             >
