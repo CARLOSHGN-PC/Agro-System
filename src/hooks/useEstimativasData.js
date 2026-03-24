@@ -224,8 +224,19 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
     // Ordem de Corte ABERTA e os duplica (salva) automaticamente para a nova rodada.
     // Por que ele existe: Para cumprir a regra de negócio onde talhões que já estão
     // sendo colhidos não precisam (nem podem) ser reestimados e devem "nascer" pintados na nova rodada.
-    if (idsAbertosSet && idsAbertosSet.size > 0 && allEstimates.length > 0) {
-      const talhoesToMigrate = allEstimates.filter(est => idsAbertosSet.has(est.talhaoId));
+    // NOTA: idsAbertosSet armazena os IDs numéricos (feature.id) do Mapbox. allEstimates usa string (talhaoId).
+    // Precisamos cruzar pelo GeoJsonData para descobrir o talhaoId de cada ID aberto.
+    if (idsAbertosSet && idsAbertosSet.size > 0 && allEstimates.length > 0 && geoJsonData) {
+      // 1. Encontra quais "talhaoId" (string) estão abertos, mapeando a partir das features do geojson
+      const talhoesIdsAbertosString = new Set();
+      geoJsonData.features.forEach(f => {
+        if (idsAbertosSet.has(f.id)) {
+          talhoesIdsAbertosString.add(getUniqueTalhaoId(f));
+        }
+      });
+
+      // 2. Filtra as estimativas que correspondem a esses talhões abertos
+      const talhoesToMigrate = allEstimates.filter(est => talhoesIdsAbertosString.has(est.talhaoId));
 
       if (talhoesToMigrate.length > 0) {
         setIsSaving(true);
