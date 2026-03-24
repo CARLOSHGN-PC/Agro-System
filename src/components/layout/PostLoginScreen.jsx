@@ -244,7 +244,8 @@ export default function PostLoginScreen({ onLogout }) {
                 currentRodada={estData.currentRodada}
                 setCurrentRodada={estData.setCurrentRodada}
                 availableRodadas={estData.availableRodadas}
-                createNewRodada={estData.createNewRodada}
+                createNewRodada={() => estData.createNewRodada(ordensMapState.idsAbertosSet)}
+                nextRodadaName={estData.nextRodadaName}
                 setFiltersOpen={mapFilters.setFiltersOpen}
                 selectedTalhoes={selectedTalhoes}
                 selectedTalhao={selectedTalhao}
