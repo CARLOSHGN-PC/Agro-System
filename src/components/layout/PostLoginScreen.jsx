@@ -188,6 +188,7 @@ export default function PostLoginScreen({ onLogout }) {
 
           scope={estData.scope} setScope={estData.setScope}
           selectedTalhao={selectedTalhao} selectedTalhoes={selectedTalhoes}
+          setSelectedTalhao={setSelectedTalhao} setSelectedTalhoes={setSelectedTalhoes}
           enhancedGeoJson={mapFilters.enhancedGeoJson} geoJsonData={estData.geoJsonData}
 
           formEstimativa={estData.formEstimativa} setFormEstimativa={estData.setFormEstimativa}

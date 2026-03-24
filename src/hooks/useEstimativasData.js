@@ -334,16 +334,16 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
     let successCount = 0;
 
     try {
-      const talhoesToSave = [];
+      const talhoesToSaveRaw = [];
       if (scope === "talhao" && selectedTalhao) {
-        talhoesToSave.push(selectedTalhao);
+        talhoesToSaveRaw.push(selectedTalhao);
       } else if (scope === "selecionados" && selectedTalhoes.length > 0) {
         selectedTalhoes.forEach(id => {
           const feat = enhancedGeoJson.features.find(f => f.id === id);
-          if (feat) talhoesToSave.push(feat);
+          if (feat) talhoesToSaveRaw.push(feat);
         });
       } else if (scope === "filtro" && enhancedGeoJson) {
-        talhoesToSave.push(...enhancedGeoJson.features);
+        talhoesToSaveRaw.push(...enhancedGeoJson.features);
       } else if (scope === "fazenda" && geoJsonData) {
         let referenceFazenda = "";
         let referenceFundo = "";
@@ -364,10 +364,30 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
              const featFundo = feat.properties.FUNDO_AGR || "";
              return featFaz === referenceFazenda && featFundo === referenceFundo;
           });
-          talhoesToSave.push(...farmFeatures);
+          talhoesToSaveRaw.push(...farmFeatures);
         } else {
-          talhoesToSave.push(...geoJsonData.features);
+          talhoesToSaveRaw.push(...geoJsonData.features);
         }
+      }
+
+      // Pre-process: Filter out ones that are already estimated so we skip them
+      const estimatedTalhaoIds = new Set(allEstimates.map(e => e.talhaoId));
+      const talhoesToSave = talhoesToSaveRaw.filter(feat => {
+        const p = feat.properties;
+        const f_agr = p.FUNDO_AGR ? String(p.FUNDO_AGR).trim() : "N-A";
+        const faz = p.FAZENDA ? String(p.FAZENDA).trim() : "N-A";
+        const talhao = p.TALHAO ? String(p.TALHAO).trim() : `mock_${feat.id}`;
+        const uniqueIndex = p.featureId !== undefined ? p.featureId : feat.id;
+
+        const rawId = `${f_agr}_${faz}_${talhao}_SEQ${uniqueIndex}`;
+        const finalUniqueId = rawId.replace(/\//g, '-').replace(/ /g, '_').toUpperCase();
+        return !estimatedTalhaoIds.has(finalUniqueId);
+      });
+
+      if (talhoesToSave.length === 0) {
+        showError("Atenção", "Todos os talhões selecionados já possuem estimativa salva.");
+        setIsSaving(false);
+        return { success: false };
       }
 
       // Batch saving

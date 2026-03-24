@@ -56,6 +56,18 @@ export default function EstimativaPanels({
 }) {
   const [infoCollapsed, setInfoCollapsed] = useState(false);
 
+  // O que este bloco faz: Monitora a seleção de talhões. Em dispositivos mobile, se a seleção
+  // aumenta (usuário clicou no mapa), o painel começa recolhido para não obstruir a tela,
+  // permitindo que a pessoa veja a seleção que acabou de fazer e decida se quer abrir o painel.
+  React.useEffect(() => {
+    if (selectedTalhoes.length > 0 && window.innerWidth < 640) {
+      setInfoCollapsed(true);
+    } else if (selectedTalhoes.length === 0) {
+      // Quando limpa a seleção, reseta o estado de colapso para a próxima vez que selecionar
+      setInfoCollapsed(false);
+    }
+  }, [selectedTalhoes.length]);
+
   // O que este bloco faz: Calcula o vínculo ativo que vai ditar o botão de ABRIR ou FECHAR.
   // Se o usuário selecionou 1 ou múltiplos talhões, pegamos o vínculo do "último" clicado (ou do primeiro da lista)
   // para ditar qual Ordem estamos operando. Assim o botão "Fechar X talhões da Ordem" aparece corretamente

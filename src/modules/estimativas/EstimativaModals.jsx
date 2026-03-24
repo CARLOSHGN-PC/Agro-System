@@ -53,10 +53,11 @@ export default function EstimativaModals({
   }, [scope, selectedTalhao, selectedTalhoes, estimateOpen]);
 
   // Regra de Negócio de Segurança:
-  // Verifica se na seleção/escopo atual existe ALGUM talhão que JÁ FOI ESTIMADO na "currentRodada".
-  // Se sim, o botão de salvar será bloqueado.
-  const isCurrentlyEstimated = React.useMemo(() => {
-    if (!estimateOpen) return false;
+  // Verifica o status de estimativa no escopo atual.
+  // Retorna um objeto indicando se TODOS estão estimados (para bloquear o botão)
+  // ou se ALGUNS estão estimados (para apenas mostrar o aviso).
+  const estimationStatus = React.useMemo(() => {
+    if (!estimateOpen) return { allEstimated: false, someEstimated: false, estimatedCount: 0, totalCount: 0 };
 
     // Obter todos os IDs de talhão que estão englobados no `scope` atual
     const scopeTalhoesIds = [];
@@ -87,17 +88,18 @@ export default function EstimativaModals({
       });
     }
 
-    // Compara se algum dos talhões neste escopo já existe no `allEstimates`
-    // (O useEstimativasData já filtra allEstimates pela currentRodada)
-    // Para comparar, precisamos converter os featureIds em UniqueTalhaoIds (getUniqueTalhaoId do geoHelpers)
+    if (scopeTalhoesIds.length === 0) {
+      return { allEstimated: false, someEstimated: false, estimatedCount: 0, totalCount: 0 };
+    }
+
+    // Compara se os talhões neste escopo já existem no `allEstimates`
     const estimatedTalhaoIds = new Set(allEstimates.map(e => e.talhaoId));
+    let estimatedCount = 0;
 
     for (const featureId of scopeTalhoesIds) {
       // Procura a feature no mapa completo
       const feat = geoJsonData?.features?.find(f => f.properties.featureId === featureId);
       if (feat) {
-        // A lógica original não usava o _SEQ, porém o banco de dados armazena os IDs únicos via geoHelpers
-        // e ele acrescenta o '_SEQ${featureId}'!
         const p = feat.properties;
         const f_agr = p.FUNDO_AGR ? String(p.FUNDO_AGR).trim() : "N-A";
         const faz = p.FAZENDA ? String(p.FAZENDA).trim() : "N-A";
@@ -108,17 +110,32 @@ export default function EstimativaModals({
         const finalUniqueId = rawId.replace(/\//g, '-').replace(/ /g, '_').toUpperCase();
 
         if (estimatedTalhaoIds.has(finalUniqueId)) {
-          return true; // Encontrou pelo menos um, bloqueia
+          estimatedCount++;
         }
       }
     }
 
-    return false;
+    return {
+      allEstimated: estimatedCount === scopeTalhoesIds.length,
+      someEstimated: estimatedCount > 0 && estimatedCount < scopeTalhoesIds.length,
+      estimatedCount,
+      totalCount: scopeTalhoesIds.length
+    };
   }, [estimateOpen, scope, selectedTalhao, selectedTalhoes, enhancedGeoJson, geoJsonData, allEstimates]);
 
   const handleSaveWrapper = async () => {
-    if (isCurrentlyEstimated) return; // Segurança extra
+    if (estimationStatus.allEstimated) return; // Segurança extra
     await submitEstimate(selectedTalhoes, selectedTalhao, enhancedGeoJson);
+
+    // Clear selection automatically after successfully saving (as requested by user)
+    // using window to avoid needing props drill or directly use the callback from the parent.
+    // However, looking at the args above, `props` was destructured. Let's fix this properly.
+    if (typeof props !== 'undefined' && typeof props?.setSelectedTalhao === 'function') {
+      props.setSelectedTalhao(null);
+    }
+    if (typeof props !== 'undefined' && typeof props?.setSelectedTalhoes === 'function') {
+      props.setSelectedTalhoes([]);
+    }
   };
 
   return (
@@ -217,17 +234,22 @@ export default function EstimativaModals({
                 <textarea placeholder="Ao salvar, cada reestimativa gera uma nova versão por safra sem apagar o histórico anterior." className="rounded-2xl border px-4 py-3 min-h-[110px] outline-none focus:border-yellow-500 transition-colors" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.12)", color: palette.white }} />
               </div>
 
-              {isCurrentlyEstimated && (
+              {estimationStatus.allEstimated && (
                 <div className="rounded-2xl border p-4 text-sm font-medium text-red-400 bg-red-400/10" style={{ borderColor: "rgba(248,113,113,0.2)" }}>
-                   Atenção: A seleção atual (ou parte dela) já possui estimativa salva na rodada "{currentRodada}".
+                   Atenção: Todos os talhões desta seleção já possuem estimativa salva na rodada "{currentRodada}".
                    Para alterar ou estimar novamente, crie uma nova reestimativa no painel principal.
+                </div>
+              )}
+              {estimationStatus.someEstimated && (
+                <div className="rounded-2xl border p-4 text-sm font-medium text-yellow-400 bg-yellow-400/10" style={{ borderColor: "rgba(250,204,21,0.2)" }}>
+                   Atenção: {estimationStatus.estimatedCount} de {estimationStatus.totalCount} talhões já estão estimados. Ao salvar, os já estimados serão ignorados.
                 </div>
               )}
             </div>
             <div className="flex justify-end gap-3 px-5 py-4 border-t shrink-0" style={{ borderColor: "rgba(255,255,255,0.12)" }}>
               <button className="rounded-xl border px-4 py-3 hover:bg-white/10 transition-colors" style={{ borderColor: "rgba(255,255,255,0.12)", background: "transparent" }} onClick={() => setEstimateOpen(false)}>Cancelar</button>
-              <button disabled={isSaving || isCurrentlyEstimated} className="rounded-xl px-4 py-3 transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed" style={{ background: "linear-gradient(135deg, #f59e0b, #f97316)", color: "white" }} onClick={handleSaveWrapper}>
-                {isSaving ? "Salvando..." : isCurrentlyEstimated ? "Já estimado nesta rodada" : "Salvar estimativa"}
+              <button disabled={isSaving || estimationStatus.allEstimated} className="rounded-xl px-4 py-3 transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed" style={{ background: "linear-gradient(135deg, #f59e0b, #f97316)", color: "white" }} onClick={handleSaveWrapper}>
+                {isSaving ? "Salvando..." : estimationStatus.allEstimated ? "Já estimado nesta rodada" : "Salvar estimativa"}
               </button>
             </div>
           </motion.div>
