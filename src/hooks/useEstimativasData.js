@@ -204,14 +204,58 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
   };
 
   /**
-   * Cria uma nova rodada baseada no estado de rodadas disponíveis, e já seta ela como ativa,
-   * limpando automaticamente o visual do mapa.
+   * Obtém dinamicamente o nome que a próxima rodada deverá ter.
    */
-  const createNewRodada = () => {
-    const nextNumber = availableRodadas.length; // Estimativa é o index 0 (1º item)
-    const newName = `Reestimativa ${nextNumber}`;
+  const nextRodadaName = `Reestimativa ${availableRodadas.length}`;
+
+  /**
+   * Cria uma nova rodada baseada no estado de rodadas disponíveis, e já seta ela como ativa,
+   * limpando automaticamente o visual do mapa. Adicionalmente, se houver talhões com
+   * Ordem de Corte ABERTA na rodada atual, eles são migrados automaticamente para a nova.
+   *
+   * @param {Set<string>} idsAbertosSet Set com os IDs dos talhões que possuem ordem de corte aberta.
+   */
+  const createNewRodada = async (idsAbertosSet) => {
+    const newName = nextRodadaName;
     setAvailableRodadas(prev => [...prev, newName]);
     setCurrentRodada(newName);
+
+    // O que este bloco faz: Procura todos os talhões da rodada antiga que possuem
+    // Ordem de Corte ABERTA e os duplica (salva) automaticamente para a nova rodada.
+    // Por que ele existe: Para cumprir a regra de negócio onde talhões que já estão
+    // sendo colhidos não precisam (nem podem) ser reestimados e devem "nascer" pintados na nova rodada.
+    if (idsAbertosSet && idsAbertosSet.size > 0 && allEstimates.length > 0) {
+      const talhoesToMigrate = allEstimates.filter(est => idsAbertosSet.has(est.talhaoId));
+
+      if (talhoesToMigrate.length > 0) {
+        setIsSaving(true);
+        try {
+          await Promise.all(talhoesToMigrate.map(async (est) => {
+             // Cria uma cópia da estimativa antiga, alterando apenas a rodada
+             const payload = {
+                fundo_agricola: est.fundo_agricola || "N/A",
+                fazenda: est.fazenda || "N/A",
+                variedade: est.variedade || "N/A",
+                area: est.area,
+                tch: est.tch,
+                toneladas: est.toneladas,
+                responsavel: est.responsavel || "Sistema",
+                rodada: newName
+             };
+             await saveEstimate(currentCompanyId, currentSafra, est.talhaoId, payload);
+          }));
+          showSuccess("Rodada Criada!", `${talhoesToMigrate.length} talhões com Ordem de Corte Aberta foram migrados automaticamente para a ${newName}.`);
+        } catch (error) {
+          console.error("Erro ao migrar talhões abertos para a nova rodada:", error);
+          showError("Aviso", "A nova rodada foi criada, mas houve um erro ao migrar os talhões com Ordem de Corte.");
+        } finally {
+          setIsSaving(false);
+          // Atualiza a tela para buscar a nova rodada e seus novos talhões migrados
+          const res = await getAllEstimates(currentCompanyId, currentSafra, newName);
+          if (res.success) setAllEstimates(res.data);
+        }
+      }
+    }
   };
 
   /**
@@ -447,6 +491,7 @@ export function useEstimativasData(currentCompanyId, currentSafra, setActiveModu
     setCurrentRodada,
     availableRodadas,
     createNewRodada,
+    nextRodadaName,
     allEstimates,
     refetchEstimates,
     currentEstimate,

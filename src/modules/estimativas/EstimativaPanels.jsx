@@ -28,6 +28,7 @@ export default function EstimativaPanels({
   setCurrentRodada,
   availableRodadas,
   createNewRodada,
+  nextRodadaName,
   setFiltersOpen,
   selectedTalhoes,
   selectedTalhao,
@@ -93,7 +94,7 @@ export default function EstimativaPanels({
                   {availableRodadas.map(r => (
                     <option key={r} value={r} style={{ color: "black" }}>{r}</option>
                   ))}
-                  <option value="new" style={{ color: "black" }}>+ Nova Rodada</option>
+                  <option value="new" style={{ color: "black" }}>+ Nova {nextRodadaName}</option>
                 </select>
                 <ChevronDown className="w-3 h-3 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#dbe4ec" }} />
               </div>
