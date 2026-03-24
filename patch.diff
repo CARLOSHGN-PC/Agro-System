@@ -1,0 +1,87 @@
+<<<<<<< SEARCH
+  const buscarColaborador = async (mat) => {
+    /**
+     * O que este bloco faz: Busca o nome do colaborador no Firebase ou localDb caso a matrícula seja inserida.
+     * Por que ele existe: Para validar a matrícula do colaborador antes de permitir a abertura da ordem de corte.
+     */
+    if (!mat) {
+      setNomeColaborador('');
+      return;
+    }
+    setIsSearchingMatricula(true);
+    try {
+      // Tenta buscar no Firebase na coleção 'colaboradores'
+      if (navigator.onLine) {
+         const docRef = doc(firestore, `colaboradores_${companyId}`, mat);
+         const docSnap = await getDoc(docRef);
+         if (docSnap.exists()) {
+             setNomeColaborador(docSnap.data().nome);
+         } else {
+             setNomeColaborador('Não encontrado');
+         }
+      } else {
+          // Quando estiver offline, busca do Dexie na tabela de profissionais.
+          const profissional = await db.profissionais.where({ matricula: mat }).first();
+          if (profissional) {
+            setNomeColaborador(profissional.nomeCompleto || profissional.nome || 'Encontrado Local');
+          } else {
+            setNomeColaborador('Não encontrado');
+          }
+      }
+    } catch (err) {
+      console.error(err);
+      setNomeColaborador('Erro na busca');
+    } finally {
+      setIsSearchingMatricula(false);
+    }
+  };
+=======
+  const buscarColaborador = async (mat) => {
+    /**
+     * O que este bloco faz: Busca o nome do colaborador no Firebase ou localDb caso a matrícula seja inserida.
+     * Por que ele existe: Para validar a matrícula do colaborador antes de permitir a abertura da ordem de corte.
+     */
+    if (!mat) {
+      setNomeColaborador('');
+      return;
+    }
+    setIsSearchingMatricula(true);
+    try {
+      // Tenta buscar no Firebase na coleção 'profissionais' onde o companyId e a matricula batem.
+      if (navigator.onLine) {
+         const profissionaisRef = collection(firestore, 'profissionais');
+         const q = query(
+           profissionaisRef,
+           where('companyId', '==', companyId),
+           where('matricula', '==', mat)
+         );
+         const querySnapshot = await getDocs(q);
+
+         if (!querySnapshot.empty) {
+             // Pega o primeiro documento que der match
+             const docData = querySnapshot.docs[0].data();
+             setNomeColaborador(docData.nomeCompleto || docData.nome || 'Nome Indisponível');
+         } else {
+             setNomeColaborador('Não encontrado');
+         }
+      } else {
+          // Quando estiver offline, busca do Dexie na tabela de profissionais filtrando companyId tbm por segurança.
+          const profissional = await db.profissionais
+            .where({ matricula: mat })
+            .filter(p => p.companyId === companyId)
+            .first();
+
+          if (profissional) {
+            setNomeColaborador(profissional.nomeCompleto || profissional.nome || 'Encontrado Local');
+          } else {
+            setNomeColaborador('Não encontrado');
+          }
+      }
+    } catch (err) {
+      console.error('Erro ao buscar colaborador:', err);
+      setNomeColaborador('Erro na busca');
+    } finally {
+      setIsSearchingMatricula(false);
+    }
+  };
+>>>>>>> REPLACE
