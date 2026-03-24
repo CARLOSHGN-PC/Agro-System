@@ -86,12 +86,15 @@ export function useProfissionaisData(companyId) {
       // Não temos o documento na store mapData, mas será o `uuid` na collection raiz ou subcoleção.
       const firebaseDocId = payload.uuid;
 
-      await enqueueTask({
-        type: actionType,
-        targetCollection: "profissionais", // Ex: "empresas/{companyId}/profissionais" se quiser subcoleção. Mas pela espec, use collection "profissionais".
-        documentId: firebaseDocId,
-        payload: payload, // Mandamos tudo para espelhar
-      });
+      // 4. Jogar pra SyncQueue (Envia pro Firestore no background)
+      // O syncService espera 4 argumentos: type, targetCollection, documentId, payload
+      // e usa 'createOrUpdate' para atualizações padronizadas.
+      await enqueueTask(
+        "createOrUpdate",
+        "profissionais",
+        firebaseDocId,
+        payload
+      );
 
       showSuccess("Salvo offline com sucesso!", "Sincronizando em background...");
       return true;
@@ -118,12 +121,12 @@ export function useProfissionaisData(companyId) {
 
       await db.profissionais.put(payload);
 
-      await enqueueTask({
-        type: "update",
-        targetCollection: "profissionais",
-        documentId: profissional.uuid,
-        payload: payload,
-      });
+      await enqueueTask(
+        "createOrUpdate",
+        "profissionais",
+        profissional.uuid,
+        payload
+      );
 
       return true;
     } catch (error) {

@@ -99,6 +99,8 @@ export const processQueue = async () => {
                              await db.ordensCorte.update(task.documentId, { syncStatus: "synced" });
                         } else if (task.targetCollection === "ordens_corte_talhoes") {
                              await db.ordensCorteTalhoes.update(task.documentId, { syncStatus: "synced" });
+                        } else if (task.targetCollection === "profissionais") {
+                             await db.profissionais.update(task.documentId, { syncStatus: "synced" });
                         }
                     } else if (task.type === 'addHistory') {
                         // Tira o id falso local e sobe só o conteúdo pro firebase criar um id gerado.
