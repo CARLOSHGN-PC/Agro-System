@@ -28,6 +28,7 @@
     "shpjs": "^6.2.0",
     "sweetalert2": "^11.26.23",
     "sweetalert2-react-content": "^5.1.2",
+    "uuid": "^13.0.0",
     "vite-plugin-pwa": "^1.2.0"
   },
   "devDependencies": {

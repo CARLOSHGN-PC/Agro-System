@@ -17,10 +17,14 @@ export const db = new Dexie('AgroSystemLocalDB');
 
 // Definição do schema e versão atual. Se você alterar isso, mude a versão.
 // Cada store recebe como string suas chaves, `&` significa chave única.
-db.version(4).stores({
+db.version(5).stores({
   // Tabela para guardar os arquivos pesados de Mapas (GeoJSON) que não podem baixar toda hora.
   // 'id' será no formato "empresaId_safra" pra puxar rápido.
   mapData: '&id, companyId, updatedAt',
+
+  // Tabela do Módulo Cadastro Profissional
+  // uuid é o ID real no Firestore. matricula e cpf também são importantes para busca
+  profissionais: '&id, uuid, companyId, nomeCompleto, cpf, matricula, status, funcao, equipe, unidade, syncStatus, createdAt, updatedAt, [companyId+status], [companyId+funcao]',
 
   // Tabela com as estimativas salvas (id é a junção empresaId_safra_rodada_talhaoId igual no Firebase).
   // Adicionamos índices compostos para permitir as queries rápidas offline.
