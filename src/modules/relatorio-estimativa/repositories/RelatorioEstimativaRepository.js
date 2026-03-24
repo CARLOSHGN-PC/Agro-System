@@ -8,7 +8,7 @@ class RelatorioEstimativaRepository {
      * refinados em memória (ou buscar subconjuntos que o Firestore suporte indexar).
      */
     async fetchEstimativas(filters) {
-        let query = adminFirestore.collection('estimativas');
+        let query = adminFirestore.collection('estimativas_safra');
 
         // Aplicação de filtros que o Firestore permite perfeitamente (Equalities)
         if (filters.safra) {
@@ -16,7 +16,7 @@ class RelatorioEstimativaRepository {
         }
 
         if (filters.empresaId) {
-            query = query.where('empresaId', '==', String(filters.empresaId));
+            query = query.where('companyId', '==', String(filters.empresaId));
         }
 
         const snapshot = await query.get();
@@ -30,7 +30,7 @@ class RelatorioEstimativaRepository {
 
         // Filtro por Unidade
         if (filters.unidadeId) {
-            results = results.filter(item => item.unidadeId == filters.unidadeId);
+            results = results.filter(item => item.unidadeId == filters.unidadeId || item.fundo_agricola == filters.unidadeId);
         }
 
         // Filtro por Tipo de Propriedade
@@ -41,7 +41,7 @@ class RelatorioEstimativaRepository {
 
         // Filtro por Propriedades/Fazendas/Talhões/Cortes/Variedades
         if (filters.fazendaIds && filters.fazendaIds.length > 0) {
-             results = results.filter(item => filters.fazendaIds.includes(item.fazendaId));
+             results = results.filter(item => filters.fazendaIds.includes(item.fazenda) || filters.fazendaIds.includes(item.fazendaId));
         }
 
         if (filters.talhaoIds && filters.talhaoIds.length > 0) {
@@ -52,19 +52,21 @@ class RelatorioEstimativaRepository {
             results = results.filter(item => filters.cortes.includes(item.corte || item.ecorte));
         }
 
-        // Filtros de Data (Estimativa)
+        // Filtros de Data (Estimativa) - baseando no updatedAt ou dataEstimativa
         if (filters.dataEstimativaInicio) {
             results = results.filter(item => {
-                if (!item.dataEstimativa) return false;
-                const d = new Date(item.dataEstimativa);
+                const dataStr = item.dataEstimativa || item.updatedAt;
+                if (!dataStr) return false;
+                const d = new Date(dataStr);
                 const f = new Date(filters.dataEstimativaInicio);
                 return d >= f;
             });
         }
         if (filters.dataEstimativaFim) {
             results = results.filter(item => {
-                if (!item.dataEstimativa) return false;
-                const d = new Date(item.dataEstimativa);
+                const dataStr = item.dataEstimativa || item.updatedAt;
+                if (!dataStr) return false;
+                const d = new Date(dataStr);
                 const f = new Date(filters.dataEstimativaFim);
                 // Ajusta para o final do dia
                 f.setUTCHours(23, 59, 59, 999);
@@ -75,16 +77,18 @@ class RelatorioEstimativaRepository {
         // Filtros de Data (Reestimativa)
         if (filters.dataReestimativaInicio) {
             results = results.filter(item => {
-                if (!item.dataReestimativa) return false;
-                const d = new Date(item.dataReestimativa);
+                const dataStr = item.dataReestimativa || item.updatedAt;
+                if (!dataStr) return false;
+                const d = new Date(dataStr);
                 const f = new Date(filters.dataReestimativaInicio);
                 return d >= f;
             });
         }
         if (filters.dataReestimativaFim) {
             results = results.filter(item => {
-                if (!item.dataReestimativa) return false;
-                const d = new Date(item.dataReestimativa);
+                const dataStr = item.dataReestimativa || item.updatedAt;
+                if (!dataStr) return false;
+                const d = new Date(dataStr);
                 const f = new Date(filters.dataReestimativaFim);
                 // Ajusta para o final do dia
                 f.setUTCHours(23, 59, 59, 999);
@@ -96,9 +100,9 @@ class RelatorioEstimativaRepository {
         if (filters.situacao) {
             if (filters.situacao === 'SOMENTE_ESTIMATIVA') {
                 // Considerando que 'Reestimativa' possui um contador de versão ou status
-                results = results.filter(item => !item.dataReestimativa || item.rodadaKey === 'Estimativa');
+                results = results.filter(item => item.rodada === 'Estimativa' || item.rodadaKey === 'Estimativa');
             } else if (filters.situacao === 'SOMENTE_REESTIMATIVA') {
-                results = results.filter(item => item.dataReestimativa || (item.rodadaKey && item.rodadaKey.startsWith('Reestimativa')));
+                results = results.filter(item => (item.rodada && item.rodada.startsWith('Reestimativa')) || (item.rodadaKey && item.rodadaKey.startsWith('Reestimativa')));
             }
             // AMBOS traz tudo, então não há filtro adicional
         }

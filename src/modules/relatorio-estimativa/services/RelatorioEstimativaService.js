@@ -68,16 +68,43 @@ class RelatorioEstimativaService {
     _normalizarDados(itensBrutos, filtros) {
         // Mapeia os dados do Firestore/App para o padrão de cálculo do relatório
         return itensBrutos.map(item => {
-            const areaEst = Number(item.area || 0);
+            // No app, area, tch e toneladas podem vir como strings com vírgula (ex: "16,06" ou "1.234,56")
+            const parseNumber = (val) => {
+                if (!val) return 0;
+                if (typeof val === 'number') return val;
+                // Remove pontos (separador de milhar) e troca vírgula por ponto (decimal)
+                return Number(String(val).replace(/\./g, '').replace(',', '.')) || 0;
+            };
+
+            const areaEst = parseNumber(item.area);
 
             // Simula a lógica de Estimativa vs Reestimativa (no app, as rodadas definem isso)
+            const isReestimativa = (item.rodada && item.rodada !== 'Estimativa') || (item.rodadaKey && item.rodadaKey !== 'Estimativa');
+
             // Se o item tem 'rodadaKey' > 0 e for reestimativa, o TCH fica na reestimativa
             // Para simplificar o MVP, mapeamos propriedades diretas ou inferimos:
-            const tchEst = Number(item.tch_estimativa || item.tch || 0);
-            const tchReest = Number(item.tch_reestimativa || item.tch || 0);
+            let tchEst = 0;
+            let tchReest = 0;
+            let tonEst = 0;
+            let tonReest = 0;
 
-            const tonEst = areaEst * tchEst;
-            const tonReest = areaEst * tchReest;
+            const baseTch = parseNumber(item.tch);
+            const baseTon = parseNumber(item.toneladas) || (areaEst * baseTch);
+
+            if (isReestimativa) {
+                tchReest = baseTch;
+                tonReest = baseTon;
+                // Como não temos o TCH original da estimativa na reestimativa diretamente no payload base,
+                // no mundo ideal pegaríamos do histórico. Vamos assumir que a base é 0 ou igual pra não quebrar
+                tchEst = parseNumber(item.tch_estimativa) || 0;
+                tonEst = parseNumber(item.toneladas_estimativa) || (areaEst * tchEst);
+            } else {
+                tchEst = baseTch;
+                tonEst = baseTon;
+                tchReest = parseNumber(item.tch_reestimativa) || 0;
+                tonReest = parseNumber(item.toneladas_reestimativa) || (areaEst * tchReest);
+            }
+
             const varTon = tonReest - tonEst;
             const varPercent = tonEst > 0 ? (varTon / tonEst) * 100 : 0;
 
@@ -86,7 +113,7 @@ class RelatorioEstimativaService {
                 tipoPropriedade: item.tipoPropriedade || 'PROPRIA',
                 fazendaNome: item.fazenda || item.fazendaNome || 'N/A',
                 fazendaId: item.fazendaId || item.fazenda,
-                talhaoNome: item.talhao || item.talhaoNome || 'N/A',
+                talhaoNome: item.talhao || item.talhaoId || 'N/A', // O talhão pode ser extraído do talhaoId se não existir
                 talhaoId: item.talhaoId || item.talhao,
                 corte: item.corte || item.ecorte || 1,
                 variedade: item.variedade || 'N/A',
@@ -98,9 +125,9 @@ class RelatorioEstimativaService {
                 tonReestimada: tonReest,
                 variacaoTon: varTon,
                 variacaoPercentual: varPercent,
-                dataEstimativa: item.dataEstimativa || null,
-                dataReestimativa: item.dataReestimativa || null,
-                situacao: item.status || 'ESTIMADO'
+                dataEstimativa: item.dataEstimativa || item.updatedAt || null,
+                dataReestimativa: isReestimativa ? (item.dataReestimativa || item.updatedAt || null) : null,
+                situacao: item.status || (isReestimativa ? 'REESTIMADO' : 'ESTIMADO')
             };
         });
     }
