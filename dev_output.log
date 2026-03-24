@@ -26,3 +26,4 @@ warnings
 }
 
 2:28:17 PM [vite] hmr update /src/components/layout/PostLoginScreen.jsx, /src/index.css
+3:11:02 PM [vite] hmr update /src/index.css, /src/modules/relatorioEstimativa/components/RelatorioEstimativaPage.jsx
