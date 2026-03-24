@@ -1,5 +1,5 @@
 import React from "react";
-import { Leaf, Wheat, Settings, Users } from "lucide-react";
+import { Leaf, Wheat, Settings, Users, FileText } from "lucide-react";
 import { palette } from "../../constants/theme";
 
 /**
@@ -68,6 +68,19 @@ export default function SidebarMenu({ activeModule, setActiveModule, setMenuOpen
         >
           <Users className="w-5 h-5 shrink-0 transition-colors" style={{ color: activeModule === "cadastroProfissional" ? palette.gold : palette.text2 }} />
           <span className="text-[15px] font-medium">Cadastro Profissional</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveModule("relatorioEstimativa"); setMenuOpen(false); }}
+          className="w-full flex items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all hover:bg-white/5"
+          style={{
+            background: activeModule === "relatorioEstimativa" ? "rgba(212,175,55,0.12)" : "transparent",
+            border: activeModule === "relatorioEstimativa" ? "1px solid rgba(230,199,107,0.18)" : "1px solid transparent",
+            color: activeModule === "relatorioEstimativa" ? palette.white : palette.text2,
+          }}
+        >
+          <FileText className="w-5 h-5 shrink-0 transition-colors" style={{ color: activeModule === "relatorioEstimativa" ? palette.gold : palette.text2 }} />
+          <span className="text-[15px] font-medium">Relatórios</span>
         </button>
       </div>
     </div>

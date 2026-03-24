@@ -17,6 +17,9 @@ import EstimativaModals from "../../modules/estimativas/EstimativaModals";
 // Components Cadastro Profissional
 import CadastroProfissionalPage from "../../modules/cadastroProfissional/CadastroProfissionalPage";
 
+// Relatório Estimativa
+import RelatorioEstimativaPage from "../../modules/relatorioEstimativa/components/RelatorioEstimativaPage";
+
 // Hooks Customizados (Lógica Isolada)
 import { useEstimativasData } from "../../hooks/useEstimativasData";
 import { useMapFilters } from "../../hooks/useMapFilters";
