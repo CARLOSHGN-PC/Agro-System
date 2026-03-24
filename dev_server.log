@@ -3,9 +3,24 @@
 > vite
 
 
-  VITE v5.4.21  ready in 335 ms
+  VITE v5.4.21  ready in 281 ms
 
   ➜  Local:   http://localhost:5173/Agro-System/
   ➜  Network: use --host to expose
-11:16:49 AM [vite] page reload index_test.html
-11:16:49 AM [vite] page reload index_test.html
+
+PWA v1.2.0
+mode      generateSW
+precache  1 entries (0.00 KiB)
+files generated
+  dev-dist/sw.js
+  dev-dist/workbox-952b5db6.js
+warnings
+  One of the glob patterns doesn't match any files. Please remove or fix the following: {
+  "globDirectory": "/app/dev-dist",
+  "globPattern": "**/*.{js,css,html,ico,png,svg,woff,woff2}",
+  "globIgnores": [
+    "**/node_modules/**/*",
+    "sw.js",
+    "workbox-*.js"
+  ]
+}
