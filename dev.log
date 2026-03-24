@@ -24,3 +24,10 @@ warnings
     "workbox-*.js"
   ]
 }
+
+6:49:46 PM [vite] hmr update /src/modules/estimativas/EstimativaPanels.jsx, /src/index.css
+6:50:01 PM [vite] hmr update /src/components/layout/PostLoginScreen.jsx, /src/index.css
+6:50:29 PM [vite] hmr update /src/modules/estimativas/EstimativaModals.jsx, /src/index.css
+6:51:13 PM [vite] hmr update /src/modules/estimativas/EstimativaModals.jsx, /src/index.css
+6:51:23 PM [vite] hmr update /src/modules/estimativas/EstimativaModals.jsx, /src/index.css
+6:51:38 PM [vite] hmr update /src/index.css, /src/components/layout/PostLoginScreen.jsx
