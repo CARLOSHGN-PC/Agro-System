@@ -17,10 +17,15 @@ export const exportarRelatorioEstimativa = async (payload) => {
             token = await user.getIdToken();
         }
 
+        // O backend está hospedado no Render, enquanto o frontend pode estar no Github Pages.
+        // Se a variável VITE_API_URL estiver definida (ex: "https://meu-backend-render.com"),
+        // a utilizamos. Senão, se estiver rodando localmente, usamos o caminho relativo.
+        const baseUrl = import.meta.env.VITE_API_URL || '';
+
         // Define a URL baseada no formato solicitado
         const endpoint = payload.formatoSaida === 'PDF'
-            ? '/api/relatorios/estimativa/exportar/pdf'
-            : '/api/relatorios/estimativa/exportar/excel';
+            ? `${baseUrl}/api/relatorios/estimativa/exportar/pdf`
+            : `${baseUrl}/api/relatorios/estimativa/exportar/excel`;
 
         const response = await fetch(endpoint, {
             method: 'POST',
