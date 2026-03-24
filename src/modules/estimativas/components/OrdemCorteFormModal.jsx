@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { palette } from '../../../constants/theme';
 import { Layers } from 'lucide-react';
@@ -103,13 +104,13 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
   // Renderiza apenas se estiver aberto
   if (!isOpen) return null;
 
-  // Usa createPortal para renderizar no root se quisermos garantir que não fique preso
-  // Mas aqui já usamos position: fixed inset-0 z-50, o problema era que o AnimatePresence
-  // precisa estar em volta do conditional rendering (isOpen) no componente pai para funcionar a saída.
-  // Vamos garantir que ele renderiza solto e na frente de tudo.
+  // Usamos createPortal para garantir que a modal escape do contexto de empilhamento (stacking context)
+  // causado pelo backdrop-filter e transforms nos componentes pais (como o EstimativaPanels).
+  // Sem isso, a modal ficaria presa dentro da div pai, cortada pelo overflow.
 
-  return (
+  const modalContent = (
     <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 sm:p-5 bg-black/60 backdrop-blur-md" style={{ position: 'fixed' }}>
+        <AnimatePresence>
         <motion.div
           initial={{ opacity: 0, y: 14, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -214,6 +215,9 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
             </button>
           </div>
         </motion.div>
+        </AnimatePresence>
       </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
