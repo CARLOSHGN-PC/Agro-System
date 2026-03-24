@@ -137,7 +137,7 @@ const EstimativaMap = React.memo(function EstimativaMap({
                 "fill-color": [
                   "case",
                   ["boolean", ["feature-state", "selected"], false],
-                  "#eab308", // Bright yellow marking color for selected talhoes
+                  "#ffbf00", // Bright yellow marking color for selected talhoes
                   ["boolean", ["feature-state", "hover"], false],
                   palette.goldLight,
                   // Injeção da Ordem de Corte (Se a chave _has_open_ordem for true -> Pinta de Azul)
@@ -150,7 +150,7 @@ const EstimativaMap = React.memo(function EstimativaMap({
                     "1º corte", "#ff0000",
                     "2º corte", "#00ff00",
                     "3º corte", "#ffe600",
-                    "4º corte", "#2f416d",
+                    "4º corte", "#01206e",
                     "5º corte", "#ff6a00",
                     "6º corte", "#9500ff",
                     "7º corte", "#00d0ff",
@@ -211,9 +211,9 @@ const EstimativaMap = React.memo(function EstimativaMap({
                   "text-allow-overlap": false
                 }}
                 paint={{
-                  "text-color": "#000000",
+                  "text-color": "#ffffff",
                   "text-halo-color": "#000000",
-                  "text-halo-width": 1.6
+                  "text-halo-width": 1.5
                 }}
               />
             )}
