@@ -14,20 +14,19 @@ def run():
             # Wait for the app to load
             time.sleep(2)
 
-            # 2. Login Offline Bypass
-            page.evaluate('''() => {
-                return crypto.subtle.digest('SHA-256', new TextEncoder().encode('123456'))
-                    .then(hashBuffer => {
-                        const hashArray = Array.from(new Uint8Array(hashBuffer));
-                        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-                        localStorage.setItem('@AgroSystem:auth', JSON.stringify({e: 'test@test.com', hash: hashHex}));
-                    });
-            }''')
+            # 2. Hardcode the offline auth token for "test@test.com" and "123456"
+            # SHA-256 of '123456' is 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
+            page.evaluate("""() => {
+                localStorage.setItem('@AgroSystem:auth', JSON.stringify({
+                    e: 'test@test.com',
+                    hash: '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92'
+                }));
+            }""")
 
             context.set_offline(True)
             time.sleep(1)
 
-            # Fill credentials
+            # Fill credentials (make sure to clear existing content if any)
             inputs = page.locator("input")
             inputs.nth(0).fill("test@test.com")
             inputs.nth(1).fill("123456")
@@ -49,21 +48,19 @@ def run():
             print("Took screenshot of dashboard")
 
             # 3. Open Sidebar Menu
-            # The menu button is usually the first button or a specific toggle
             page.locator("button").first.click()
             time.sleep(1)
 
             page.screenshot(path="sidebar_screen.png")
             print("Took screenshot of sidebar")
 
-            # 4. Click on 'Cadastro Profissional'
-            cadastro_btn = page.locator("button", has_text="Cadastro Profissional").first
-            cadastro_btn.click()
+            # 4. Click on 'Relatórios'
+            page.locator("button", has_text="Relatórios").first.click()
             time.sleep(1)
 
             # 5. Screenshot the new module page
-            page.screenshot(path="cadastro_profissional_page.png")
-            print("Took screenshot of Cadastro Profissional page")
+            page.screenshot(path="relatorio_estimativa_page.png")
+            print("Took screenshot of Relatório de Estimativa page")
 
         except Exception as e:
             print(f"Error: {e}")
