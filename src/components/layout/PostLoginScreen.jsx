@@ -14,6 +14,9 @@ import EstimativaMap from "../../modules/estimativas/EstimativaMap";
 import EstimativaPanels from "../../modules/estimativas/EstimativaPanels";
 import EstimativaModals from "../../modules/estimativas/EstimativaModals";
 
+// Components Cadastro Profissional
+import CadastroProfissionalPage from "../../modules/cadastroProfissional/CadastroProfissionalPage";
+
 // Hooks Customizados (Lógica Isolada)
 import { useEstimativasData } from "../../hooks/useEstimativasData";
 import { useMapFilters } from "../../hooks/useMapFilters";
@@ -206,7 +209,11 @@ export default function PostLoginScreen({ onLogout }) {
         />
 
         <div className="relative flex-1 overflow-hidden">
-          {activeModule === "estimativa" ? (
+          {activeModule === "cadastroProfissional" ? (
+            <div className="absolute inset-0 z-10 overflow-hidden bg-black/20">
+              <CadastroProfissionalPage companyId={currentCompanyId} />
+            </div>
+          ) : activeModule === "estimativa" ? (
             <>
               {/* O componente de renderização pura do WebGL via Mapbox */}
               <EstimativaMap
