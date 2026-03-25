@@ -46,6 +46,7 @@ import { useOrdemCorteMapState } from "../../hooks/estimativas/useOrdemCorteMapS
 export default function PostLoginScreen({ onLogout }) {
   // === ESTADOS ESTRUTURAIS DA UI GLOBAL ===
   const [activeModule, setActiveModule] = useState("estimativa"); // "estimativa" | "configuracao"
+  const [activeMapModule, setActiveMapModule] = useState("estimativa"); // "estimativa" | "tratosCulturais"
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -236,12 +237,15 @@ export default function PostLoginScreen({ onLogout }) {
                 selectedTalhao={selectedTalhao}
                 idsAbertosSet={ordensMapState.idsAbertosSet}
                 idsOcultosSet={ordensMapState.idsOcultosSet}
+                activeMapModule={activeMapModule}
               />
 
               <div className="absolute inset-0 pointer-events-none" style={{ background: "linear-gradient(180deg, rgba(5,5,5,0.14), rgba(5,5,5,0.08) 20%, rgba(5,5,5,0.18) 100%)" }} />
 
               {/* Os painéis flutuantes em cima do mapa (Título, Legend, Talhões selecionados) */}
               <EstimativaPanels
+                activeMapModule={activeMapModule}
+                setActiveMapModule={setActiveMapModule}
                 currentRodada={estData.currentRodada}
                 setCurrentRodada={estData.setCurrentRodada}
                 availableRodadas={estData.availableRodadas}
