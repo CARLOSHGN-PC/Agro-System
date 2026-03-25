@@ -68,10 +68,10 @@ const EstimativaMap = React.memo(function EstimativaMap({
         const isEstimated = f.properties?._is_estimated;
 
         if (activeMapModule === "estimativa") {
-            // Estimativa de Safra: Mostra os talhões, mas ESCONDE os que já tiveram ordem de corte fechada.
-            return !f.properties._is_closed_ordem;
+            // Estimativa de Safra: Mostra os talhões, mas ESCONDE os que têm ordem de corte aberta E os que têm fechada.
+            return !f.properties._is_closed_ordem && !f.properties._has_open_ordem;
         } else if (activeMapModule === "ordemCorte") {
-            // Ordem de Corte: Mostra os estimados e OS FECHADOS.
+            // Ordem de Corte: Mostra os estimados, os pendentes/abertos, e os fechados.
             return isEstimated;
         } else if (activeMapModule === "tratosCulturais") {
             // Tratos Culturais: Mostra APENAS os talhões que já tiveram a ordem de corte fechada
@@ -164,15 +164,18 @@ const EstimativaMap = React.memo(function EstimativaMap({
                   "#ffbf00", // Bright yellow marking color for selected talhoes
                   ["boolean", ["feature-state", "hover"], false],
                   palette.goldLight,
-                  // Regras de Cor para o Módulo de Ordem de Corte (Pendente = Vermelho, Aberto = Amarelo, Fechado = Verde)
+                  // Regras de Cor para o Módulo de Ordem de Corte:
+                  // 1. Verde = Fechado
                   ["all", ["==", activeMapModule, "ordemCorte"], ["boolean", ["get", "_is_closed_ordem"], false]],
-                  "#22c55e", // Fechado = Verde
+                  "#22c55e",
 
+                  // 2. Vermelho = Pendente (Tem ordem aberta, mas ainda não foi 'Liberada' por outro módulo)
                   ["all", ["==", activeMapModule, "ordemCorte"], ["boolean", ["get", "_has_open_ordem"], false]],
-                  "#eab308", // Aberto = Amarelo
+                  "#ef4444",
 
+                  // 3. Transparente = Estimado (Ainda não abriu nenhuma ordem)
                   ["all", ["==", activeMapModule, "ordemCorte"], ["boolean", ["get", "_is_estimated"], true]],
-                  "#ef4444", // Pendente (Tem estimativa mas não abriu/fechou ordem) = Vermelho
+                  "rgba(0,0,0,0)",
 
                   // Regras para os outros Módulos (Tratos Culturais = Cinza)
                   ["all", ["==", activeMapModule, "tratosCulturais"], ["boolean", ["get", "_is_closed_ordem"], false]],
