@@ -81,7 +81,8 @@ export default function PostLoginScreen({ onLogout }) {
     estData.geoJsonData,
     estData.allEstimates,
     activeMapModule,
-    ordensMapState.idsOcultosSet
+    ordensMapState.idsOcultosSet,
+    ordensMapState.idsAbertosSet
   );
 
   // 3. Gerencia o painel de Resumo e a Legenda baseando-se no que está ativo

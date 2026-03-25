@@ -20,7 +20,7 @@ import { normalizeCorte, naturalSort } from "../utils/formatters";
  * @param {Array} allEstimates - O array de estimativas atuais vindas do Firestore.
  * @returns {Object} Estado, opções calculadas, setters e métodos de manipulação de filtro.
  */
-export function useMapFilters(geoJsonData, allEstimates, activeMapModule = "estimativa", idsOcultosSet = new Set()) {
+export function useMapFilters(geoJsonData, allEstimates, activeMapModule = "estimativa", idsOcultosSet = new Set(), idsAbertosSet = new Set()) {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // O estado 'filters' armazena o estado "draft" dentro do modal.
@@ -65,10 +65,14 @@ export function useMapFilters(geoJsonData, allEstimates, activeMapModule = "esti
       const uniqueTalhaoId = getUniqueTalhaoId(f);
       const isEstimated = allEstimates.some(est => est.talhaoId === uniqueTalhaoId);
       const isClosed = idsOcultosSet.has(f.id);
+      const isOpen = idsAbertosSet.has(f.id) && !isClosed;
 
       // Filtra de acordo com o módulo ativo para não popular options com itens que não aparecem
-      if (activeMapModule === "estimativa" && isClosed) return;
+      // Na estimativa, quem abriu ordem ou já fechou a ordem desaparece
+      if (activeMapModule === "estimativa" && (isClosed || isOpen)) return;
+      // Na ordem de corte, só entra quem já foi estimado
       if (activeMapModule === "ordemCorte" && !isEstimated) return;
+      // Nos tratos culturais, só entra o que já foi fechado
       if (activeMapModule === "tratosCulturais" && !isClosed) return;
 
       // 1. A Fazenda é o nível mais alto. Ela sempre aparece (mas talvez filtrada por outras coisas no futuro, se quisermos).
