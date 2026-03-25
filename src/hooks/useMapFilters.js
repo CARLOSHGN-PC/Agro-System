@@ -20,7 +20,7 @@ import { normalizeCorte, naturalSort } from "../utils/formatters";
  * @param {Array} allEstimates - O array de estimativas atuais vindas do Firestore.
  * @returns {Object} Estado, opções calculadas, setters e métodos de manipulação de filtro.
  */
-export function useMapFilters(geoJsonData, allEstimates) {
+export function useMapFilters(geoJsonData, allEstimates, activeMapModule = "estimativa", idsOcultosSet = new Set()) {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // O estado 'filters' armazena o estado "draft" dentro do modal.
@@ -62,6 +62,15 @@ export function useMapFilters(geoJsonData, allEstimates) {
       const corte = p.ECORTE ? String(p.ECORTE).trim() : "";
       const talhao = p.TALHAO ? String(p.TALHAO).trim() : "";
 
+      const uniqueTalhaoId = getUniqueTalhaoId(f);
+      const isEstimated = allEstimates.some(est => est.talhaoId === uniqueTalhaoId);
+      const isClosed = idsOcultosSet.has(f.id);
+
+      // Filtra de acordo com o módulo ativo para não popular options com itens que não aparecem
+      if (activeMapModule === "estimativa" && isClosed) return;
+      if (activeMapModule === "ordemCorte" && !isEstimated) return;
+      if (activeMapModule === "tratosCulturais" && !isClosed) return;
+
       // 1. A Fazenda é o nível mais alto. Ela sempre aparece (mas talvez filtrada por outras coisas no futuro, se quisermos).
       // Por enquanto, mostra todas as fazendas disponíveis no mapa.
       if (fazendaName) fazendasSet.add(fazendaName);
@@ -98,7 +107,7 @@ export function useMapFilters(geoJsonData, allEstimates) {
       cortes: Array.from(cortesSet).sort(naturalSort),
       talhoes: Array.from(talhoesSet).sort(naturalSort),
     };
-  }, [geoJsonData, filters.frente, filters.fazenda, filters.variedade, filters.corte]);
+  }, [geoJsonData, filters.frente, filters.fazenda, filters.variedade, filters.corte, activeMapModule, idsOcultosSet, allEstimates]);
 
   /**
    * Constrói uma nova versão do GeoJSON apenas com as features (polígonos)
