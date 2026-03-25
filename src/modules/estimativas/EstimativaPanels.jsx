@@ -85,6 +85,10 @@ export default function EstimativaPanels({
       return feat && !feat.properties?._is_estimated;
   });
 
+  // O que este bloco faz: Verifica se DENTRE os selecionados, algum JÁ TEM a ordem de corte FECHADA.
+  // Por que ele existe: O usuário pediu que uma vez fechado, NÃO SE PODE ABRIR DE NOVO pra mesma safra.
+  const hasClosedOrdem = selectedTalhoes.some(id => idsOcultosSet?.has(id));
+
   const [isModuleDropdownOpen, setIsModuleDropdownOpen] = useState(false);
   const moduleLabels = {
     estimativa: "Estimativa Safra",
@@ -98,8 +102,42 @@ export default function EstimativaPanels({
       <div className="absolute top-4 left-4 right-4 sm:right-auto w-auto sm:w-[400px] rounded-[22px] border overflow-visible z-30 shadow-[0_10px_30px_rgba(0,0,0,0.24)]" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
         <div className="p-4 flex items-start justify-between gap-3 relative">
           <div className="flex-1">
-            <div className="text-[18px] font-bold leading-tight text-white mb-1">
-               {moduleLabels[activeMapModule]}
+            <div className="flex items-center gap-3 mb-1">
+              <div className="text-[18px] font-bold leading-tight text-white">
+                 {moduleLabels[activeMapModule]}
+              </div>
+
+              {/* Ícone de Camadas que abre o Dropdown */}
+              <div className="relative">
+                 <button
+                    onClick={() => setIsModuleDropdownOpen(!isModuleDropdownOpen)}
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors hover:bg-white/10"
+                    style={{ background: "rgba(255,255,255,0.08)" }}
+                    title="Alternar Módulo"
+                 >
+                    <Layers className="w-4 h-4 text-white" />
+                 </button>
+
+                 {/* Dropdown de Seleção de Módulos */}
+                 {isModuleDropdownOpen && (
+                   <div className="absolute top-10 left-0 w-56 rounded-xl border overflow-hidden shadow-2xl z-50 flex flex-col" style={{ background: "rgba(23, 29, 43, 0.98)", borderColor: "rgba(255,255,255,0.15)", backdropFilter: "blur(20px)" }}>
+                     {Object.entries(moduleLabels).map(([key, label]) => (
+                       <button
+                          key={key}
+                          className={`w-full text-left px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/10 ${activeMapModule === key ? 'text-white bg-white/5' : 'text-gray-400'}`}
+                          onClick={() => {
+                             setActiveMapModule(key);
+                             if (typeof setSelectedTalhoes === "function") setSelectedTalhoes([]);
+                             if (typeof setSelectedTalhao === "function") setSelectedTalhao(null);
+                             setIsModuleDropdownOpen(false);
+                          }}
+                       >
+                         {label}
+                       </button>
+                     ))}
+                   </div>
+                 )}
+              </div>
             </div>
 
             {activeMapModule === "estimativa" && (
@@ -127,40 +165,8 @@ export default function EstimativaPanels({
               </div>
             )}
 
-            {/* Ícone de Camadas que abre o Dropdown */}
-            <div className="mt-3 relative">
-               <button
-                  onClick={() => setIsModuleDropdownOpen(!isModuleDropdownOpen)}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors hover:bg-white/10"
-                  style={{ background: "rgba(255,255,255,0.08)" }}
-                  title="Alternar Módulo"
-               >
-                  <Layers className="w-5 h-5 text-white" />
-               </button>
-
-               {/* Dropdown de Seleção de Módulos */}
-               {isModuleDropdownOpen && (
-                 <div className="absolute top-12 left-0 w-56 rounded-xl border overflow-hidden shadow-2xl z-50 flex flex-col" style={{ background: "rgba(23, 29, 43, 0.98)", borderColor: "rgba(255,255,255,0.15)", backdropFilter: "blur(20px)" }}>
-                   {Object.entries(moduleLabels).map(([key, label]) => (
-                     <button
-                       key={key}
-                       onClick={() => {
-                          setActiveMapModule(key);
-                          setSelectedTalhoes([]);
-                          setSelectedTalhao(null);
-                          setIsModuleDropdownOpen(false);
-                       }}
-                       className={`px-4 py-3 text-left text-sm font-semibold transition-colors hover:bg-white/10 ${activeMapModule === key ? 'text-blue-400 bg-white/5' : 'text-white'}`}
-                     >
-                       {label}
-                     </button>
-                   ))}
-                 </div>
-               )}
-            </div>
-
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 mt-1 sm:mt-0">
             <button className="w-11 h-11 rounded-xl flex items-center justify-center transition-colors hover:bg-white/10" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setFiltersOpen(true)}>
               <ChevronDown className="w-5 h-5" />
             </button>
@@ -302,6 +308,7 @@ export default function EstimativaPanels({
                         vinculoAtivo={vinculoAtivo}
                         talhoesIds={selectedTalhoes}
                         hasUnestimatedTalhao={hasUnestimatedTalhao}
+                        hasClosedOrdem={hasClosedOrdem}
                         companyId={companyId}
                         safra={safra}
                         rodadaOrigem={currentRodada}
@@ -353,7 +360,27 @@ export default function EstimativaPanels({
               </div>
             </div>
             <div className="px-4 pb-4 text-sm space-y-2 max-h-[40vh] overflow-y-auto">
-              {legendItems.length > 0 ? (
+              {activeMapModule === "ordemCorte" ? (
+                <>
+                  <div className="grid grid-cols-[16px_1fr] gap-3 items-center">
+                    <span className="w-4 h-4 rounded-md bg-green-500" />
+                    <span>Fechado</span>
+                  </div>
+                  <div className="grid grid-cols-[16px_1fr] gap-3 items-center">
+                    <span className="w-4 h-4 rounded-md bg-yellow-500" />
+                    <span>Aberto</span>
+                  </div>
+                  <div className="grid grid-cols-[16px_1fr] gap-3 items-center">
+                    <span className="w-4 h-4 rounded-md bg-red-500" />
+                    <span>Pendente</span>
+                  </div>
+                </>
+              ) : activeMapModule === "tratosCulturais" ? (
+                <div className="grid grid-cols-[16px_1fr] gap-3 items-center">
+                  <span className="w-4 h-4 rounded-md bg-gray-500" />
+                  <span>Fechado</span>
+                </div>
+              ) : legendItems.length > 0 ? (
                 legendItems.map(([color, label]) => (
                   <div key={label} className="grid grid-cols-[16px_1fr] gap-3 items-center">
                     <span className="w-4 h-4 rounded-md" style={{ background: color }} />

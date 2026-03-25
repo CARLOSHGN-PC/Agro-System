@@ -68,18 +68,24 @@ export default function PostLoginScreen({ onLogout }) {
   const isMultiSelectMode = true; // Por enquanto fixo como true na especificação
 
   // === HOOKS LÓGICOS DE NEGÓCIO ===
+  // 4. Gerencia as Ordens de Corte
+  const ordensState = useOrdensCorte(currentCompanyId, currentSafra);
+  const ordensMapState = useOrdemCorteMapState(ordensState.vinculosSafra);
+
   // 1. Gerencia dados do Firestore (Carregamento e Salvamento)
   const estData = useEstimativasData(currentCompanyId, currentSafra, setActiveModule);
 
   // 2. Gerencia a Filtragem do GeoJSON baseando-se nos inputs
-  const mapFilters = useMapFilters(estData.geoJsonData, estData.allEstimates);
+  // Agora passamos o activeMapModule e os idsOcultos para filtrar as opções disponíveis dinamicamente
+  const mapFilters = useMapFilters(
+    estData.geoJsonData,
+    estData.allEstimates,
+    activeMapModule,
+    ordensMapState.idsOcultosSet
+  );
 
   // 3. Gerencia o painel de Resumo e a Legenda baseando-se no que está ativo
   const mapSummary = useMapSummary(mapFilters.enhancedGeoJson, estData.allEstimates);
-
-  // 4. Gerencia as Ordens de Corte
-  const ordensState = useOrdensCorte(currentCompanyId, currentSafra);
-  const ordensMapState = useOrdemCorteMapState(ordensState.vinculosSafra);
 
   // 5. Injeta a flag visual _has_open_ordem no GeoJSON sem quebrar o hook useMapFilters
   const mapboxGeoJson = React.useMemo(() => {
