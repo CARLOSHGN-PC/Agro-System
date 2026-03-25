@@ -56,9 +56,16 @@ const EstimativaMap = React.memo(function EstimativaMap({
     return {
       ...enhancedGeoJson,
       features: enhancedGeoJson.features.filter(f => {
+        const isEstimated = f.properties?._is_estimated;
+
         if (activeMapModule === "estimativa") {
-            return !idsOcultosSet.has(f.id);
+            // Estimativa de Safra: Mostra tudo, independente de ter estimativa ou ordem de corte fechada
+            return true;
+        } else if (activeMapModule === "ordemCorte") {
+            // Ordem de Corte: Mostra APENAS os talhões que já foram estimados e que AINDA NÃO tiveram a ordem fechada
+            return isEstimated && !idsOcultosSet.has(f.id);
         } else if (activeMapModule === "tratosCulturais") {
+            // Tratos Culturais: Mostra APENAS os talhões que já tiveram a ordem de corte fechada
             return idsOcultosSet.has(f.id);
         }
         return true;

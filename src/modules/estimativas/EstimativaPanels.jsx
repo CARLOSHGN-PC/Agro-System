@@ -101,6 +101,7 @@ export default function EstimativaPanels({
                   className="appearance-none outline-none cursor-pointer bg-transparent text-[18px] font-bold leading-tight pr-8 text-white w-full"
               >
                   <option value="estimativa" style={{ color: "black" }}>Estimativa Safra</option>
+                  <option value="ordemCorte" style={{ color: "black" }}>Ordem de Corte</option>
                   <option value="tratosCulturais" style={{ color: "black" }}>Tratos Culturais</option>
               </select>
               <ChevronDown className="w-5 h-5 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-white/70" />
@@ -225,56 +226,57 @@ export default function EstimativaPanels({
                 </div>
               ))}
 
-              {activeMapModule === "estimativa" ? (
-                <>
-                  <div className="col-span-2 grid grid-cols-2 gap-3 mt-2">
-                    <button
-                      className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02]"
-                      style={{ background: "#22c55e", color: "#ffffff" }}
-                      onClick={() => {
-                        if (selectedTalhoes.length > 1) {
-                          setScope("selecionados");
-                        } else {
-                          setScope("talhao");
-                        }
-                        setEstimateOpen(true);
-                      }}
-                    >
-                      <Pencil className="w-4 h-4" />
-                      {(() => {
-                         let hasEstimated = false;
-                         selectedTalhoes.forEach(id => {
-                            const feat = enhancedGeoJson?.features?.find(f => f.id === id);
-                            if (feat && feat.properties?._is_estimated) hasEstimated = true;
-                         });
-                         return hasEstimated ? "Reestimar" : "Estimar";
-                      })()}
-                    </button>
-                    <button
-                      onClick={() => openHistory(selectedTalhao)}
-                      disabled={selectedTalhoes.length > 1}
-                      className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] border disabled:opacity-50"
-                      style={{ background: "rgba(31, 38, 53, 0.7)", borderColor: "rgba(255,255,255,0.08)", color: "#ffffff" }}
-                    >
-                      <History className="w-4 h-4" />
-                      Histórico
-                    </button>
-                  </div>
+              {activeMapModule === "estimativa" && (
+                <div className="col-span-2 grid grid-cols-2 gap-3 mt-2">
+                  <button
+                    className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02]"
+                    style={{ background: "#22c55e", color: "#ffffff" }}
+                    onClick={() => {
+                      if (selectedTalhoes.length > 1) {
+                        setScope("selecionados");
+                      } else {
+                        setScope("talhao");
+                      }
+                      setEstimateOpen(true);
+                    }}
+                  >
+                    <Pencil className="w-4 h-4" />
+                    {(() => {
+                       let hasEstimated = false;
+                       selectedTalhoes.forEach(id => {
+                          const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+                          if (feat && feat.properties?._is_estimated) hasEstimated = true;
+                       });
+                       return hasEstimated ? "Reestimar" : "Estimar";
+                    })()}
+                  </button>
+                  <button
+                    onClick={() => openHistory(selectedTalhao)}
+                    disabled={selectedTalhoes.length > 1}
+                    className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] border disabled:opacity-50"
+                    style={{ background: "rgba(31, 38, 53, 0.7)", borderColor: "rgba(255,255,255,0.08)", color: "#ffffff" }}
+                  >
+                    <History className="w-4 h-4" />
+                    Histórico
+                  </button>
+                </div>
+              )}
 
-                  {/* Bloco Dinâmico Injetado - Ordem de Corte */}
-                  <div className="col-span-2 mt-2">
-                     <OrdemCorteActions
-                          vinculoAtivo={vinculoAtivo}
-                          talhoesIds={selectedTalhoes}
-                          hasUnestimatedTalhao={hasUnestimatedTalhao}
-                          companyId={companyId}
-                          safra={safra}
-                          rodadaOrigem={currentRodada}
-                          usuario="Sistema" // Em um cenário real, pegaria do AuthContext
-                     />
-                  </div>
-                </>
-              ) : (
+              {activeMapModule === "ordemCorte" && (
+                <div className="col-span-2 mt-2">
+                   <OrdemCorteActions
+                        vinculoAtivo={vinculoAtivo}
+                        talhoesIds={selectedTalhoes}
+                        hasUnestimatedTalhao={hasUnestimatedTalhao}
+                        companyId={companyId}
+                        safra={safra}
+                        rodadaOrigem={currentRodada}
+                        usuario="Sistema" // Em um cenário real, pegaria do AuthContext
+                   />
+                </div>
+              )}
+
+              {activeMapModule === "tratosCulturais" && (
                 <div className="col-span-2 mt-2">
                   <button
                     className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] shadow-lg"

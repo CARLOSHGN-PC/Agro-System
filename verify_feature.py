@@ -48,19 +48,19 @@ async def run():
         print("Taking screenshot of main screen...")
         await page.screenshot(path="main_screen.png")
 
-        print("Selecting 'Tratos Culturais' from the native select dropdown...")
+        print("Selecting 'Ordem de Corte' from the native select dropdown...")
         try:
             # Click the select to open options
-            await page.locator('select').first.select_option(label='Tratos Culturais')
-            print("Selected Tratos Culturais.")
+            await page.locator('select').first.select_option(label='Ordem de Corte')
+            print("Selected Ordem de Corte.")
         except Exception as e:
-            print("Failed to select Tratos Culturais.")
+            print("Failed to select Ordem de Corte.")
             print(e)
 
         await page.wait_for_timeout(2000) # Wait for map/features to update
 
-        print("Taking screenshot of Tratos Culturais module...")
-        await page.screenshot(path="tratos_culturais_module.png")
+        print("Taking screenshot of Ordem de Corte module...")
+        await page.screenshot(path="ordem_corte_module.png")
 
         await browser.close()
         print("Verification complete!")
