@@ -1,12 +1,21 @@
 import React, { useState, useRef } from "react";
-import { UploadCloud, CheckCircle2, AlertCircle, File, Loader2, Map } from "lucide-react";
+import { UploadCloud, CheckCircle2, AlertCircle, File, Loader2, Map, FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { getUniqueTalhaoId } from "../utils/geoHelpers";
+import { saveEstimate } from "../services/estimativa";
+import { parseBrazilianFloat } from "../utils/formatters";
 import { importShapefile, validateShapefileSet } from "../services/shpImport";
 
-export default function CompanyConfig({ onUploadSuccess }) {
+export default function CompanyConfig({ onUploadSuccess, currentCompanyId, currentSafra, geoJsonData, allEstimates, refetchEstimates }) {
   const [files, setFiles] = useState([]);
   const [status, setStatus] = useState("idle"); // idle, processing, success, error
   const [errorMessage, setErrorMessage] = useState("");
   const fileInputRef = useRef(null);
+  const fileInputRefEst = useRef(null);
+  const [estFile, setEstFile] = useState(null);
+  const [estStatus, setEstStatus] = useState("idle");
+  const [estErrorMessage, setEstErrorMessage] = useState("");
 
   const palette = {
     bg: "#050505",
@@ -62,6 +71,174 @@ export default function CompanyConfig({ onUploadSuccess }) {
     } catch (err) {
       setStatus("error");
       setErrorMessage(err.message || "Erro durante o processamento do shapefile.");
+    }
+  };
+
+
+  const handleEstFileChange = (e) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setEstFile(e.target.files[0]);
+      setEstStatus("idle");
+      setEstErrorMessage("");
+    }
+  };
+
+  const removeEstFile = () => {
+    setEstFile(null);
+    setEstStatus("idle");
+    setEstErrorMessage("");
+  };
+
+  const handleEstUpload = async () => {
+    if (!estFile) return;
+    if (!geoJsonData || !geoJsonData.features || geoJsonData.features.length === 0) {
+      setEstStatus("error");
+      setEstErrorMessage("Nenhum mapa (Shapefile) encontrado. Importe o mapa primeiro para poder cruzar as áreas.");
+      return;
+    }
+
+    setEstStatus("processing");
+    setEstErrorMessage("");
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+          if (json.length === 0) {
+            throw new Error("A planilha está vazia.");
+          }
+
+          // Encontra os nomes das colunas de forma flexível (ignorando case)
+          const firstRow = json[0];
+          const keys = Object.keys(firstRow);
+
+          let fundoCol = keys.find(k => k.toLowerCase().includes("fundo"));
+          let talhaoCol = keys.find(k => k.toLowerCase().includes("talh"));
+          let tchCol = keys.find(k => k.toLowerCase().includes("tch"));
+
+          if (!fundoCol || !talhaoCol || !tchCol) {
+            throw new Error("A planilha deve conter as colunas: FUNDO_AGRICOLA, TALHAO e TCH.");
+          }
+
+          const missingLines = [];
+          const linesToSave = [];
+          const estimatedTalhaoIds = new Set((allEstimates || []).map(est => est.talhaoId));
+
+          for (let i = 0; i < json.length; i++) {
+            const row = json[i];
+            const fundo = String(row[fundoCol] || "").trim().toUpperCase();
+            const talhao = String(row[talhaoCol] || "").trim().toUpperCase();
+            const tchStr = String(row[tchCol] || "").trim();
+            const tch = parseBrazilianFloat(tchStr);
+
+            if (!fundo || !talhao || isNaN(tch) || tch <= 0) continue;
+
+            // Encontrar no geoJsonData
+            let foundFeatures = geoJsonData.features.filter(f => {
+              const fAgr = String(f.properties?.FUNDO_AGR || "").trim().toUpperCase();
+              const fTalhao = String(f.properties?.TALHAO || "").trim().toUpperCase();
+              // Como pode haver variações de nome de fundo (ex: "FUNDO 1" vs "FUNDO_1"), fazemos um include simples ou match exato
+              return fAgr === fundo && fTalhao === talhao;
+            });
+
+            // Fallback de busca mais relaxada se não encontrar exato
+            if (foundFeatures.length === 0) {
+               foundFeatures = geoJsonData.features.filter(f => {
+                  const fAgr = String(f.properties?.FUNDO_AGR || "").trim().toUpperCase();
+                  const fTalhao = String(f.properties?.TALHAO || "").trim().toUpperCase();
+                  // Tenta achar com replaces de espaço
+                  return fAgr.replace(/\s+/g, '') === fundo.replace(/\s+/g, '') &&
+                         fTalhao.replace(/^0+/, '') === talhao.replace(/^0+/, '');
+               });
+            }
+
+            if (foundFeatures.length > 0) {
+              // Pegamos a primeira feature correspondente. Em caso de multipoligonos, o usuário
+              // pode ter que consolidar. Mas vamos associar a todas as parts do talhão se houver mais de uma
+              for (const feat of foundFeatures) {
+                const uniqueTalhaoId = getUniqueTalhaoId(feat);
+
+                // Ignorar se já existe estimativa salva pra esse talhão nesta rodada (Estimativa)
+                if (estimatedTalhaoIds.has(uniqueTalhaoId)) continue;
+
+                const area = parseBrazilianFloat(feat.properties?.AREA || "0");
+                const toneladas = area * tch;
+
+                linesToSave.push({
+                   uniqueTalhaoId,
+                   payload: {
+                      fundo_agricola: feat.properties?.FUNDO_AGR || fundo,
+                      fazenda: feat.properties?.FAZENDA || "N/A",
+                      variedade: feat.properties?.VARIEDADE || "N/A",
+                      area: area.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                      tch: tchStr,
+                      toneladas: toneladas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+                      responsavel: "Importação",
+                      rodada: "Estimativa"
+                   }
+                });
+              }
+            } else {
+              // Não encontrou no shapefile
+              missingLines.push({
+                "Linha Planilha": i + 2,
+                "Fundo Agricola": fundo,
+                "Talhao": talhao,
+                "TCH": tchStr,
+                "Motivo": "Talhão não encontrado no mapa (Shapefile)"
+              });
+            }
+          }
+
+          // Salvar as estimativas encontradas
+          let savedCount = 0;
+          if (linesToSave.length > 0) {
+            // Em batch para não travar
+            const promises = linesToSave.map(item =>
+              saveEstimate(currentCompanyId || "empresa_default", currentSafra || "2026/2027", item.uniqueTalhaoId, item.payload)
+            );
+            await Promise.all(promises);
+            savedCount = linesToSave.length;
+            if (refetchEstimates) await refetchEstimates();
+          }
+
+          // Gerar relatório se houver falhas
+          if (missingLines.length > 0) {
+            const ws = XLSX.utils.json_to_sheet(missingLines);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Falhas na Importação");
+            const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+            const dataBlob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8" });
+            saveAs(dataBlob, "relatorio_falha_importacao.xlsx");
+
+            setEstErrorMessage(`Importação finalizada. ${savedCount} talhões importados. ${missingLines.length} talhões falharam e o relatório foi baixado.`);
+            setEstStatus("error"); // Usamos error pra mostrar a msg de aviso
+          } else {
+            setEstStatus("success");
+            setEstErrorMessage(`${savedCount} talhões importados com sucesso! Nenhuma falha encontrada.`);
+          }
+
+        } catch (err) {
+          setEstStatus("error");
+          setEstErrorMessage("Erro ao ler o arquivo: " + err.message);
+        }
+      };
+
+      reader.onerror = () => {
+        setEstStatus("error");
+        setEstErrorMessage("Erro ao processar a leitura do arquivo.");
+      };
+
+      reader.readAsArrayBuffer(estFile);
+    } catch (err) {
+      setEstStatus("error");
+      setEstErrorMessage(err.message || "Erro desconhecido ao processar planilha.");
     }
   };
 
@@ -209,7 +386,127 @@ export default function CompanyConfig({ onUploadSuccess }) {
             </div>
           )}
         </div>
+
+
+      <div
+        className="rounded-[28px] border overflow-hidden shadow-2xl backdrop-blur-md relative mt-8"
+        style={{
+          background: "linear-gradient(180deg, rgba(22,24,28,0.78), rgba(18,20,24,0.66))",
+          borderColor: "rgba(230,199,107,0.18)",
+        }}
+      >
+        <div className="p-4 sm:p-6 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <h2 className="text-lg sm:text-xl font-medium">Importação de Estimativa Inicial (Planilha)</h2>
+          <p className="text-sm mt-1" style={{ color: palette.text2 }}>
+            Faça upload de uma planilha (.XLSX ou .CSV) contendo as colunas de FUNDO, TALHÃO e TCH. O sistema vai cruzar a área com o mapa atual e salvar como primeira estimativa.
+          </p>
+        </div>
+
+        <div className="p-4 sm:p-6 space-y-6">
+          <div
+            className="border-2 border-dashed rounded-[20px] p-6 sm:p-8 text-center transition-colors duration-200"
+            style={{
+              borderColor: "rgba(255,255,255,0.15)",
+              background: "rgba(255,255,255,0.02)",
+            }}
+          >
+            <FileSpreadsheet className="w-12 h-12 mx-auto mb-4" style={{ color: palette.goldLight }} />
+            <h3 className="text-lg font-medium mb-2">Selecione seu arquivo .XLSX ou .CSV</h3>
+            <p className="text-sm mb-4" style={{ color: palette.text2 }}>
+              A planilha deve conter colunas chamadas FUNDO, TALHÃO e TCH
+            </p>
+            <input
+              type="file"
+              className="hidden"
+              ref={fileInputRefEst}
+              onChange={handleEstFileChange}
+              accept=".xlsx,.xls,.csv"
+            />
+            <button
+              onClick={() => fileInputRefEst.current.click()}
+              className="px-6 py-2.5 rounded-xl text-sm font-medium transition-transform hover:scale-105"
+              style={{
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.15)",
+              }}
+            >
+              Procurar planilha
+            </button>
+          </div>
+
+          {estFile && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-medium" style={{ color: palette.text2 }}>Arquivo selecionado</h4>
+              <div className="grid grid-cols-1 gap-3">
+                  <div
+                    className="flex items-center justify-between p-3 rounded-xl border"
+                    style={{ background: "rgba(255,255,255,0.04)", borderColor: "rgba(255,255,255,0.08)" }}
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <File className="w-5 h-5 shrink-0" style={{ color: palette.text2 }} />
+                      <span className="text-sm truncate">{estFile.name}</span>
+                    </div>
+                    {estStatus !== "processing" && (
+                      <button
+                        onClick={removeEstFile}
+                        className="text-xs hover:text-red-400 p-1 rounded-md"
+                        style={{ color: palette.text2 }}
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+              </div>
+
+              {estStatus === "error" && (
+                <div className="flex items-start gap-3 p-4 rounded-xl mt-4" style={{ background: estErrorMessage.includes("falharam") ? "rgba(234,179,8,0.1)" : "rgba(239,68,68,0.1)", border: estErrorMessage.includes("falharam") ? "1px solid rgba(234,179,8,0.3)" : "1px solid rgba(239,68,68,0.3)" }}>
+                  <AlertCircle className={`w-5 h-5 ${estErrorMessage.includes("falharam") ? 'text-yellow-400' : 'text-red-400'} shrink-0`} />
+                  <div>
+                    <div className={`text-sm font-medium ${estErrorMessage.includes("falharam") ? 'text-yellow-400' : 'text-red-400'}`}>Aviso / Erro na Importação</div>
+                    <div className={`text-xs ${estErrorMessage.includes("falharam") ? 'text-yellow-300' : 'text-red-300'} mt-1`}>{estErrorMessage}</div>
+                  </div>
+                </div>
+              )}
+
+              {estStatus === "success" && (
+                <div className="flex items-start gap-3 p-4 rounded-xl mt-4" style={{ background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)" }}>
+                  <CheckCircle2 className="w-5 h-5 text-green-400 shrink-0" />
+                  <div>
+                    <div className="text-sm font-medium text-green-400">Sucesso!</div>
+                    <div className="text-xs text-green-300 mt-1">{estErrorMessage}</div>
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-4 flex justify-end">
+                <button
+                  onClick={handleEstUpload}
+                  disabled={estStatus === "processing"}
+                  className="px-6 py-3 rounded-xl font-semibold flex items-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
+                  style={{
+                    background: `linear-gradient(135deg, ${palette.gold} 0%, ${palette.goldLight} 100%)`,
+                    color: palette.bg
+                  }}
+                >
+                  {estStatus === "processing" ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Processando...
+                    </>
+                  ) : (
+                    <>
+                      <UploadCloud className="w-5 h-5" />
+                      Importar Planilha
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+
+    </div>
     </div>
   );
 }
