@@ -165,13 +165,13 @@ export default function LoginScreen({ onLoginSuccess }) {
               transition={{ duration: 0.9, delay: 0.15 }}
               className="text-5xl xl:text-6xl font-semibold leading-tight"
             >
-              Bem-vindo ao OnSystem Sua plataforma completa de gestão e inteligência operacional.
+              Controle do campo com visual futurista e operação real.
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.3 }}
-              className="text-sm leading-8"
+              className="text-lg leading-8"
               style={{ color: palette.text2 }}
             >
               Uma interface moderna, com foco em velocidade, clareza de dados, sincronização e produtividade no uso diário.
