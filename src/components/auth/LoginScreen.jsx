@@ -165,7 +165,7 @@ export default function LoginScreen({ onLoginSuccess }) {
               transition={{ duration: 0.9, delay: 0.15 }}
               className="text-5xl xl:text-6xl font-semibold leading-tight"
             >
-              Controle do campo com visual futurista e operação real.
+              OnSystem, sua gestão completa com inteligência operacional.
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 18 }}
