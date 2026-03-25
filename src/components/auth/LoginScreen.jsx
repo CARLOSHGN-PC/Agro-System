@@ -171,7 +171,7 @@ export default function LoginScreen({ onLoginSuccess }) {
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.9, delay: 0.3 }}
-              className="text-lg leading-8"
+              className="text-sm leading-8"
               style={{ color: palette.text2 }}
             >
               Uma interface moderna, com foco em velocidade, clareza de dados, sincronização e produtividade no uso diário.
