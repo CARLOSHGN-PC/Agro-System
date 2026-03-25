@@ -16,6 +16,7 @@ export default function CompanyConfig({ onUploadSuccess, currentCompanyId, curre
   const [estFile, setEstFile] = useState(null);
   const [estStatus, setEstStatus] = useState("idle");
   const [estErrorMessage, setEstErrorMessage] = useState("");
+  const [estProgress, setEstProgress] = useState({ current: 0, total: 0 });
 
   const palette = {
     bg: "#050505",
@@ -80,6 +81,7 @@ export default function CompanyConfig({ onUploadSuccess, currentCompanyId, curre
       setEstFile(e.target.files[0]);
       setEstStatus("idle");
       setEstErrorMessage("");
+      setEstProgress({ current: 0, total: 0 });
     }
   };
 
@@ -87,6 +89,7 @@ export default function CompanyConfig({ onUploadSuccess, currentCompanyId, curre
     setEstFile(null);
     setEstStatus("idle");
     setEstErrorMessage("");
+    setEstProgress({ current: 0, total: 0 });
   };
 
   const handleEstUpload = async () => {
@@ -196,15 +199,29 @@ export default function CompanyConfig({ onUploadSuccess, currentCompanyId, curre
             }
           }
 
-          // Salvar as estimativas encontradas
+          // Salvar as estimativas encontradas em LOTES para não travar o navegador
           let savedCount = 0;
           if (linesToSave.length > 0) {
-            // Em batch para não travar
-            const promises = linesToSave.map(item =>
-              saveEstimate(currentCompanyId || "empresa_default", currentSafra || "2026/2027", item.uniqueTalhaoId, item.payload)
-            );
-            await Promise.all(promises);
-            savedCount = linesToSave.length;
+            const BATCH_SIZE = 50;
+            setEstProgress({ current: 0, total: linesToSave.length });
+
+            for (let i = 0; i < linesToSave.length; i += BATCH_SIZE) {
+              const batch = linesToSave.slice(i, i + BATCH_SIZE);
+
+              const promises = batch.map(item =>
+                saveEstimate(currentCompanyId || "empresa_default", currentSafra || "2026/2027", item.uniqueTalhaoId, item.payload)
+              );
+
+              await Promise.all(promises);
+              savedCount += batch.length;
+
+              // Atualiza a interface
+              setEstProgress({ current: savedCount, total: linesToSave.length });
+
+              // Pausa de 50ms para permitir que o navegador (React) atualize a tela e respire
+              await new Promise(resolve => setTimeout(resolve, 50));
+            }
+
             if (refetchEstimates) await refetchEstimates();
           }
 
@@ -491,7 +508,9 @@ export default function CompanyConfig({ onUploadSuccess, currentCompanyId, curre
                   {estStatus === "processing" ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
-                      Processando...
+                      {estProgress.total > 0
+                        ? `Salvando (${estProgress.current}/${estProgress.total})...`
+                        : "Processando..."}
                     </>
                   ) : (
                     <>
