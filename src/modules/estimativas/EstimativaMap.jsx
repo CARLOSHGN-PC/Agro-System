@@ -55,18 +55,31 @@ const EstimativaMap = React.memo(function EstimativaMap({
     if (!enhancedGeoJson) return null;
     return {
       ...enhancedGeoJson,
-      features: enhancedGeoJson.features.filter(f => {
+      features: enhancedGeoJson.features.map(f => {
+        // Clone features to avoid mutating the original data in useMemo
+        return {
+          ...f,
+          properties: {
+            ...f.properties,
+            _is_closed_ordem: idsOcultosSet.has(f.id)
+          }
+        };
+      }).filter(f => {
         const isEstimated = f.properties?._is_estimated;
 
         if (activeMapModule === "estimativa") {
-            // Estimativa de Safra: Mostra tudo, independente de ter estimativa ou ordem de corte fechada
+            // Estimativa de Safra: Mostra tudo
             return true;
         } else if (activeMapModule === "ordemCorte") {
-            // Ordem de Corte: Mostra APENAS os talhões que já foram estimados e que AINDA NÃO tiveram a ordem fechada
-            return isEstimated && !idsOcultosSet.has(f.id);
+            // Ordem de Corte: Mostra os estimados e OS FECHADOS, mas o que for fechado ficará vermelho (pintado via mapbox paint)
+            // Se eu não renderizar os fechados, não tem como eles ficarem vermelhos na view do 'Ordem de Corte'
+            // O usuário pediu: "deixar de vermelho quando fechar nao precisa sumir" no módulo ordem de corte
+            // Mas também disse: "se aparece fechado tem que ir no outro modulo"
+            // Entendemos que eles ficam visíveis mas coloridos diferentemente em ordemCorte
+            return isEstimated;
         } else if (activeMapModule === "tratosCulturais") {
             // Tratos Culturais: Mostra APENAS os talhões que já tiveram a ordem de corte fechada
-            return idsOcultosSet.has(f.id);
+            return f.properties._is_closed_ordem;
         }
         return true;
       })
@@ -156,8 +169,22 @@ const EstimativaMap = React.memo(function EstimativaMap({
                   ["boolean", ["feature-state", "hover"], false],
                   palette.goldLight,
                   // Injeção da Ordem de Corte (Se a chave _has_open_ordem for true -> Pinta de Azul)
+                  // Se for ordem fechada e estiver no módulo de Ordem de Corte, fica Vermelho
+                  // Se for ordem fechada e estiver em Tratos Culturais, fica Cinza Neutro (o usuário pediu "cor neutra")
+                  // Se for ordem fechada e estiver em Estimativa Safra, mantém a cor de estimativa normal
+                  ["all", ["==", activeMapModule, "ordemCorte"], ["boolean", ["get", "_is_closed_ordem"], false]],
+                  "#ff0000", // Vermelho para fechado no Ordem de Corte
+
+                  ["all", ["==", activeMapModule, "tratosCulturais"], ["boolean", ["get", "_is_closed_ordem"], false]],
+                  "#808080", // Cor neutra (cinza) para fechado em Tratos Culturais
+
                   ["boolean", ["get", "_has_open_ordem"], false],
                   ORDEM_CORTE_CORES.AZUL_ABERTA,
+
+                  // Se for ordem de corte, mas a ordem não está aberta nem fechada, fica cinza (sem cor de corte, como pedido)
+                  ["all", ["==", activeMapModule, "ordemCorte"], ["boolean", ["get", "_is_estimated"], false]],
+                  "#808080", // Cor neutra para talhões que podem abrir ordem mas não abriram
+
                   ["boolean", ["get", "_is_estimated"], false],
                   [
                     "match",

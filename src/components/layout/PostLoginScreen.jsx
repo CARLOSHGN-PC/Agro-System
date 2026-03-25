@@ -244,6 +244,7 @@ export default function PostLoginScreen({ onLogout }) {
 
               {/* Os painéis flutuantes em cima do mapa (Título, Legend, Talhões selecionados) */}
               <EstimativaPanels
+                idsOcultosSet={ordensMapState.idsOcultosSet}
                 activeMapModule={activeMapModule}
                 setActiveMapModule={setActiveMapModule}
                 currentRodada={estData.currentRodada}

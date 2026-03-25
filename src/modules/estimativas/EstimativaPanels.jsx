@@ -24,6 +24,7 @@ import { OrdemCorteActions } from "./components/OrdemCorteActions";
  * @returns {JSX.Element} Conjunto de divs absolutas de UI.
  */
 export default function EstimativaPanels({
+  idsOcultosSet,
   activeMapModule,
   setActiveMapModule,
   currentRodada,
@@ -84,31 +85,25 @@ export default function EstimativaPanels({
       return feat && !feat.properties?._is_estimated;
   });
 
+  const [isModuleDropdownOpen, setIsModuleDropdownOpen] = useState(false);
+  const moduleLabels = {
+    estimativa: "Estimativa Safra",
+    ordemCorte: "Ordem de Corte",
+    tratosCulturais: "Tratos Culturais"
+  };
+
   return (
     <>
       {/* Título e Botão de Filtro - Top Left */}
-      <div className="absolute top-4 left-4 right-4 sm:right-auto w-auto sm:w-[400px] rounded-[22px] border overflow-hidden z-10 shadow-[0_10px_30px_rgba(0,0,0,0.24)]" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
-        <div className="p-4 flex items-start justify-between gap-3">
+      <div className="absolute top-4 left-4 right-4 sm:right-auto w-auto sm:w-[400px] rounded-[22px] border overflow-visible z-30 shadow-[0_10px_30px_rgba(0,0,0,0.24)]" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
+        <div className="p-4 flex items-start justify-between gap-3 relative">
           <div className="flex-1">
-            <div className="relative w-fit">
-              <select
-                  value={activeMapModule}
-                  onChange={(e) => {
-                     setActiveMapModule(e.target.value);
-                     setSelectedTalhoes([]);
-                     setSelectedTalhao(null);
-                  }}
-                  className="appearance-none outline-none cursor-pointer bg-transparent text-[18px] font-bold leading-tight pr-8 text-white w-full"
-              >
-                  <option value="estimativa" style={{ color: "black" }}>Estimativa Safra</option>
-                  <option value="ordemCorte" style={{ color: "black" }}>Ordem de Corte</option>
-                  <option value="tratosCulturais" style={{ color: "black" }}>Tratos Culturais</option>
-              </select>
-              <ChevronDown className="w-5 h-5 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-white/70" />
+            <div className="text-[18px] font-bold leading-tight text-white mb-1">
+               {moduleLabels[activeMapModule]}
             </div>
 
             {activeMapModule === "estimativa" && (
-              <div className="mt-3 inline-flex items-center gap-2">
+              <div className="mt-2 inline-flex items-center gap-2">
                 <div className="relative">
                   <select
                     value={currentRodada}
@@ -131,6 +126,39 @@ export default function EstimativaPanels({
                 </div>
               </div>
             )}
+
+            {/* Ícone de Camadas que abre o Dropdown */}
+            <div className="mt-3 relative">
+               <button
+                  onClick={() => setIsModuleDropdownOpen(!isModuleDropdownOpen)}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors hover:bg-white/10"
+                  style={{ background: "rgba(255,255,255,0.08)" }}
+                  title="Alternar Módulo"
+               >
+                  <Layers className="w-5 h-5 text-white" />
+               </button>
+
+               {/* Dropdown de Seleção de Módulos */}
+               {isModuleDropdownOpen && (
+                 <div className="absolute top-12 left-0 w-56 rounded-xl border overflow-hidden shadow-2xl z-50 flex flex-col" style={{ background: "rgba(23, 29, 43, 0.98)", borderColor: "rgba(255,255,255,0.15)", backdropFilter: "blur(20px)" }}>
+                   {Object.entries(moduleLabels).map(([key, label]) => (
+                     <button
+                       key={key}
+                       onClick={() => {
+                          setActiveMapModule(key);
+                          setSelectedTalhoes([]);
+                          setSelectedTalhao(null);
+                          setIsModuleDropdownOpen(false);
+                       }}
+                       className={`px-4 py-3 text-left text-sm font-semibold transition-colors hover:bg-white/10 ${activeMapModule === key ? 'text-blue-400 bg-white/5' : 'text-white'}`}
+                     >
+                       {label}
+                     </button>
+                   ))}
+                 </div>
+               )}
+            </div>
+
           </div>
           <div className="flex gap-2">
             <button className="w-11 h-11 rounded-xl flex items-center justify-center transition-colors hover:bg-white/10" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setFiltersOpen(true)}>
@@ -229,8 +257,9 @@ export default function EstimativaPanels({
               {activeMapModule === "estimativa" && (
                 <div className="col-span-2 grid grid-cols-2 gap-3 mt-2">
                   <button
-                    className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02]"
+                    className={`rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed`}
                     style={{ background: "#22c55e", color: "#ffffff" }}
+                    disabled={selectedTalhoes.some(id => idsOcultosSet?.has(id))}
                     onClick={() => {
                       if (selectedTalhoes.length > 1) {
                         setScope("selecionados");
@@ -247,6 +276,11 @@ export default function EstimativaPanels({
                           const feat = enhancedGeoJson?.features?.find(f => f.id === id);
                           if (feat && feat.properties?._is_estimated) hasEstimated = true;
                        });
+
+                       // Se houver algum talhão fechado selecionado, mudamos o texto para alertar que está bloqueado
+                       const isClosed = selectedTalhoes.some(id => idsOcultosSet?.has(id));
+                       if (isClosed) return "Ordem Fechada";
+
                        return hasEstimated ? "Reestimar" : "Estimar";
                     })()}
                   </button>
