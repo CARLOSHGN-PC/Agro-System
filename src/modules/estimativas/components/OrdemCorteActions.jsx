@@ -66,7 +66,7 @@ export const OrdemCorteActions = ({
             {vinculoAtivo && <OrdemCorteInfo vinculo={vinculoAtivo} />}
 
             {/* Botões de Ação Dinâmicos */}
-            {!vinculoAtivo || vinculoAtivo.status === ORDEM_CORTE_STATUS.FECHADA ? (
+            {!vinculoAtivo || vinculoAtivo.status === ORDEM_CORTE_STATUS.FINALIZADA ? (
                  <button
                     onClick={onAbrirClick}
                     disabled={isProcessing || talhoesIds.length === 0 || hasUnestimatedTalhao || hasClosedOrdem}

@@ -20,7 +20,7 @@ test('validatePodeAbrirOrdem', async (t) => {
         const talhoesDesejados = ['TALHAO_01', 'TALHAO_02'];
         const todosVinculosSafra = [
             { talhaoId: 'TALHAO_03', status: ORDEM_CORTE_STATUS.ABERTA },
-            { talhaoId: 'TALHAO_01', status: ORDEM_CORTE_STATUS.FECHADA }
+            { talhaoId: 'TALHAO_01', status: ORDEM_CORTE_STATUS.FINALIZADA }
         ];
 
         const result = validatePodeAbrirOrdem(talhoesDesejados, todosVinculosSafra);
@@ -43,7 +43,7 @@ test('validatePodeAbrirOrdem', async (t) => {
     await t.test('deve retornar canOpen true quando os talhões desejados estiverem apenas em ordens FECHADAS', () => {
         const talhoesDesejados = ['TALHAO_01'];
         const todosVinculosSafra = [
-            { talhaoId: 'TALHAO_01', status: ORDEM_CORTE_STATUS.FECHADA }
+            { talhaoId: 'TALHAO_01', status: ORDEM_CORTE_STATUS.FINALIZADA }
         ];
 
         const result = validatePodeAbrirOrdem(talhoesDesejados, todosVinculosSafra);

@@ -82,6 +82,19 @@ export default function SidebarMenu({ activeModule, setActiveModule, setMenuOpen
           <FileText className="w-5 h-5 shrink-0 transition-colors" style={{ color: activeModule === "relatorioEstimativa" ? palette.gold : palette.text2 }} />
           <span className="text-[15px] font-medium">Relatórios</span>
         </button>
+
+        <button
+          onClick={() => { setActiveModule("gerenciamentoOrdemCorte"); setMenuOpen(false); }}
+          className="w-full flex items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all hover:bg-white/5"
+          style={{
+            background: activeModule === "gerenciamentoOrdemCorte" ? "rgba(212,175,55,0.12)" : "transparent",
+            border: activeModule === "gerenciamentoOrdemCorte" ? "1px solid rgba(230,199,107,0.18)" : "1px solid transparent",
+            color: activeModule === "gerenciamentoOrdemCorte" ? palette.white : palette.text2,
+          }}
+        >
+          <FileText className="w-5 h-5 shrink-0" style={{ color: activeModule === "gerenciamentoOrdemCorte" ? palette.gold : "inherit" }} />
+          <span className="font-semibold text-[15px] truncate">Ordens de Corte</span>
+        </button>
       </div>
     </div>
   );

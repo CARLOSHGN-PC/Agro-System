@@ -35,7 +35,7 @@ export const OrdemCorteInfo = ({ vinculo }) => {
                 <OrdemCorteStatusBadge status={vinculo.status} />
             </div>
 
-            {vinculo.status === ORDEM_CORTE_STATUS.FECHADA && (
+            {vinculo.status === ORDEM_CORTE_STATUS.FINALIZADA && (
                 <div className="mt-1 text-[11px] bg-yellow-500/10 text-yellow-500 p-2 rounded border border-yellow-500/20">
                     Aviso: O talhão encontra-se oculto da safra vigente por pertencer a uma Ordem já encerrada.
                 </div>

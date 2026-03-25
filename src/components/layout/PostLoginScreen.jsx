@@ -20,6 +20,9 @@ import CadastroProfissionalPage from "../../modules/cadastroProfissional/Cadastr
 // Relatório Estimativa
 import RelatorioEstimativaPage from "../../modules/relatorioEstimativa/components/RelatorioEstimativaPage";
 
+// Gerenciamento Ordem de Corte
+import GerenciamentoOrdemCortePage from "../../modules/gerenciamentoOrdemCorte/GerenciamentoOrdemCortePage";
+
 // Hooks Customizados (Lógica Isolada)
 import { useEstimativasData } from "../../hooks/useEstimativasData";
 import { useMapFilters } from "../../hooks/useMapFilters";
@@ -228,6 +231,14 @@ export default function PostLoginScreen({ onLogout }) {
           ) : activeModule === "relatorioEstimativa" ? (
             <div className="absolute inset-0 z-10 overflow-auto bg-black/20">
               <RelatorioEstimativaPage />
+            </div>
+          ) : activeModule === "gerenciamentoOrdemCorte" ? (
+            <div className="absolute inset-0 w-full h-full bg-[#f8fafc] overflow-y-auto">
+              <GerenciamentoOrdemCortePage
+                 companyId={currentCompanyId}
+                 safra={currentSafra}
+                 setActiveModule={setActiveModule}
+              />
             </div>
           ) : activeModule === "estimativa" ? (
             <>

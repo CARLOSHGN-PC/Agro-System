@@ -28,11 +28,11 @@ export const selecionarVinculoDoTalhao = (talhaoId, todosVinculosSafra) => {
     const vinculosFiltrados = todosVinculosSafra.filter(v => v.talhaoId === talhaoId);
 
     // Se só houver um, ótimo. Se houver FECHADOS (ex: rodadas antigas e ele tentar re-estimar),
-    // ou ABERTOS atuais, precisamos retornar a ABERTA, ou a última FECHADA se não houver ABERTAS.
-    const aberto = vinculosFiltrados.find(v => v.status === ORDEM_CORTE_STATUS.ABERTA);
+    // ou ABERTOS/AGUARDANDO atuais, precisamos retornar eles em prioridade.
+    const aberto = vinculosFiltrados.find(v => v.status === ORDEM_CORTE_STATUS.ABERTA || v.status === ORDEM_CORTE_STATUS.AGUARDANDO);
     if (aberto) return aberto;
 
-    // Se não há ABERTO, ordenamos os FECHADOS pelos mais recentes para mostrar a última.
+    // Se não há ABERTO/AGUARDANDO, ordenamos os FECHADOS pelos mais recentes para mostrar a última.
     if (vinculosFiltrados.length > 0) {
          vinculosFiltrados.sort((a, b) => new Date(b.closedAt) - new Date(a.closedAt));
          return vinculosFiltrados[0];
@@ -49,35 +49,32 @@ export const selecionarVinculoDoTalhao = (talhaoId, todosVinculosSafra) => {
 export const selecionarIdsOcultosDaSafra = (todosVinculosSafra) => {
     if (!todosVinculosSafra || !todosVinculosSafra.length) return [];
 
-    // Pegamos todos os talhões que estão com status FECHADA
+    // Pegamos todos os talhões que estão com status FINALIZADA
     const idsFechados = todosVinculosSafra
-        .filter(v => v.status === ORDEM_CORTE_STATUS.FECHADA)
+        .filter(v => v.status === ORDEM_CORTE_STATUS.FINALIZADA)
         .map(v => v.talhaoId);
 
-    // Retiramos da lista "suja" de fechados, os caras que têm um status ABERTO concorrente
-    // (Por exemplo: o usuário abriu uma nova, as regras permitiram, então não deve ocultar).
-    // Nota: Nossas regras bloqueiam Reabrir no fluxo normal, mas como precaução, garantimos
-    // que "Oculto" é o que não tem ABERTA no sistema!
+    // Retiramos da lista "suja" de fechados, os caras que têm um status ABERTO ou AGUARDANDO concorrente
     const idsAbertos = new Set(todosVinculosSafra
-        .filter(v => v.status === ORDEM_CORTE_STATUS.ABERTA)
+        .filter(v => v.status === ORDEM_CORTE_STATUS.ABERTA || v.status === ORDEM_CORTE_STATUS.AGUARDANDO)
         .map(v => v.talhaoId));
 
-    // Apenas quem é FECHADO e não ABERTO entra para ocultação.
+    // Apenas quem é FECHADO e não ABERTO/AGUARDANDO entra para ocultação.
     const exclusivosFechados = idsFechados.filter(id => !idsAbertos.has(id));
 
-    // Retorna a lista unificada sem repetição, ideal para o hook do Mapbox.
     return [...new Set(exclusivosFechados)];
 };
 
 /**
- * Constrói a lista de Talhões que devem ser pitados de azul forte,
- * ignorando legendas e cores normais, pois estão designados a "Cortar".
+ * Constrói a lista de Talhões que devem ser pintados como pendentes ou abertos (amarelo ou vermelho).
+ * Consideramos ambos os status (AGUARDANDO e ABERTA) como abertos no visual do mapa do ponto de vista
+ * de que eles têm uma ordem em andamento.
  */
 export const selecionarIdsAbertosDaSafra = (todosVinculosSafra) => {
      if (!todosVinculosSafra || !todosVinculosSafra.length) return [];
 
      const idsAbertos = todosVinculosSafra
-         .filter(v => v.status === ORDEM_CORTE_STATUS.ABERTA)
+         .filter(v => v.status === ORDEM_CORTE_STATUS.ABERTA || v.status === ORDEM_CORTE_STATUS.AGUARDANDO)
          .map(v => v.talhaoId);
 
      return [...new Set(idsAbertos)];

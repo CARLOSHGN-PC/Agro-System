@@ -11,8 +11,9 @@
  */
 
 export const ORDEM_CORTE_STATUS = {
+    AGUARDANDO: 'AGUARDANDO',
     ABERTA: 'ABERTA',
-    FECHADA: 'FECHADA'
+    FINALIZADA: 'FINALIZADA'
 };
 
 export const ORDEM_CORTE_COLECOES = {
