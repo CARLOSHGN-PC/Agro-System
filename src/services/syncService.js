@@ -185,12 +185,12 @@ export const processQueue = async () => {
 };
 
 /**
- * Registra uma operação no banco local do Dexie para ser executada em background
- * quando a conexão voltar.
+ * Registers an operation in the local Dexie database to be executed in the background
+ * when the connection is restored.
  */
 export const enqueueTask = async (type, targetCollection, documentId, payload) => {
-    // Se estiver online, tenta enviar imediatamente pro Firebase SEM passar pela fila do Dexie.
-    // Isso resolve a lentidão de "salvar e ter que fechar e abrir" que estava retendo dados velhos.
+    // If online, attempt to send immediately to Firebase WITHOUT passing through the Dexie queue.
+    // This resolves the slowness of "saving and having to close and open" which was retaining old data.
     if (navigator.onLine) {
         try {
             if (type === 'createOrUpdate') {
@@ -198,7 +198,7 @@ export const enqueueTask = async (type, targetCollection, documentId, payload) =
                 const { syncStatus, ...firebasePayload } = payload;
                 await setDoc(docRef, { ...firebasePayload, updatedAt: serverTimestamp() }, { merge: true });
 
-                // Marca como sincronizado no payload local antes de prosseguir se o app for gravá-lo
+                // Mark as synchronized in the local payload before proceeding if the app is going to record it.
                 payload.syncStatus = 'synced';
             } else if (type === 'addHistory') {
                 const { localId, ...firebasePayload } = payload;
@@ -207,54 +207,64 @@ export const enqueueTask = async (type, targetCollection, documentId, payload) =
                     createdAt: serverTimestamp()
                 });
             }
-            // Sucesso! Retorna sem sujar a syncQueue.
+            // Success! Return without cluttering the syncQueue.
             return;
         } catch (error) {
-            console.warn("Falha no envio direto. Caindo para fila offline...", error);
-            // Se falhar (ex: internet piscou), ele ignora e cai no código abaixo pra enfileirar.
+            console.warn("Direct send failed. Falling back to offline queue...", error);
+            // If it fails (e.g., internet flickered), it ignores and falls into the code below to enqueue.
         }
     }
 
-    // Se for um update em um mesmo documento, removemos a tarefa antiga pendente
-    // para não encher a fila com atualizações obsoletas e sobrepor dados.
+    // If it's an update for the same document, we remove the old pending task
+    // to avoid filling the queue with obsolete updates and overwriting data.
     if (type === 'createOrUpdate' && documentId) {
         const existingTasks = await db.syncQueue
-            .where('[type+documentId]') // Necessita de index
+            .where('[type+documentId]') // Requires an index
             .equals([type, documentId])
             .toArray();
 
-        for (const t of existingTasks) {
-            if (t.status === 'pending') {
-                await db.syncQueue.delete(t.id);
-            }
+        /**
+         * What this block does:
+         * Collects IDs of all pending tasks for the same document.
+         *
+         * Why it exists:
+         * To optimize performance by deleting everything in a single bulkDelete command,
+         * reducing the number of IndexedDB transactions.
+         */
+        const idsToDelete = existingTasks
+            .filter(t => t.status === 'pending')
+            .map(t => t.id);
+
+        if (idsToDelete.length > 0) {
+            await db.syncQueue.bulkDelete(idsToDelete);
         }
     }
 
     await db.syncQueue.add({
-        type, // ex: 'createOrUpdate' ou 'addHistory'
-        targetCollection, // ex: 'estimativas_safra'
-        documentId, // String da primary key ou null se for add()
-        payload, // O próprio JSON do form
+        type, // e.g., 'createOrUpdate' or 'addHistory'
+        targetCollection, // e.g., 'estimativas_safra'
+        documentId, // String of the primary key or null if it's add()
+        payload, // The form's own JSON
         status: 'pending',
         retryCount: 0,
         createdAt: new Date().toISOString()
     });
 
-    // Como já tentamos online antes e falhou (ou estamos offline), não adianta chamar processQueue agora.
+    // Since we already tried online before and it failed (or we are offline), no use in calling processQueue now.
 };
 
-// Listeners Globais: Quando a rede voltar (evento do navegador), a gente reprocessa automaticamente!
+// Global Listeners: When the network returns (browser event), we automatically reprocess!
 if (typeof window !== "undefined") {
     window.addEventListener('online', () => {
-        console.log("Internet restaurada! Reprocessando pendências.");
+        console.log("Internet restored! Reprocessing pending tasks.");
         processQueue();
     });
 
-    // Tentativa inicial no momento do carregamento do app (startup), caso tenha sido
-    // fechado enquanto offline e reaberto enquanto online.
+    // Initial attempt at app load (startup), in case it was
+    // closed while offline and reopened while online.
     setTimeout(() => {
         if (navigator.onLine) {
             processQueue();
         }
-    }, 2000); // pequeno delay pra garantir que auth do firebase resolveu
+    }, 2000); // small delay to ensure firebase auth has resolved
 }
