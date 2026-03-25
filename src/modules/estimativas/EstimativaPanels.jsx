@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ChevronDown, X, Pencil, History, Palette, PieChart } from "lucide-react";
+import { ChevronDown, X, Pencil, History, Palette, PieChart, Layers } from "lucide-react";
 import { palette } from "../../constants/theme";
 import { parseBrazilianFloat } from "../../utils/formatters";
 
@@ -24,6 +24,8 @@ import { OrdemCorteActions } from "./components/OrdemCorteActions";
  * @returns {JSX.Element} Conjunto de divs absolutas de UI.
  */
 export default function EstimativaPanels({
+  activeMapModule,
+  setActiveMapModule,
   currentRodada,
   setCurrentRodada,
   availableRodadas,
@@ -87,30 +89,47 @@ export default function EstimativaPanels({
       {/* Título e Botão de Filtro - Top Left */}
       <div className="absolute top-4 left-4 right-4 sm:right-auto w-auto sm:w-[400px] rounded-[22px] border overflow-hidden z-10 shadow-[0_10px_30px_rgba(0,0,0,0.24)]" style={{ background: "rgba(17,24,39,0.88)", borderColor: "rgba(255,255,255,0.10)", backdropFilter: "blur(16px)" }}>
         <div className="p-4 flex items-start justify-between gap-3">
-          <div>
-            <div className="text-[18px] font-bold leading-tight">Estimativa<br/>Safra</div>
-            <div className="mt-3 inline-flex items-center gap-2">
-              <div className="relative">
-                <select
-                  value={currentRodada}
+          <div className="flex-1">
+            <div className="relative w-fit">
+              <select
+                  value={activeMapModule}
                   onChange={(e) => {
-                     if (e.target.value === "new") {
-                        createNewRodada();
-                     } else {
-                        setCurrentRodada(e.target.value);
-                     }
+                     setActiveMapModule(e.target.value);
+                     setSelectedTalhoes([]);
+                     setSelectedTalhao(null);
                   }}
-                  className="rounded-full px-3 py-1 text-xs font-bold appearance-none outline-none pr-8 cursor-pointer"
-                  style={{ background: "rgba(255,255,255,0.10)", color: "#dbe4ec" }}
-                >
-                  {availableRodadas.map(r => (
-                    <option key={r} value={r} style={{ color: "black" }}>{r}</option>
-                  ))}
-                  <option value="new" style={{ color: "black" }}>+ Nova {nextRodadaName}</option>
-                </select>
-                <ChevronDown className="w-3 h-3 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#dbe4ec" }} />
-              </div>
+                  className="appearance-none outline-none cursor-pointer bg-transparent text-[18px] font-bold leading-tight pr-8 text-white w-full"
+              >
+                  <option value="estimativa" style={{ color: "black" }}>Estimativa Safra</option>
+                  <option value="tratosCulturais" style={{ color: "black" }}>Tratos Culturais</option>
+              </select>
+              <ChevronDown className="w-5 h-5 absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-white/70" />
             </div>
+
+            {activeMapModule === "estimativa" && (
+              <div className="mt-3 inline-flex items-center gap-2">
+                <div className="relative">
+                  <select
+                    value={currentRodada}
+                    onChange={(e) => {
+                       if (e.target.value === "new") {
+                          createNewRodada();
+                       } else {
+                          setCurrentRodada(e.target.value);
+                       }
+                    }}
+                    className="rounded-full px-3 py-1 text-xs font-bold appearance-none outline-none pr-8 cursor-pointer"
+                    style={{ background: "rgba(255,255,255,0.10)", color: "#dbe4ec" }}
+                  >
+                    {availableRodadas.map(r => (
+                      <option key={r} value={r} style={{ color: "black" }}>{r}</option>
+                    ))}
+                    <option value="new" style={{ color: "black" }}>+ Nova {nextRodadaName}</option>
+                  </select>
+                  <ChevronDown className="w-3 h-3 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#dbe4ec" }} />
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <button className="w-11 h-11 rounded-xl flex items-center justify-center transition-colors hover:bg-white/10" style={{ background: "rgba(255,255,255,0.08)" }} onClick={() => setFiltersOpen(true)}>
@@ -206,52 +225,70 @@ export default function EstimativaPanels({
                 </div>
               ))}
 
-              <div className="col-span-2 grid grid-cols-2 gap-3 mt-2">
-                <button
-                  className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02]"
-                  style={{ background: "#22c55e", color: "#ffffff" }}
-                  onClick={() => {
-                    if (selectedTalhoes.length > 1) {
-                      setScope("selecionados");
-                    } else {
-                      setScope("talhao");
-                    }
-                    setEstimateOpen(true);
-                  }}
-                >
-                  <Pencil className="w-4 h-4" />
-                  {(() => {
-                     let hasEstimated = false;
-                     selectedTalhoes.forEach(id => {
-                        const feat = enhancedGeoJson?.features?.find(f => f.id === id);
-                        if (feat && feat.properties?._is_estimated) hasEstimated = true;
-                     });
-                     return hasEstimated ? "Reestimar" : "Estimar";
-                  })()}
-                </button>
-                <button
-                  onClick={() => openHistory(selectedTalhao)}
-                  disabled={selectedTalhoes.length > 1}
-                  className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] border disabled:opacity-50"
-                  style={{ background: "rgba(31, 38, 53, 0.7)", borderColor: "rgba(255,255,255,0.08)", color: "#ffffff" }}
-                >
-                  <History className="w-4 h-4" />
-                  Histórico
-                </button>
-              </div>
+              {activeMapModule === "estimativa" ? (
+                <>
+                  <div className="col-span-2 grid grid-cols-2 gap-3 mt-2">
+                    <button
+                      className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02]"
+                      style={{ background: "#22c55e", color: "#ffffff" }}
+                      onClick={() => {
+                        if (selectedTalhoes.length > 1) {
+                          setScope("selecionados");
+                        } else {
+                          setScope("talhao");
+                        }
+                        setEstimateOpen(true);
+                      }}
+                    >
+                      <Pencil className="w-4 h-4" />
+                      {(() => {
+                         let hasEstimated = false;
+                         selectedTalhoes.forEach(id => {
+                            const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+                            if (feat && feat.properties?._is_estimated) hasEstimated = true;
+                         });
+                         return hasEstimated ? "Reestimar" : "Estimar";
+                      })()}
+                    </button>
+                    <button
+                      onClick={() => openHistory(selectedTalhao)}
+                      disabled={selectedTalhoes.length > 1}
+                      className="rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] border disabled:opacity-50"
+                      style={{ background: "rgba(31, 38, 53, 0.7)", borderColor: "rgba(255,255,255,0.08)", color: "#ffffff" }}
+                    >
+                      <History className="w-4 h-4" />
+                      Histórico
+                    </button>
+                  </div>
 
-              {/* Bloco Dinâmico Injetado - Ordem de Corte */}
-              <div className="col-span-2 mt-2">
-                 <OrdemCorteActions
-                      vinculoAtivo={vinculoAtivo}
-                      talhoesIds={selectedTalhoes}
-                      hasUnestimatedTalhao={hasUnestimatedTalhao}
-                      companyId={companyId}
-                      safra={safra}
-                      rodadaOrigem={currentRodada}
-                      usuario="Sistema" // Em um cenário real, pegaria do AuthContext
-                 />
-              </div>
+                  {/* Bloco Dinâmico Injetado - Ordem de Corte */}
+                  <div className="col-span-2 mt-2">
+                     <OrdemCorteActions
+                          vinculoAtivo={vinculoAtivo}
+                          talhoesIds={selectedTalhoes}
+                          hasUnestimatedTalhao={hasUnestimatedTalhao}
+                          companyId={companyId}
+                          safra={safra}
+                          rodadaOrigem={currentRodada}
+                          usuario="Sistema" // Em um cenário real, pegaria do AuthContext
+                     />
+                  </div>
+                </>
+              ) : (
+                <div className="col-span-2 mt-2">
+                  <button
+                    className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 font-semibold text-[15px] transition-transform hover:scale-[1.02] shadow-lg"
+                    style={{ background: "#3b82f6", color: "#ffffff" }}
+                    onClick={() => {
+                       // Placeholder for future Tratos Culturais Action
+                       console.log("Nova Ordem de Serviço Tratos Culturais clicked");
+                    }}
+                  >
+                    <Layers className="w-4 h-4" />
+                    Nova Ordem de Serviço
+                  </button>
+                </div>
+              )}
 
               <div className="col-span-2 mt-2">
                 <button

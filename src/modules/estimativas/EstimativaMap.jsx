@@ -44,7 +44,8 @@ const EstimativaMap = React.memo(function EstimativaMap({
   selectedTalhoes,
   selectedTalhao,
   idsAbertosSet = new Set(),
-  idsOcultosSet = new Set()
+  idsOcultosSet = new Set(),
+  activeMapModule = "estimativa"
 }) {
   const previousGeoJsonBbox = useRef("");
 
@@ -54,9 +55,16 @@ const EstimativaMap = React.memo(function EstimativaMap({
     if (!enhancedGeoJson) return null;
     return {
       ...enhancedGeoJson,
-      features: enhancedGeoJson.features.filter(f => !idsOcultosSet.has(f.id))
+      features: enhancedGeoJson.features.filter(f => {
+        if (activeMapModule === "estimativa") {
+            return !idsOcultosSet.has(f.id);
+        } else if (activeMapModule === "tratosCulturais") {
+            return idsOcultosSet.has(f.id);
+        }
+        return true;
+      })
     };
-  }, [enhancedGeoJson, idsOcultosSet]);
+  }, [enhancedGeoJson, idsOcultosSet, activeMapModule]);
 
   // Realiza o zoom adaptativo APENAS quando os polígonos filtrados mudam,
   // e não quando eles mudam de cor (propriedades).
