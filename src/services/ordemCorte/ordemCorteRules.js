@@ -11,7 +11,7 @@
  * "Esse talhão já tem uma Ordem?".
  */
 
-import { ORDEM_CORTE_STATUS } from './ordemCorteConstants';
+import { ORDEM_CORTE_STATUS } from './ordemCorteConstants.js';
 
 /**
  * Valida se é seguro e permitido abrir ordem de corte para os talhões escolhidos.
