@@ -68,6 +68,21 @@ export const abrirOrdemCorte = async (companyId, safra, talhaoIds, rodadaOrigem,
     }
 };
 
+export const editarOrdemCorte = async (ordemCorteId, dados) => {
+    try {
+        await repo.updateOrdemCorte(ordemCorteId, dados);
+
+        if (navigator.onLine) {
+            processQueue();
+        }
+
+        return { success: true };
+    } catch (err) {
+        console.error("Falha editando a Ordem de Corte:", err);
+        return { success: false, message: "Erro fatal ao editar Ordem de Corte." };
+    }
+};
+
 export const fecharOrdemCorte = async (ordemCorteId, talhoesIdsDesejados, usuario) => {
     try {
         if (!talhoesIdsDesejados || talhoesIdsDesejados.length === 0) {

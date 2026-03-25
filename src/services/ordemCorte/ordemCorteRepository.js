@@ -45,6 +45,38 @@ export const saveOrdemCorteAndVinculos = async (ordemPayload, vinculosPayload) =
     }
 };
 
+export const updateOrdemCorte = async (ordemCorteId, novosDados) => {
+    const updatedAt = new Date().toISOString();
+    const payload = { ...novosDados, updatedAt, syncStatus: 'pending' };
+
+    await db.ordensCorte.update(ordemCorteId, payload);
+
+    // Recupera o objeto completo para enviar ao Sync
+    const ordemBase = await db.ordensCorte.get(ordemCorteId);
+    if (ordemBase) {
+        await enqueueTask('createOrUpdate', ORDEM_CORTE_COLECOES.MESTRE, ordemCorteId, ordemBase);
+
+        // Se mudou o status ou numeroEmpresa, também é interessante replicar para os vínculos dessa ordem.
+        const vinculosDaOrdem = await db.ordensCorteTalhoes
+            .where('ordemCorteId')
+            .equals(ordemCorteId)
+            .toArray();
+
+        for (const v of vinculosDaOrdem) {
+            // Apenas replicas os campos pertinentes
+            const vinculoPayload = {
+                 ...v,
+                 status: ordemBase.status,
+                 numeroEmpresa: ordemBase.numeroEmpresa,
+                 updatedAt,
+                 syncStatus: 'pending'
+            };
+            await db.ordensCorteTalhoes.update(v.id, vinculoPayload);
+            await enqueueTask('createOrUpdate', ORDEM_CORTE_COLECOES.VINCULO, v.id, vinculoPayload);
+        }
+    }
+};
+
 export const fecharOrdemCorte = async (ordemCorteId, talhoesSelecionadosIds, usuario) => {
     // O que este bloco faz: Atualiza os registros do banco local (Dexie) de apenas um ou mais talhões selecionados da ordem,
     // fechando apenas os "Vínculos" deles. Se depois de fechar, nenhum outro talhão sobrar ABERTO na ordem, a Ordem Mestre
@@ -69,7 +101,7 @@ export const fecharOrdemCorte = async (ordemCorteId, talhoesSelecionadosIds, usu
         // Damos um "clone" manual do objeto v (o Vínculo) com as novas propriedades para garantir
         // que o "enqueueTask" não envie "undefined" ou falhe caso o Dexie demore para processar a linha do .update()
         const novoStatus = {
-            status: ORDEM_CORTE_STATUS.FECHADA,
+            status: ORDEM_CORTE_STATUS.FINALIZADA,
             closedAt,
             updatedAt: closedAt,
             syncStatus: 'pending'
@@ -95,7 +127,7 @@ export const fecharOrdemCorte = async (ordemCorteId, talhoesSelecionadosIds, usu
     // 5. Se não sobrou nenhum talhão ABERTO, fechamos também o Cabeçalho da Ordem ("Mestre").
     if (restantesAbertos.length === 0) {
         const novosDadosMestre = {
-            status: ORDEM_CORTE_STATUS.FECHADA,
+            status: ORDEM_CORTE_STATUS.FINALIZADA,
             closedAt,
             closedBy: usuario || 'Sistema',
             updatedAt: closedAt,
