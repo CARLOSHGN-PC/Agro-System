@@ -276,7 +276,13 @@ export default function PostLoginScreen({ onLogout }) {
             </>
           ) : (
             <div className="absolute inset-0 z-10 overflow-auto bg-black/20 pb-16">
-              <CompanyConfig onUploadSuccess={(data) => {
+              <CompanyConfig
+                currentCompanyId={currentCompanyId}
+                currentSafra={currentSafra}
+                geoJsonData={estData.geoJsonData}
+                allEstimates={estData.allEstimates}
+                refetchEstimates={estData.refetchEstimates}
+                onUploadSuccess={(data) => {
                 estData.setGeoJsonData(data);
                 setActiveModule("estimativa");
               }} />
