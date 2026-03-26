@@ -1,4 +1,4 @@
-import { adminDb } from '../../../config/firebaseAdmin.js';
+import { adminFirestore } from '../../../config/firebaseAdmin.js';
 import { gerarPdfOrdemCorte } from '../services/pdf/gerarPdfOrdemCorte.js';
 
 class OrdemCorteRelatorioController {
@@ -15,7 +15,7 @@ class OrdemCorteRelatorioController {
             }
 
             // 1. Busca os dados Mestre da Ordem de Corte
-            const ordemRef = adminDb.collection('ordens_corte').doc(ordemId);
+            const ordemRef = adminFirestore.collection('ordens_corte').doc(ordemId);
             const ordemDoc = await ordemRef.get();
 
             if (!ordemDoc.exists) {
@@ -26,7 +26,7 @@ class OrdemCorteRelatorioController {
             ordemDados.id = ordemDoc.id;
 
             // 2. Busca todos os talhões (Vínculos) dessa Ordem para poder imprimir a tabela
-            const vinculosSnapshot = await adminDb.collection('ordens_corte_talhoes')
+            const vinculosSnapshot = await adminFirestore.collection('ordens_corte_talhoes')
                 .where('ordemCorteId', '==', ordemId)
                 .get();
 
@@ -56,7 +56,7 @@ class OrdemCorteRelatorioController {
                      // Mas o jeito mais seguro (caso a arquitetura separe) é buscar apenas estimativas_safra onde talhaoId == v.talhaoId e safra == v.safra.
 
                      // Para acelerar e ser resiliente:
-                     const estQuery = await adminDb.collection('estimativas_safra')
+                     const estQuery = await adminFirestore.collection('estimativas_safra')
                         .where('talhaoId', '==', v.talhaoId)
                         .where('safra', '==', v.safra)
                         .limit(1)
