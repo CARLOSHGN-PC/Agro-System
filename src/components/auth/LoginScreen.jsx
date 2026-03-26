@@ -102,7 +102,7 @@ export default function LoginScreen({ onLoginSuccess }) {
     <div
       className="min-h-screen relative overflow-hidden"
       style={{
-        backgroundImage: "url('./assets/login-bg.jpeg')",
+        backgroundImage: "url('./assets/login-bg.png')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         color: palette.white,
