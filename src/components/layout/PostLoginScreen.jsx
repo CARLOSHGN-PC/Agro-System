@@ -91,7 +91,7 @@ export default function PostLoginScreen({ onLogout }) {
   // 3. Gerencia o painel de Resumo e a Legenda baseando-se no que está ativo
   const mapSummary = useMapSummary(mapFilters.enhancedGeoJson, estData.allEstimates);
 
-  // 5. Injeta a flag visual _has_open_ordem no GeoJSON sem quebrar o hook useMapFilters
+  // 5. Injeta a flag visual _has_open_ordem e _is_aguardando_ordem no GeoJSON sem quebrar o hook useMapFilters
   const mapboxGeoJson = React.useMemo(() => {
      if (!mapFilters.enhancedGeoJson) return null;
      return {
@@ -100,11 +100,12 @@ export default function PostLoginScreen({ onLogout }) {
             ...f,
             properties: {
                 ...f.properties,
-                _has_open_ordem: ordensMapState.idsAbertosSet.has(f.id)
+                _has_open_ordem: ordensMapState.idsAbertosSet.has(f.id),
+                _is_aguardando_ordem: ordensMapState.idsAguardandoSet.has(f.id)
             }
         }))
      };
-  }, [mapFilters.enhancedGeoJson, ordensMapState.idsAbertosSet]);
+  }, [mapFilters.enhancedGeoJson, ordensMapState.idsAbertosSet, ordensMapState.idsAguardandoSet]);
 
   // Removemos mock de notificações
   // const notificationsMock = [...]

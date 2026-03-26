@@ -66,16 +66,27 @@ export const selecionarIdsOcultosDaSafra = (todosVinculosSafra) => {
 };
 
 /**
- * Constrói a lista de Talhões que devem ser pintados como pendentes ou abertos (amarelo ou vermelho).
- * Consideramos ambos os status (AGUARDANDO e ABERTA) como abertos no visual do mapa do ponto de vista
- * de que eles têm uma ordem em andamento.
+ * Constrói a lista de Talhões que devem ser pintados como ABERTOS (amarelo).
  */
 export const selecionarIdsAbertosDaSafra = (todosVinculosSafra) => {
      if (!todosVinculosSafra || !todosVinculosSafra.length) return [];
 
      const idsAbertos = todosVinculosSafra
-         .filter(v => v.status === ORDEM_CORTE_STATUS.ABERTA || v.status === ORDEM_CORTE_STATUS.AGUARDANDO)
+         .filter(v => v.status === ORDEM_CORTE_STATUS.ABERTA)
          .map(v => v.talhaoId);
 
      return [...new Set(idsAbertos)];
+};
+
+/**
+ * Constrói a lista de Talhões que devem ser pintados como PENDENTES (AGUARDANDO) (vermelho).
+ */
+export const selecionarIdsAguardandoDaSafra = (todosVinculosSafra) => {
+     if (!todosVinculosSafra || !todosVinculosSafra.length) return [];
+
+     const idsAguardando = todosVinculosSafra
+         .filter(v => v.status === ORDEM_CORTE_STATUS.AGUARDANDO)
+         .map(v => v.talhaoId);
+
+     return [...new Set(idsAguardando)];
 };

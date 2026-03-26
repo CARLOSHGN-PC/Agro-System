@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { selecionarIdsAbertosDaSafra, selecionarIdsOcultosDaSafra } from '../../modules/estimativas/utils/ordemCorteSelectors';
+import { selecionarIdsAbertosDaSafra, selecionarIdsAguardandoDaSafra, selecionarIdsOcultosDaSafra } from '../../modules/estimativas/utils/ordemCorteSelectors';
 import { ORDEM_CORTE_CORES } from '../../services/ordemCorte/ordemCorteConstants';
 
 /**
@@ -25,6 +25,11 @@ export const useOrdemCorteMapState = (todosVinculosSafra) => {
         return new Set(selecionarIdsAbertosDaSafra(todosVinculosSafra));
     }, [todosVinculosSafra]);
 
+    // Gera Set com Ids dos talhões que possuem Ordem Aguardando
+    const idsAguardandoSet = useMemo(() => {
+        return new Set(selecionarIdsAguardandoDaSafra(todosVinculosSafra));
+    }, [todosVinculosSafra]);
+
     // Gera Set com Ids dos talhões que possuem Ordem Fechada
     const idsOcultosSet = useMemo(() => {
         return new Set(selecionarIdsOcultosDaSafra(todosVinculosSafra));
@@ -33,7 +38,7 @@ export const useOrdemCorteMapState = (todosVinculosSafra) => {
     // Função utilitária rápida: Intercepta a "Pintura Original" de um feature no Mapbox e,
     // se for azul de ordem de corte, devolve ele, senão devolve a pintura original (verde/amarelo de estimativa/etc)
     const overrideCorOrdemCorte = (talhaoId, corOriginal) => {
-        if (idsAbertosSet.has(talhaoId)) return ORDEM_CORTE_CORES.AZUL_ABERTA;
+        if (idsAbertosSet.has(talhaoId) || idsAguardandoSet.has(talhaoId)) return ORDEM_CORTE_CORES.AZUL_ABERTA;
         return corOriginal; // Fallback natural
     };
 
@@ -44,6 +49,7 @@ export const useOrdemCorteMapState = (todosVinculosSafra) => {
 
     return {
         idsAbertosSet,
+        idsAguardandoSet,
         idsOcultosSet,
         overrideCorOrdemCorte,
         isTalhaoOculto
