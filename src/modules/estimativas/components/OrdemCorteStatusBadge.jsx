@@ -25,8 +25,11 @@ export const OrdemCorteStatusBadge = ({ status }) => {
     } else if (status === ORDEM_CORTE_STATUS.ABERTA) {
         bgClass = 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
         dotClass = 'bg-yellow-400';
+    } else if (status === ORDEM_CORTE_STATUS.FINALIZADA) {
+        bgClass = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+        dotClass = 'bg-emerald-400';
     } else {
-        // Fallback (FINALIZADA)
+        // Fallback para status desconhecidos
         bgClass = 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
         dotClass = 'bg-gray-400';
     }
