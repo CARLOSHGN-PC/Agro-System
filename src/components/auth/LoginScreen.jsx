@@ -149,7 +149,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                 <Leaf className="w-7 h-7" />
               </div>
               <div>
-                <div className="text-2xl font-semibold tracking-wide">AgroSystem Modern</div>
+                <div className="text-2xl font-semibold tracking-wide">AgroSystem - Usina Caçu</div>
                 <div className="text-sm" style={{ color: palette.text2 }}>
                   Gestão agrícola com experiência premium
                 </div>
@@ -158,7 +158,7 @@ export default function LoginScreen({ onLoginSuccess }) {
           </div>
 
           <div className="max-w-xl space-y-6">
-            <PremiumBadge>Experiência redesenhada</PremiumBadge>
+            <PremiumBadge>Experiência Completa</PremiumBadge>
             <motion.h1
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
