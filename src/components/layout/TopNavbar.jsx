@@ -131,7 +131,7 @@ export default function TopNavbar({
       {/* Centro: Logo e Status de Conexão/Sincronização */}
       <div className="flex flex-col items-center absolute left-1/2 transform -translate-x-1/2">
         <div className="flex items-center gap-2 sm:gap-3 text-white font-semibold text-lg sm:text-xl">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.14)", color: palette.gold }}>
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl flex items-center justify-center" style={{ background: "rgba(85,171,82,0.14)", color: "#55AB52" }}>
             <Leaf className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <span className="hidden sm:inline">AgroSystem - Usina Caçu</span>

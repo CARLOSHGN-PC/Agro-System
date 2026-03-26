@@ -28,9 +28,10 @@ export function useMapSummary(enhancedGeoJson, allEstimates) {
     estimados: 0,
     pendentes: 0,
     toneladas: 0,
+    tch: 0,
   });
 
-  // Calcula itens dinâmicos do summary (Área, Toneladas, Qtd.)
+  // Calcula itens dinâmicos do summary (Área, Toneladas, Qtd., TCH)
   useEffect(() => {
     if (!enhancedGeoJson || !enhancedGeoJson.features) return;
 
@@ -64,6 +65,7 @@ export function useMapSummary(enhancedGeoJson, allEstimates) {
       estimados: estimadosCount,
       pendentes: pendentesCount,
       toneladas: totalToneladas.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+      tch: totalArea > 0 ? (totalToneladas / totalArea).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0,00",
     });
   }, [enhancedGeoJson, allEstimates]);
 
