@@ -168,7 +168,7 @@ export const OrdemCorteFormModal = ({ isOpen, onClose, onConfirm, talhoesCount, 
                    >
                      <option value="Crua" style={{ color: "black" }}>Crua</option>
                      <option value="Queimada" style={{ color: "black" }}>Queimada</option>
-                     <option value="Bicada" style={{ color: "black" }}>Bicada</option>
+                     <option value="Bisada" style={{ color: "black" }}>Bisada</option>
                    </select>
                  </div>
 
