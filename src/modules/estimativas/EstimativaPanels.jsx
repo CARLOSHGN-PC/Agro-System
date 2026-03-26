@@ -419,6 +419,7 @@ export default function EstimativaPanels({
                 ["Área filtrada", `${summaryData.area.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha`],
                 ["Estimados", String(summaryData.estimados)],
                 ["Pendentes", String(summaryData.pendentes)],
+                ["TCH", String(summaryData.tch)],
                 ["Toneladas", String(summaryData.toneladas)]
               ].map(([k, v]) => (
                 <div key={k} className="rounded-[16px] border p-4" style={{ background: "rgba(255,255,255,0.05)", borderColor: "rgba(255,255,255,0.08)" }}>

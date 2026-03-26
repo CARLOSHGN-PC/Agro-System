@@ -1,5 +1,5 @@
-import React from "react";
-import { Leaf, Wheat, Settings, Users, FileText } from "lucide-react";
+import React, { useState } from "react";
+import { Leaf, Wheat, Settings, Users, FileText, FolderOpen, ChevronDown, ChevronRight, Sliders } from "lucide-react";
 import { palette } from "../../constants/theme";
 
 /**
@@ -19,11 +19,13 @@ import { palette } from "../../constants/theme";
  * @returns {JSX.Element} O painel lateral estilizado, ocupando 100% da altura e exibindo opções de módulos.
  */
 export default function SidebarMenu({ activeModule, setActiveModule, setMenuOpen }) {
+  const [solicitacoesOpen, setSolicitacoesOpen] = useState(activeModule === "gerenciamentoOrdemCorte");
+
   return (
     <div className="h-full flex flex-col" style={{ background: "linear-gradient(180deg, rgba(10,10,10,0.98), rgba(13,27,42,0.98))" }}>
       <div className="h-16 px-5 flex items-center border-b shrink-0" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
         <div className="flex items-center gap-3 text-white font-semibold text-[18px]">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.14)", color: palette.gold }}>
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "rgba(85,171,82,0.14)", color: "#55AB52" }}>
             <Leaf className="w-5 h-5" />
           </div>
           <span>AgroSystem - Usina Caçu</span>
@@ -41,21 +43,56 @@ export default function SidebarMenu({ activeModule, setActiveModule, setMenuOpen
           }}
         >
           <Wheat className="w-5 h-5 shrink-0 transition-colors" style={{ color: activeModule === "estimativa" ? palette.gold : palette.text2 }} />
-          <span className="text-[15px] font-medium">Estimativa Safra</span>
+          <span className="text-[15px] font-medium">Mapas</span>
         </button>
 
         <button
-          onClick={() => { setActiveModule("configuracao"); setMenuOpen(false); }}
+          onClick={() => { setActiveModule("premissas"); setMenuOpen(false); }}
           className="w-full flex items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all hover:bg-white/5"
           style={{
-            background: activeModule === "configuracao" ? "rgba(212,175,55,0.12)" : "transparent",
-            border: activeModule === "configuracao" ? "1px solid rgba(230,199,107,0.18)" : "1px solid transparent",
-            color: activeModule === "configuracao" ? palette.white : palette.text2,
+            background: activeModule === "premissas" ? "rgba(212,175,55,0.12)" : "transparent",
+            border: activeModule === "premissas" ? "1px solid rgba(230,199,107,0.18)" : "1px solid transparent",
+            color: activeModule === "premissas" ? palette.white : palette.text2,
           }}
         >
-          <Settings className="w-5 h-5 shrink-0 transition-colors" style={{ color: activeModule === "configuracao" ? palette.gold : palette.text2 }} />
-          <span className="text-[15px] font-medium">Configuração da Empresa</span>
+          <Sliders className="w-5 h-5 shrink-0 transition-colors" style={{ color: activeModule === "premissas" ? palette.gold : palette.text2 }} />
+          <span className="text-[15px] font-medium">Premissas</span>
         </button>
+
+        <div>
+          <button
+            onClick={() => setSolicitacoesOpen(!solicitacoesOpen)}
+            className="w-full flex items-center justify-between rounded-2xl px-4 py-3 text-left transition-all hover:bg-white/5"
+            style={{ color: palette.text2 }}
+          >
+            <div className="flex items-center gap-4">
+              <FolderOpen className="w-5 h-5 shrink-0 transition-colors" />
+              <span className="text-[15px] font-medium">Solicitações</span>
+            </div>
+            {solicitacoesOpen ? (
+              <ChevronDown className="w-4 h-4 shrink-0 transition-colors" />
+            ) : (
+              <ChevronRight className="w-4 h-4 shrink-0 transition-colors" />
+            )}
+          </button>
+
+          {solicitacoesOpen && (
+            <div className="pl-12 pr-4 pt-1 space-y-1">
+              <button
+                onClick={() => { setActiveModule("gerenciamentoOrdemCorte"); setMenuOpen(false); }}
+                className="w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-all hover:bg-white/5"
+                style={{
+                  background: activeModule === "gerenciamentoOrdemCorte" ? "rgba(212,175,55,0.12)" : "transparent",
+                  border: activeModule === "gerenciamentoOrdemCorte" ? "1px solid rgba(230,199,107,0.18)" : "1px solid transparent",
+                  color: activeModule === "gerenciamentoOrdemCorte" ? palette.white : palette.text2,
+                }}
+              >
+                <FileText className="w-4 h-4 shrink-0" style={{ color: activeModule === "gerenciamentoOrdemCorte" ? palette.gold : "inherit" }} />
+                <span className="font-semibold text-[14px] truncate">Ordens de Corte</span>
+              </button>
+            </div>
+          )}
+        </div>
 
         <button
           onClick={() => { setActiveModule("cadastroProfissional"); setMenuOpen(false); }}
@@ -83,18 +120,6 @@ export default function SidebarMenu({ activeModule, setActiveModule, setMenuOpen
           <span className="text-[15px] font-medium">Relatórios</span>
         </button>
 
-        <button
-          onClick={() => { setActiveModule("gerenciamentoOrdemCorte"); setMenuOpen(false); }}
-          className="w-full flex items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all hover:bg-white/5"
-          style={{
-            background: activeModule === "gerenciamentoOrdemCorte" ? "rgba(212,175,55,0.12)" : "transparent",
-            border: activeModule === "gerenciamentoOrdemCorte" ? "1px solid rgba(230,199,107,0.18)" : "1px solid transparent",
-            color: activeModule === "gerenciamentoOrdemCorte" ? palette.white : palette.text2,
-          }}
-        >
-          <FileText className="w-5 h-5 shrink-0" style={{ color: activeModule === "gerenciamentoOrdemCorte" ? palette.gold : "inherit" }} />
-          <span className="font-semibold text-[15px] truncate">Ordens de Corte</span>
-        </button>
       </div>
     </div>
   );

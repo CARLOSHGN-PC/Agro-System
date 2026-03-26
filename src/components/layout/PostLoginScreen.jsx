@@ -48,7 +48,7 @@ import { useOrdemCorteMapState } from "../../hooks/estimativas/useOrdemCorteMapS
  */
 export default function PostLoginScreen({ onLogout }) {
   // === ESTADOS ESTRUTURAIS DA UI GLOBAL ===
-  const [activeModule, setActiveModule] = useState("estimativa"); // "estimativa" | "configuracao"
+  const [activeModule, setActiveModule] = useState("estimativa"); // "estimativa" | "premissas" | etc
   const [activeMapModule, setActiveMapModule] = useState("estimativa"); // "estimativa" | "tratosCulturais"
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -298,7 +298,7 @@ export default function PostLoginScreen({ onLogout }) {
                 safra={currentSafra}
               />
             </>
-          ) : (
+          ) : activeModule === "premissas" || activeModule === "configuracao" ? (
             <div className="absolute inset-0 z-10 overflow-auto bg-black/20 pb-16">
               <CompanyConfig
                 currentCompanyId={currentCompanyId}
@@ -311,7 +311,7 @@ export default function PostLoginScreen({ onLogout }) {
                 setActiveModule("estimativa");
               }} />
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
