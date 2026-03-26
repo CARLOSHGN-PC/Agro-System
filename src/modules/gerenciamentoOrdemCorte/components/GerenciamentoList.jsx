@@ -72,7 +72,7 @@ export default function GerenciamentoList({ ordens, companyId, safra }) {
       case ORDEM_CORTE_STATUS.ABERTA:
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800"><CheckCircle className="w-3 h-3 mr-1" /> Aberta</span>;
       case ORDEM_CORTE_STATUS.FINALIZADA:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"><AlertCircle className="w-3 h-3 mr-1" /> Finalizada</span>;
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"><CheckCircle className="w-3 h-3 mr-1" /> Finalizada</span>;
       default:
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">{status}</span>;
     }
@@ -140,32 +140,32 @@ export default function GerenciamentoList({ ordens, companyId, safra }) {
                     {ordem.status === ORDEM_CORTE_STATUS.AGUARDANDO && (
                       <button
                         onClick={() => handleLiberarOrdem(ordem)}
-                        className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-1 border bg-white shadow-sm"
+                        className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors flex items-center justify-center border bg-white shadow-sm"
                         title="Liberar Ordem"
                       >
-                        <Play className="w-4 h-4" /> <span className="text-xs font-semibold px-1">Liberar</span>
+                        <Play className="w-4 h-4" />
                       </button>
                     )}
                     <button
                       onClick={() => openModal(ordem, 'view')}
-                      className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 border bg-white shadow-sm"
+                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center border bg-white shadow-sm"
                       title="Ver Ordem"
                     >
-                      <Eye className="w-4 h-4" /> <span className="text-xs font-semibold px-1">Ver</span>
+                      <Eye className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => openModal(ordem, 'edit')}
-                      className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors flex items-center gap-1 border bg-white shadow-sm"
+                      className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors flex items-center justify-center border bg-white shadow-sm"
                       title="Editar Ordem"
                     >
-                      <Edit3 className="w-4 h-4" /> <span className="text-xs font-semibold px-1">Editar</span>
+                      <Edit3 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => openModal(ordem, 'pdf')}
-                      className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex items-center gap-1 border bg-white shadow-sm"
+                      className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex items-center justify-center border bg-white shadow-sm"
                       title="Gerar PDF"
                     >
-                      <FileDown className="w-4 h-4" /> <span className="text-xs font-semibold px-1">PDF</span>
+                      <FileDown className="w-4 h-4" />
                     </button>
                   </div>
                 </td>
