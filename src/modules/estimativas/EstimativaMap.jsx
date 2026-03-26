@@ -69,7 +69,7 @@ const EstimativaMap = React.memo(function EstimativaMap({
 
         if (activeMapModule === "estimativa") {
             // Estimativa de Safra: Mostra os talhões, mas ESCONDE os que têm ordem de corte aberta E os que têm fechada.
-            return !f.properties._is_closed_ordem && !f.properties._has_open_ordem;
+            return !f.properties._is_closed_ordem && !f.properties._has_open_ordem && !f.properties._is_aguardando_ordem;
         } else if (activeMapModule === "ordemCorte") {
             // Ordem de Corte: Mostra os estimados, os pendentes/abertos, e os fechados.
             return isEstimated;
@@ -169,11 +169,15 @@ const EstimativaMap = React.memo(function EstimativaMap({
                   ["all", ["==", activeMapModule, "ordemCorte"], ["boolean", ["get", "_is_closed_ordem"], false]],
                   "#22c55e",
 
-                  // 2. Vermelho = Pendente (Tem ordem aberta, mas ainda não foi 'Liberada' por outro módulo)
+                  // 2. Amarelo = Aberta (Já tem número da empresa informado)
                   ["all", ["==", activeMapModule, "ordemCorte"], ["boolean", ["get", "_has_open_ordem"], false]],
+                  "#eab308",
+
+                  // 3. Vermelho = Pendente (Aguardando - abriu a ordem mas ainda não tem número da empresa)
+                  ["all", ["==", activeMapModule, "ordemCorte"], ["boolean", ["get", "_is_aguardando_ordem"], false]],
                   "#ef4444",
 
-                  // 3. Transparente = Estimado (Ainda não abriu nenhuma ordem)
+                  // 4. Transparente = Estimado (Ainda não abriu nenhuma ordem)
                   ["all", ["==", activeMapModule, "ordemCorte"], ["boolean", ["get", "_is_estimated"], true]],
                   "rgba(0,0,0,0)",
 

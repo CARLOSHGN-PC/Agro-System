@@ -3,6 +3,7 @@ import path from 'path';
 import cors from 'cors';
 import { fileURLToPath } from 'url';
 import relatorioEstimativaRoutes from './src/modules/relatorio-estimativa/routes/relatorioEstimativaRoutes.js';
+import ordemCorteRoutes from './src/modules/relatorio-estimativa/routes/ordemCorteRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,6 +21,7 @@ app.get('/api/status', (req, res) => {
 
 // Registrar rotas de módulos REST do Backend
 app.use('/api/relatorios/estimativa', relatorioEstimativaRoutes);
+app.use('/api/estimativas', ordemCorteRoutes);
 
 // Serve static files from the React Vite build (dist folder)
 app.use(express.static(path.join(__dirname, 'dist')));
