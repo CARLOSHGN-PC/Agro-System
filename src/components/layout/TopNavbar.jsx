@@ -134,7 +134,7 @@ export default function TopNavbar({
           <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.14)", color: palette.gold }}>
             <Leaf className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
-          <span className="hidden sm:inline">AgroSystem</span>
+          <span className="hidden sm:inline">AgroSystem - Usina Caçu</span>
         </div>
 
         {/* Indicadores dinâmicos de Rede/Sync */}
