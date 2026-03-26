@@ -22,8 +22,9 @@ export const ORDEM_CORTE_COLECOES = {
 };
 
 export const ORDEM_CORTE_CORES = {
-    // O que este bloco faz: Define uma cor Azul Puro saturada e muito forte para os talhões em Ordem Aberta.
-    // Por que ele existe: A pedido do usuário, o azul precisa se destacar fortemente (como caneta/neon escuro)
-    // para não se misturar nem parecer rios/lagoas no satélite.
-    AZUL_ABERTA: '#0022ff', // Azul Puro/Saturado e brilhante
+    // O que este bloco faz: Define cores de destaque para diferenciar o status da Ordem de Corte no mapa.
+    // Por que ele existe: A pedido do usuário, precisamos identificar visualmente se a ordem
+    // apenas foi iniciada (Vermelho/Aguardando número) ou se já foi liberada com número da ordem (Amarelo).
+    VERMELHO_AGUARDANDO: '#ef4444', // Vermelho para "Aguardando número da Ordem de Serviço"
+    AMARELO_ABERTA: '#eab308',      // Amarelo para "Autorizado/Liberado"
 };

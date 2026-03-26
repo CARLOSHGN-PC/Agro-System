@@ -36,14 +36,6 @@ export default function GerenciamentoOrdemCortePage({ companyId, safra, setActiv
     setFilteredOrdens(result);
   }, [ordensSafra, searchTerm, dateFilter]);
 
-  // Resumo para os cards
-  const summary = {
-    hoje: ordensSafra.filter(o => o.createdAt && o.createdAt.startsWith(new Date().toISOString().split('T')[0])).length,
-    aguardando: ordensSafra.filter(o => o.status === ORDEM_CORTE_STATUS.AGUARDANDO).length,
-    abertas: ordensSafra.filter(o => o.status === ORDEM_CORTE_STATUS.ABERTA).length,
-    pdfs: 0 // Placeholder: se houver rastreio disso no futuro
-  };
-
   return (
     <div className="h-full w-full overflow-y-auto bg-gray-50/50 p-6">
 
@@ -62,26 +54,6 @@ export default function GerenciamentoOrdemCortePage({ companyId, safra, setActiv
             Abrir no Mapa
           </button>
         </div>
-      </div>
-
-      {/* CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: "Ordens do Dia", value: summary.hoje, icon: Clock, color: "text-blue-600", bg: "bg-blue-50" },
-          { label: "Aguardando Número", value: summary.aguardando, icon: FileText, color: "text-amber-600", bg: "bg-amber-50" },
-          { label: "Abertas", value: summary.abertas, icon: CheckCircle, color: "text-emerald-600", bg: "bg-emerald-50" },
-          { label: "PDFs Gerados", value: summary.pdfs, icon: FileText, color: "text-purple-600", bg: "bg-purple-50" },
-        ].map((card, i) => (
-          <div key={i} className="bg-white rounded-2xl p-5 border shadow-sm flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${card.bg} ${card.color}`}>
-              <card.icon className="w-6 h-6" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 font-medium">{card.label}</p>
-              <h3 className="text-2xl font-bold text-gray-900">{card.value}</h3>
-            </div>
-          </div>
-        ))}
       </div>
 
       {/* FILTROS E TABELA */}

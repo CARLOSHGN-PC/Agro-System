@@ -12,8 +12,8 @@ export default function OrdemCorteViewModal({ isOpen, onClose, ordem, onOpenPdf 
 
   const getStatusColor = (status) => {
     switch (status) {
-      case ORDEM_CORTE_STATUS.AGUARDANDO: return 'text-amber-600 bg-amber-50 border-amber-200';
-      case ORDEM_CORTE_STATUS.ABERTA: return 'text-emerald-600 bg-emerald-50 border-emerald-200';
+      case ORDEM_CORTE_STATUS.AGUARDANDO: return 'text-red-600 bg-red-50 border-red-200';
+      case ORDEM_CORTE_STATUS.ABERTA: return 'text-amber-600 bg-amber-50 border-amber-200';
       case ORDEM_CORTE_STATUS.FINALIZADA: return 'text-gray-600 bg-gray-50 border-gray-200';
       default: return 'text-gray-600 bg-gray-50 border-gray-200';
     }
