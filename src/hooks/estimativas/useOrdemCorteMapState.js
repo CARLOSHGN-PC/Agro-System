@@ -36,9 +36,10 @@ export const useOrdemCorteMapState = (todosVinculosSafra) => {
     }, [todosVinculosSafra]);
 
     // Função utilitária rápida: Intercepta a "Pintura Original" de um feature no Mapbox e,
-    // se for azul de ordem de corte, devolve ele, senão devolve a pintura original (verde/amarelo de estimativa/etc)
+    // se for vermelho (aguardando) ou amarelo (aberta) de ordem de corte, devolve a cor, senão devolve a pintura original
     const overrideCorOrdemCorte = (talhaoId, corOriginal) => {
-        if (idsAbertosSet.has(talhaoId) || idsAguardandoSet.has(talhaoId)) return ORDEM_CORTE_CORES.AZUL_ABERTA;
+        if (idsAguardandoSet.has(talhaoId)) return ORDEM_CORTE_CORES.VERMELHO_AGUARDANDO;
+        if (idsAbertosSet.has(talhaoId)) return ORDEM_CORTE_CORES.AMARELO_ABERTA;
         return corOriginal; // Fallback natural
     };
 

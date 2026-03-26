@@ -16,14 +16,24 @@ import { ORDEM_CORTE_STATUS } from '../../../services/ordemCorte/ordemCorteConst
 export const OrdemCorteStatusBadge = ({ status }) => {
     if (!status) return null;
 
-    const isAberta = status === ORDEM_CORTE_STATUS.ABERTA;
+    let bgClass = '';
+    let dotClass = '';
+
+    if (status === ORDEM_CORTE_STATUS.AGUARDANDO) {
+        bgClass = 'bg-red-500/20 text-red-400 border border-red-500/30';
+        dotClass = 'bg-red-400';
+    } else if (status === ORDEM_CORTE_STATUS.ABERTA) {
+        bgClass = 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
+        dotClass = 'bg-yellow-400';
+    } else {
+        // Fallback (FINALIZADA)
+        bgClass = 'bg-gray-500/20 text-gray-400 border border-gray-500/30';
+        dotClass = 'bg-gray-400';
+    }
 
     return (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-            isAberta ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                     : 'bg-red-500/20 text-red-400 border border-red-500/30'
-        }`}>
-            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${isAberta ? 'bg-blue-400' : 'bg-red-400'}`}></span>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${bgClass}`}>
+            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${dotClass}`}></span>
             {status}
         </span>
     );

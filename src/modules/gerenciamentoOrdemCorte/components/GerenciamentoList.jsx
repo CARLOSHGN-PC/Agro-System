@@ -22,9 +22,9 @@ export default function GerenciamentoList({ ordens, companyId, safra }) {
   const getStatusBadge = (status) => {
     switch (status) {
       case ORDEM_CORTE_STATUS.AGUARDANDO:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800"><Clock className="w-3 h-3 mr-1" /> Aguardando</span>;
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"><Clock className="w-3 h-3 mr-1" /> Aguardando</span>;
       case ORDEM_CORTE_STATUS.ABERTA:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800"><CheckCircle className="w-3 h-3 mr-1" /> Aberta</span>;
+        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800"><CheckCircle className="w-3 h-3 mr-1" /> Aberta</span>;
       case ORDEM_CORTE_STATUS.FINALIZADA:
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"><AlertCircle className="w-3 h-3 mr-1" /> Finalizada</span>;
       default:
@@ -39,7 +39,7 @@ export default function GerenciamentoList({ ordens, companyId, safra }) {
           <tr>
             <th className="px-6 py-3 font-semibold text-gray-900">Data</th>
             <th className="px-6 py-3 font-semibold text-gray-900">Frente</th>
-            <th className="px-6 py-3 font-semibold text-gray-900">ID do sistema Ordem de Corte</th>
+            <th className="px-6 py-3 font-semibold text-gray-900">ID do sistema</th>
             <th className="px-6 py-3 font-semibold text-gray-900">Nº Ordem Empresa</th>
             <th className="px-6 py-3 font-semibold text-gray-900">Responsável</th>
             <th className="px-6 py-3 font-semibold text-gray-900">Status</th>
@@ -63,7 +63,7 @@ export default function GerenciamentoList({ ordens, companyId, safra }) {
                   {ordem.frenteServico || '-'}
                 </td>
                 <td className="px-6 py-4 text-gray-500 font-mono text-xs">
-                  {ordem.id}
+                  {ordem.sequencial}
                 </td>
                 <td className="px-6 py-4">
                   {ordem.numeroEmpresa ? (
