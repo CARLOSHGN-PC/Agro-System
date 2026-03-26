@@ -22,16 +22,8 @@ export default function OrdemCorteInfoModal({ isOpen, onClose, ordem, isEditMode
   const handleSave = async () => {
     setIsSaving(true);
 
-    // Regra principal: Se colocou número -> ABERTA. Se tirou -> AGUARDANDO.
-    // Se a ordem já for FINALIZADA, ela continua FINALIZADA.
-    let novoStatus = ordem.status;
-    if (ordem.status !== ORDEM_CORTE_STATUS.FINALIZADA) {
-       novoStatus = numeroEmpresa.trim() ? ORDEM_CORTE_STATUS.ABERTA : ORDEM_CORTE_STATUS.AGUARDANDO;
-    }
-
     const novosDados = {
-      numeroEmpresa: numeroEmpresa.trim(),
-      status: novoStatus
+      numeroEmpresa: numeroEmpresa.trim()
     };
 
     if (isEditMode) {
@@ -92,7 +84,7 @@ export default function OrdemCorteInfoModal({ isOpen, onClose, ordem, isEditMode
             />
             {!isEditMode && (
               <p className="text-xs text-gray-500 mt-2">
-                Ao informar um número, o status mudará para <span className="font-semibold text-emerald-600">ABERTA</span>.
+                Ao informar um número, a ordem poderá ser liberada na lista de ações.
               </p>
             )}
           </div>

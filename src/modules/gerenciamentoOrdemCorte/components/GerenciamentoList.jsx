@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
-import { Eye, Edit3, FileDown, Clock, CheckCircle, AlertCircle } from 'lucide-react';
+import { Eye, Edit3, FileDown, Clock, CheckCircle, AlertCircle, Play } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { ORDEM_CORTE_STATUS } from '../../../services/ordemCorte/ordemCorteConstants';
+import { editarOrdemCorte } from '../../../services/ordemCorte/ordemCorteService';
 import OrdemCorteInfoModal from './OrdemCorteInfoModal';
 import OrdemCortePdfModal from './OrdemCortePdfModal';
 import OrdemCorteViewModal from './OrdemCorteViewModal';
@@ -17,6 +19,50 @@ export default function GerenciamentoList({ ordens, companyId, safra }) {
   const closeModal = () => {
     setSelectedOrdem(null);
     setModalType(null);
+  };
+
+  const handleLiberarOrdem = async (ordem) => {
+    if (!ordem.numeroEmpresa) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Atenção',
+        text: 'É necessário informar o número da Ordem Empresa antes de liberar.',
+        confirmButtonColor: '#3b82f6',
+        confirmButtonText: 'Entendi'
+      });
+      return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Liberar Ordem?',
+      text: `Deseja liberar a ordem ${ordem.numeroEmpresa}? O status mudará para ABERTA no mapa.`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#10b981',
+      cancelButtonColor: '#9ca3af',
+      confirmButtonText: 'Sim, liberar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await editarOrdemCorte(ordem.id, { status: ORDEM_CORTE_STATUS.ABERTA });
+        Swal.fire({
+          icon: 'success',
+          title: 'Ordem Liberada!',
+          text: 'A ordem de corte foi liberada com sucesso.',
+          timer: 2000,
+          showConfirmButton: false
+        });
+      } catch (error) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Erro',
+          text: 'Não foi possível liberar a ordem de corte.',
+          confirmButtonColor: '#3b82f6'
+        });
+      }
+    }
   };
 
   const getStatusBadge = (status) => {
@@ -37,19 +83,20 @@ export default function GerenciamentoList({ ordens, companyId, safra }) {
       <table className="w-full text-left text-sm text-gray-600">
         <thead className="bg-gray-50 border-b">
           <tr>
-            <th className="px-6 py-3 font-semibold text-gray-900">Data</th>
+            <th className="px-6 py-3 font-semibold text-gray-900">Data Abertura</th>
             <th className="px-6 py-3 font-semibold text-gray-900">Frente</th>
             <th className="px-6 py-3 font-semibold text-gray-900">ID do sistema</th>
             <th className="px-6 py-3 font-semibold text-gray-900">Nº Ordem Empresa</th>
             <th className="px-6 py-3 font-semibold text-gray-900">Responsável</th>
             <th className="px-6 py-3 font-semibold text-gray-900">Status</th>
+            <th className="px-6 py-3 font-semibold text-gray-900">Data Finalização</th>
             <th className="px-6 py-3 font-semibold text-gray-900 text-center">Ações</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {ordens.length === 0 ? (
             <tr>
-              <td colSpan="7" className="px-6 py-12 text-center text-gray-400">
+              <td colSpan="8" className="px-6 py-12 text-center text-gray-400">
                 Nenhuma ordem encontrada para os filtros aplicados.
               </td>
             </tr>
@@ -83,8 +130,22 @@ export default function GerenciamentoList({ ordens, companyId, safra }) {
                 <td className="px-6 py-4">
                   {getStatusBadge(ordem.status)}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {ordem.status === ORDEM_CORTE_STATUS.FINALIZADA && ordem.closedAt
+                    ? new Date(ordem.closedAt).toLocaleDateString('pt-BR')
+                    : '-'}
+                </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-center gap-2">
+                    {ordem.status === ORDEM_CORTE_STATUS.AGUARDANDO && (
+                      <button
+                        onClick={() => handleLiberarOrdem(ordem)}
+                        className="p-1.5 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-1 border bg-white shadow-sm"
+                        title="Liberar Ordem"
+                      >
+                        <Play className="w-4 h-4" /> <span className="text-xs font-semibold px-1">Liberar</span>
+                      </button>
+                    )}
                     <button
                       onClick={() => openModal(ordem, 'view')}
                       className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-1 border bg-white shadow-sm"
