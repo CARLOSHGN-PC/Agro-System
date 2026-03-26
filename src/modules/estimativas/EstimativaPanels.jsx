@@ -307,6 +307,10 @@ export default function EstimativaPanels({
                    <OrdemCorteActions
                         vinculoAtivo={vinculoAtivo}
                         talhoesIds={selectedTalhoes}
+                        talhoesNomes={selectedTalhoes.map(id => {
+                           const feat = enhancedGeoJson?.features?.find(f => f.id === id);
+                           return feat?.properties?.TALHAO || id;
+                        })}
                         hasUnestimatedTalhao={hasUnestimatedTalhao}
                         hasClosedOrdem={hasClosedOrdem}
                         companyId={companyId}

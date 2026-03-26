@@ -17,7 +17,7 @@ import { processQueue } from '../syncService';
  * Nenhuma regra UI (React) entra aqui, garantindo pureza da camada.
  */
 
-export const abrirOrdemCorte = async (companyId, safra, talhaoIds, rodadaOrigem, usuario, formDadosAdicionais = {}) => {
+export const abrirOrdemCorte = async (companyId, safra, talhaoIds, talhoesNomes, rodadaOrigem, usuario, formDadosAdicionais = {}) => {
     try {
         // Passo 1: Puxa todos os vínculos existentes dessa safra para passar na validação de regras.
         // Precisamos saber se qualquer ID do array 'talhaoIds' já tem algo ABERTO.
@@ -42,6 +42,7 @@ export const abrirOrdemCorte = async (companyId, safra, talhaoIds, rodadaOrigem,
             sequencial: sequencialNumber,
             codigoVisual: codigoFormatado,
             talhaoIds,
+            talhoesNomes,
             rodadaOrigem,
             usuario,
             frenteServico: formDadosAdicionais.frenteServico,
@@ -52,9 +53,10 @@ export const abrirOrdemCorte = async (companyId, safra, talhaoIds, rodadaOrigem,
         });
 
         // E constrói as filhas (Vínculos), que referenciam o pai.
-        const payloadVinculos = talhaoIds.map(tId => buildVinculoOrdemTalhao({
+        const payloadVinculos = talhaoIds.map((tId, index) => buildVinculoOrdemTalhao({
             ordemBase: payloadOrdem,
-            talhaoId: tId
+            talhaoId: tId,
+            talhaoNome: talhoesNomes ? talhoesNomes[index] : null
         }));
 
         // Passo 5: Efetivar no Banco (que fará a fila Offline-First acontecer).

@@ -80,45 +80,46 @@ export default function GerenciamentoList({ ordens, companyId, safra }) {
 
   return (
     <div className="w-full">
-      <table className="w-full text-left text-sm text-gray-600">
-        <thead className="bg-gray-50 border-b">
+      <table className="w-full text-left text-sm" style={{ color: '#aebccb' }}>
+        <thead className="border-b" style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.02)' }}>
           <tr>
-            <th className="px-6 py-3 font-semibold text-gray-900">Data Abertura</th>
-            <th className="px-6 py-3 font-semibold text-gray-900">Frente</th>
-            <th className="px-6 py-3 font-semibold text-gray-900">ID do sistema</th>
-            <th className="px-6 py-3 font-semibold text-gray-900">Nº Ordem Empresa</th>
-            <th className="px-6 py-3 font-semibold text-gray-900">Responsável</th>
-            <th className="px-6 py-3 font-semibold text-gray-900">Status</th>
-            <th className="px-6 py-3 font-semibold text-gray-900">Data Finalização</th>
-            <th className="px-6 py-3 font-semibold text-gray-900 text-center">Ações</th>
+            <th className="px-6 py-3 font-semibold text-white">Data Abertura</th>
+            <th className="px-6 py-3 font-semibold text-white">Frente</th>
+            <th className="px-6 py-3 font-semibold text-white">ID do sistema</th>
+            <th className="px-6 py-3 font-semibold text-white">Nº Ordem Empresa</th>
+            <th className="px-6 py-3 font-semibold text-white">Responsável</th>
+            <th className="px-6 py-3 font-semibold text-white">Status</th>
+            <th className="px-6 py-3 font-semibold text-white">Data Finalização</th>
+            <th className="px-6 py-3 font-semibold text-white text-center">Ações</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-gray-100">
+        <tbody className="divide-y" style={{ divideColor: 'rgba(255,255,255,0.08)' }}>
           {ordens.length === 0 ? (
             <tr>
-              <td colSpan="8" className="px-6 py-12 text-center text-gray-400">
+              <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
                 Nenhuma ordem encontrada para os filtros aplicados.
               </td>
             </tr>
           ) : (
             ordens.map(ordem => (
-              <tr key={ordem.id} className="hover:bg-gray-50 transition-colors">
+              <tr key={ordem.id} className="transition-colors hover:bg-white/5">
                 <td className="px-6 py-4 whitespace-nowrap">
                   {new Date(ordem.createdAt).toLocaleDateString('pt-BR')}
                 </td>
-                <td className="px-6 py-4 font-medium text-gray-900">
+                <td className="px-6 py-4 font-medium text-white">
                   {ordem.frenteServico || '-'}
                 </td>
-                <td className="px-6 py-4 text-gray-500 font-mono text-xs">
+                <td className="px-6 py-4 font-mono text-xs" style={{ color: '#aebccb' }}>
                   {ordem.sequencial}
                 </td>
                 <td className="px-6 py-4">
                   {ordem.numeroEmpresa ? (
-                    <span className="font-semibold text-gray-900">{ordem.numeroEmpresa}</span>
+                    <span className="font-semibold text-white">{ordem.numeroEmpresa}</span>
                   ) : (
                     <button
                       onClick={() => openModal(ordem, 'info')}
-                      className="text-amber-600 hover:text-amber-700 font-medium hover:underline text-xs bg-amber-50 px-2 py-1 rounded"
+                      className="text-amber-400 hover:text-amber-300 font-medium hover:underline text-xs px-2 py-1 rounded"
+                      style={{ background: 'rgba(251, 191, 36, 0.1)' }}
                     >
                       Informar número
                     </button>
@@ -140,7 +141,8 @@ export default function GerenciamentoList({ ordens, companyId, safra }) {
                     {ordem.status === ORDEM_CORTE_STATUS.AGUARDANDO && (
                       <button
                         onClick={() => handleLiberarOrdem(ordem)}
-                        className="p-2 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors flex items-center justify-center border bg-white shadow-sm"
+                        className="p-2 text-emerald-400 hover:bg-emerald-400/10 rounded-lg transition-colors flex items-center justify-center border"
+                        style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)' }}
                         title="Liberar Ordem"
                       >
                         <Play className="w-4 h-4" />
@@ -148,21 +150,24 @@ export default function GerenciamentoList({ ordens, companyId, safra }) {
                     )}
                     <button
                       onClick={() => openModal(ordem, 'view')}
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex items-center justify-center border bg-white shadow-sm"
+                      className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors flex items-center justify-center border"
+                      style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)' }}
                       title="Ver Ordem"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => openModal(ordem, 'edit')}
-                      className="p-2 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors flex items-center justify-center border bg-white shadow-sm"
+                      className="p-2 text-amber-400 hover:bg-amber-400/10 rounded-lg transition-colors flex items-center justify-center border"
+                      style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)' }}
                       title="Editar Ordem"
                     >
                       <Edit3 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => openModal(ordem, 'pdf')}
-                      className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex items-center justify-center border bg-white shadow-sm"
+                      className="p-2 text-purple-400 hover:bg-purple-400/10 rounded-lg transition-colors flex items-center justify-center border"
+                      style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.04)' }}
                       title="Gerar PDF"
                     >
                       <FileDown className="w-4 h-4" />

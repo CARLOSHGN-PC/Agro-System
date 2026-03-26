@@ -22,6 +22,7 @@ import { OrdemCorteFormModal } from './OrdemCorteFormModal';
 export const OrdemCorteActions = ({
     vinculoAtivo, // Pode ser null se não tiver ordem, ou o objeto do vinculo
     talhoesIds, // Array de string (IDs que estão selecionados no mapa)
+    talhoesNomes, // Array de string (Nomes/Códigos reais dos talhões selecionados)
     hasUnestimatedTalhao, // Boolean indicando se pelo menos 1 talhão não está estimado na camada/rodada atual
     hasClosedOrdem, // Boolean indicando se os talhões selecionados já tiveram a ordem FECHADA (impedido de reabrir na mesma safra)
     companyId,
@@ -46,6 +47,7 @@ export const OrdemCorteActions = ({
             companyId,
             safra,
             talhaoIds: talhoesIds,
+            talhoesNomes: talhoesNomes,
             rodadaOrigem,
             usuario,
             formDadosAdicionais: dadosAdicionais
