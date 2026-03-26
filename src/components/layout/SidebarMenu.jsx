@@ -26,7 +26,7 @@ export default function SidebarMenu({ activeModule, setActiveModule, setMenuOpen
           <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "rgba(212,175,55,0.14)", color: palette.gold }}>
             <Leaf className="w-5 h-5" />
           </div>
-          <span>AgroSystem</span>
+          <span>AgroSystem - Usina Caçu</span>
         </div>
       </div>
 
