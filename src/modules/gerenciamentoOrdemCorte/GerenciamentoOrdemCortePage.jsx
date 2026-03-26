@@ -37,18 +37,19 @@ export default function GerenciamentoOrdemCortePage({ companyId, safra, setActiv
   }, [ordensSafra, searchTerm, dateFilter]);
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-gray-50/50 p-6">
+    <div className="h-full w-full overflow-y-auto p-6" style={{ background: '#0e1014' }}>
 
       {/* HEADER */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gerenciamento de Ordem de Corte</h1>
-          <p className="text-sm text-gray-500 mt-1">Safra {safra}</p>
+          <h1 className="text-2xl font-bold text-white">Gerenciamento de Ordem de Corte</h1>
+          <p className="text-sm mt-1" style={{ color: '#aebccb' }}>Safra {safra}</p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setActiveModule('estimativa')}
-            className="px-4 py-2 bg-white text-gray-700 font-semibold text-sm rounded-xl border border-gray-200 shadow-sm hover:bg-gray-50 transition-colors flex items-center gap-2"
+            className="px-4 py-2 text-white font-semibold text-sm rounded-xl border shadow-sm transition-colors flex items-center gap-2 hover:bg-white/10"
+            style={{ background: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' }}
           >
             <MapIcon className="w-4 h-4" />
             Abrir no Mapa
@@ -57,15 +58,16 @@ export default function GerenciamentoOrdemCortePage({ companyId, safra, setActiv
       </div>
 
       {/* FILTROS E TABELA */}
-      <div className="bg-white border rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+      <div className="border rounded-2xl shadow-sm overflow-hidden flex flex-col min-h-[500px]" style={{ background: '#111a2d', borderColor: 'rgba(255,255,255,0.12)' }}>
         {/* Barra de Filtros */}
-        <div className="p-4 border-b bg-gray-50/50 flex flex-col sm:flex-row gap-4">
+        <div className="p-4 border-b flex flex-col sm:flex-row gap-4" style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(0,0,0,0.2)' }}>
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2" style={{ color: '#aebccb' }} />
             <input
               type="text"
               placeholder="Buscar por frente, ID, número ou responsável..."
-              className="w-full pl-9 pr-4 py-2 text-sm bg-white border rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+              className="w-full pl-9 pr-4 py-2 text-sm rounded-xl outline-none focus:border-yellow-500 transition-colors text-white placeholder-gray-500"
+              style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)', borderStyle: 'solid', borderWidth: '1px' }}
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
@@ -73,7 +75,8 @@ export default function GerenciamentoOrdemCortePage({ companyId, safra, setActiv
           <div className="w-full sm:w-48">
              <input
                 type="date"
-                className="w-full px-4 py-2 text-sm bg-white border rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 transition-all text-gray-600"
+                className="w-full px-4 py-2 text-sm rounded-xl outline-none focus:border-yellow-500 transition-colors text-white placeholder-gray-500"
+                style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)', borderStyle: 'solid', borderWidth: '1px', colorScheme: 'dark' }}
                 value={dateFilter}
                 onChange={e => setDateFilter(e.target.value)}
              />

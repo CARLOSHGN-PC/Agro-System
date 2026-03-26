@@ -12,27 +12,28 @@ export default function OrdemCorteViewModal({ isOpen, onClose, ordem, onOpenPdf 
 
   const getStatusColor = (status) => {
     switch (status) {
-      case ORDEM_CORTE_STATUS.AGUARDANDO: return 'text-red-600 bg-red-50 border-red-200';
-      case ORDEM_CORTE_STATUS.ABERTA: return 'text-amber-600 bg-amber-50 border-amber-200';
-        case ORDEM_CORTE_STATUS.FINALIZADA: return 'text-emerald-600 bg-emerald-50 border-emerald-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case ORDEM_CORTE_STATUS.AGUARDANDO: return 'text-red-400 bg-red-400/10 border-red-400/20';
+      case ORDEM_CORTE_STATUS.ABERTA: return 'text-amber-400 bg-amber-400/10 border-amber-400/20';
+      case ORDEM_CORTE_STATUS.FINALIZADA: return 'text-emerald-400 bg-emerald-400/10 border-emerald-400/20';
+      default: return 'text-gray-400 bg-white/5 border-white/10';
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center items-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 z-50 flex justify-center items-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="rounded-2xl w-full max-w-lg shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200 border" style={{ background: '#111a2d', borderColor: 'rgba(255,255,255,0.12)' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b bg-gray-50/50">
+        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.02)' }}>
           <div>
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-500" /> Detalhes da Ordem
+            <h2 className="text-lg font-bold text-white flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-400" /> Detalhes da Ordem
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-200 transition-colors text-gray-500"
+            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
+            style={{ color: '#aebccb' }}
           >
             <X className="w-5 h-5" />
           </button>
@@ -42,55 +43,68 @@ export default function OrdemCorteViewModal({ isOpen, onClose, ordem, onOpenPdf 
         <div className="p-6">
           <div className="grid grid-cols-2 gap-y-6 gap-x-8">
             <div className="col-span-2 sm:col-span-1">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">ID do Sistema</p>
-              <p className="text-sm font-mono text-gray-900 bg-gray-50 px-3 py-2 rounded-lg border">{ordem.id}</p>
+              <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: '#aebccb' }}>ID do Sistema</p>
+              <p className="text-sm font-mono text-white rounded-lg border px-3 py-2" style={{ background: 'rgba(0,0,0,0.2)', borderColor: 'rgba(255,255,255,0.08)' }}>{ordem.id}</p>
             </div>
 
             <div className="col-span-2 sm:col-span-1">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Nº Ordem Empresa</p>
-              <p className="text-sm font-bold text-gray-900 bg-blue-50/50 px-3 py-2 rounded-lg border border-blue-100">{ordem.numeroEmpresa || 'Não informado'}</p>
+              <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: '#aebccb' }}>Nº Ordem Empresa</p>
+              <p className="text-sm font-bold text-white rounded-lg border px-3 py-2" style={{ background: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.2)' }}>{ordem.numeroEmpresa || 'Não informado'}</p>
             </div>
 
             <div className="col-span-2 sm:col-span-1">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Status</p>
+              <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: '#aebccb' }}>Status</p>
               <span className={`inline-flex px-3 py-1 text-xs font-bold uppercase rounded-lg border ${getStatusColor(ordem.status)}`}>
                 {ordem.status}
               </span>
             </div>
 
             <div className="col-span-2 sm:col-span-1">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Frente de Serviço</p>
-              <p className="text-sm font-semibold text-gray-800">{ordem.frenteServico || 'Não informado'}</p>
+              <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: '#aebccb' }}>Frente de Serviço</p>
+              <p className="text-sm font-semibold text-white">{ordem.frenteServico || 'Não informado'}</p>
             </div>
 
             <div className="col-span-2 sm:col-span-1">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Responsável</p>
-              <p className="text-sm font-medium text-gray-800">{ordem.nomeColaborador || 'Não informado'}</p>
+              <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: '#aebccb' }}>Responsável</p>
+              <p className="text-sm font-medium text-white">{ordem.nomeColaborador || 'Não informado'}</p>
             </div>
 
             <div className="col-span-2 sm:col-span-1">
-              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Data de Criação</p>
-              <p className="text-sm font-medium text-gray-800">{new Date(ordem.createdAt).toLocaleString('pt-BR')}</p>
+              <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: '#aebccb' }}>Data de Criação</p>
+              <p className="text-sm font-medium text-white">{new Date(ordem.createdAt).toLocaleString('pt-BR')}</p>
             </div>
 
             <div className="col-span-2">
-               <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Quantidade de Talhões Vinculados</p>
-               <p className="text-sm font-medium text-gray-800 bg-gray-50 px-3 py-2 rounded-lg border inline-block">{(ordem.talhaoIds || []).length} talhões</p>
+               <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: '#aebccb' }}>Quantidade de Talhões Vinculados</p>
+               <p className="text-sm font-medium text-white rounded-lg border inline-block px-3 py-2" style={{ background: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.12)' }}>{(ordem.talhaoIds || []).length} talhões</p>
+            </div>
+
+            <div className="col-span-2">
+               <p className="text-xs font-bold uppercase tracking-wide mb-1" style={{ color: '#aebccb' }}>Talhões Vinculados</p>
+               <div className="flex flex-wrap gap-2 mt-2">
+                 {ordem.talhaoIds?.map((id, index) => (
+                   <div key={id} className="px-3 py-1.5 text-blue-300 font-mono text-xs rounded-lg border" style={{ background: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.2)' }}>
+                     {ordem.talhoesNomes ? ordem.talhoesNomes[index] : id}
+                   </div>
+                 ))}
+               </div>
             </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-5 border-t bg-gray-50 flex justify-between gap-3">
+        <div className="p-5 border-t flex justify-between gap-3" style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.02)' }}>
           <button
             onClick={onClose}
-            className="px-5 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-xl transition-colors"
+            className="px-5 py-2.5 text-sm font-semibold rounded-xl transition-colors hover:bg-white/10"
+            style={{ color: '#aebccb' }}
           >
             Fechar
           </button>
           <button
             onClick={handleDownload}
-            className="px-5 py-2.5 text-sm font-semibold text-purple-700 bg-purple-100 hover:bg-purple-200 rounded-xl transition-all flex items-center gap-2 border border-purple-200 shadow-sm"
+            className="px-5 py-2.5 text-sm font-semibold text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 rounded-xl transition-all flex items-center gap-2 border shadow-sm"
+            style={{ borderColor: 'rgba(168, 85, 247, 0.3)' }}
           >
             <Download className="w-4 h-4" />
             Gerar PDF

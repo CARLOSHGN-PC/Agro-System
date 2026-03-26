@@ -41,18 +41,19 @@ export default function OrdemCortePdfModal({ isOpen, onClose, ordem, companyId }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-center items-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+    <div className="fixed inset-0 z-50 flex justify-center items-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="rounded-2xl w-full max-w-sm shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200 border" style={{ background: '#111a2d', borderColor: 'rgba(255,255,255,0.12)' }}>
 
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b bg-purple-50">
-          <h2 className="text-lg font-bold text-purple-900 flex items-center gap-2">
-            <FileDown className="w-5 h-5 text-purple-600" />
+        <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.02)' }}>
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <FileDown className="w-5 h-5 text-purple-400" />
             Gerar PDF
           </h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-purple-200 transition-colors text-purple-700"
+            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-white/10"
+            style={{ color: '#aebccb' }}
           >
             <X className="w-5 h-5" />
           </button>
@@ -60,38 +61,38 @@ export default function OrdemCortePdfModal({ isOpen, onClose, ordem, companyId }
 
         {/* Body */}
         <div className="p-6 text-center flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center mb-2">
-            <FileDown className="w-8 h-8 text-purple-600" />
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mb-2" style={{ background: 'rgba(168, 85, 247, 0.1)' }}>
+            <FileDown className="w-8 h-8 text-purple-400" />
           </div>
 
           <div>
-            <h3 className="text-base font-bold text-gray-900">Ordem {ordem.numeroEmpresa || ordem.codigo}</h3>
-            <p className="text-sm text-gray-500 mt-1">Deseja gerar o documento em PDF desta ordem de corte?</p>
+            <h3 className="text-base font-bold text-white">Ordem {ordem.numeroEmpresa || ordem.codigo}</h3>
+            <p className="text-sm mt-1" style={{ color: '#8b9bb4' }}>Deseja gerar o documento em PDF desta ordem de corte?</p>
           </div>
 
-          <div className="bg-gray-50 rounded-xl p-4 w-full text-left text-sm mt-2 border">
-            <p className="flex justify-between mb-1"><span className="text-gray-500">ID:</span> <span className="font-mono font-medium">{ordem.id}</span></p>
-            <p className="flex justify-between mb-1"><span className="text-gray-500">Frente:</span> <span className="font-medium">{ordem.frenteServico || '-'}</span></p>
-            <p className="flex justify-between mb-1"><span className="text-gray-500">Resp:</span> <span className="font-medium">{ordem.nomeColaborador || '-'}</span></p>
-            <p className="flex justify-between"><span className="text-gray-500">Talhões:</span> <span className="font-medium">{(ordem.talhaoIds || []).length}</span></p>
+          <div className="rounded-xl p-4 w-full text-left text-sm mt-2 border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.08)' }}>
+            <p className="flex justify-between mb-1"><span style={{ color: '#8b9bb4' }}>ID:</span> <span className="font-mono font-medium text-white">{ordem.id}</span></p>
+            <p className="flex justify-between mb-1"><span style={{ color: '#8b9bb4' }}>Frente:</span> <span className="font-medium text-white">{ordem.frenteServico || '-'}</span></p>
+            <p className="flex justify-between mb-1"><span style={{ color: '#8b9bb4' }}>Resp:</span> <span className="font-medium text-white">{ordem.nomeColaborador || '-'}</span></p>
+            <p className="flex justify-between"><span style={{ color: '#8b9bb4' }}>Talhões:</span> <span className="font-medium text-white">{(ordem.talhaoIds || []).length}</span></p>
           </div>
 
         </div>
 
         {error && (
           <div className="px-6 pb-2">
-             <div className="bg-red-50 text-red-600 text-xs p-3 rounded-xl border border-red-100 w-full text-left">
+             <div className="text-xs p-3 rounded-xl border w-full text-left" style={{ background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)', color: '#f87171' }}>
                {error}
              </div>
           </div>
         )}
 
         {/* Footer */}
-        <div className="p-5 border-t bg-gray-50 flex flex-col gap-3">
+        <div className="p-5 border-t flex flex-col gap-3" style={{ borderColor: 'rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.02)' }}>
           <button
             onClick={handleDownload}
             disabled={isGenerating}
-            className="w-full px-5 py-3 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 rounded-xl transition-all shadow-md shadow-purple-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-5 py-3 text-sm font-semibold text-white bg-purple-600 hover:bg-purple-500 rounded-xl transition-all shadow-md shadow-purple-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGenerating ? (
               <><Loader2 className="w-4 h-4 animate-spin" /> Gerando Documento...</>
@@ -102,7 +103,8 @@ export default function OrdemCortePdfModal({ isOpen, onClose, ordem, companyId }
           <button
             onClick={onClose}
             disabled={isGenerating}
-            className="w-full px-5 py-3 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-xl transition-colors disabled:opacity-50"
+            className="w-full px-5 py-3 text-sm font-semibold rounded-xl transition-colors hover:bg-white/10 disabled:opacity-50"
+            style={{ color: '#aebccb' }}
           >
             Cancelar
           </button>

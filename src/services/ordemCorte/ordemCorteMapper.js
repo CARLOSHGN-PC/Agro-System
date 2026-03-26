@@ -23,6 +23,7 @@ export const buildNovaOrdemCorte = ({
     sequencial,
     codigoVisual,
     talhaoIds,
+    talhoesNomes,
     rodadaOrigem,
     usuario,
     frenteServico,
@@ -43,6 +44,7 @@ export const buildNovaOrdemCorte = ({
         status: ORDEM_CORTE_STATUS.AGUARDANDO,
         numeroEmpresa: '',
         talhaoIds,
+        talhoesNomes: talhoesNomes || [],
         rodadaOrigem,
         frenteServico: frenteServico || '',
         tipoCana: tipoCana || '',
@@ -65,7 +67,8 @@ export const buildNovaOrdemCorte = ({
  */
 export const buildVinculoOrdemTalhao = ({
     ordemBase,
-    talhaoId
+    talhaoId,
+    talhaoNome
 }) => {
     // Usamos um id único e previsível
     const vinculoId = `${ordemBase.id}_${talhaoId}`;
@@ -75,6 +78,7 @@ export const buildVinculoOrdemTalhao = ({
         companyId: ordemBase.companyId,
         safra: ordemBase.safra,
         talhaoId: talhaoId,
+        talhaoNome: talhaoNome || talhaoId,
         ordemCorteId: ordemBase.id,
         ordemCodigo: ordemBase.codigo,
         status: ORDEM_CORTE_STATUS.AGUARDANDO,
