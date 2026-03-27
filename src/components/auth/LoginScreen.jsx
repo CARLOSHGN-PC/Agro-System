@@ -11,6 +11,7 @@ import { palette } from "../../constants/theme";
 import PremiumBadge from "../ui/PremiumBadge";
 import GlowOrb from "../layout/GlowOrb";
 import AnimatedBackground from "../layout/AnimatedBackground";
+import { useCompanyConfig } from "../../contexts/ConfigContext";
 
 /**
  * LoginScreen.jsx
@@ -40,6 +41,7 @@ export default function LoginScreen({ onLoginSuccess }) {
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const { logoColor } = useCompanyConfig();
 
   const handleFirebaseLogin = async () => {
     if (!email || !password) {
@@ -116,8 +118,8 @@ export default function LoginScreen({ onLoginSuccess }) {
       />
 
       <AnimatedBackground />
-      <GlowOrb className="top-[-60px] right-[-60px] bg-yellow-300/40" size={240} delay={0.2} />
-      <GlowOrb className="bottom-[8%] left-[-60px] bg-blue-500/30" size={320} delay={0.8} />
+      <GlowOrb className="top-[-60px] right-[-60px]" colorType="theme" size={240} delay={0.2} />
+      <GlowOrb className="bottom-[8%] left-[-60px]" colorType="theme" size={320} delay={0.8} />
       <GlowOrb className="top-[28%] left-[36%] bg-slate-400/20" size={220} delay={1.4} />
 
       <div
@@ -142,8 +144,8 @@ export default function LoginScreen({ onLoginSuccess }) {
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl"
                 style={{
-                  background: `linear-gradient(135deg, ${palette.gold} 0%, ${palette.goldLight} 100%)`,
-                  color: palette.bg,
+                  background: logoColor || palette.gold,
+                  color: palette.white,
                 }}
               >
                 <Leaf className="w-7 h-7" />
@@ -196,7 +198,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                     borderColor: "rgba(255,255,255,0.08)",
                   }}
                 >
-                  <item.icon className="w-5 h-5 mb-3" style={{ color: palette.gold }} />
+                  <item.icon className="w-5 h-5 mb-3" style={{ color: logoColor || palette.gold }} />
                   <div className="font-medium">{item.title}</div>
                   <div className="text-sm mt-1" style={{ color: palette.text2 }}>{item.desc}</div>
                 </div>
@@ -238,7 +240,7 @@ export default function LoginScreen({ onLoginSuccess }) {
               <div className="space-y-2">
                 <label className="text-sm" style={{ color: palette.text2 }}>E-mail</label>
                 <div className="relative">
-                  <User className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: palette.gold }} />
+                  <User className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: logoColor || palette.gold }} />
                   <Input
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -251,7 +253,7 @@ export default function LoginScreen({ onLoginSuccess }) {
               <div className="space-y-2">
                 <label className="text-sm" style={{ color: palette.text2 }}>Senha</label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: palette.gold }} />
+                  <Lock className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2" style={{ color: logoColor || palette.gold }} />
                   <Input
                     type="password"
                     value={password}
@@ -268,12 +270,12 @@ export default function LoginScreen({ onLoginSuccess }) {
                   className="flex items-center gap-2 transition-opacity hover:opacity-90"
                   style={{ color: palette.text2 }}
                 >
-                  <span className="w-4 h-4 rounded border flex items-center justify-center" style={{ borderColor: remember ? palette.gold : "rgba(255,255,255,0.2)", background: remember ? "rgba(212,175,55,0.15)" : "transparent" }}>
-                    {remember ? <div className="w-2 h-2 rounded-full" style={{ background: palette.gold }} /> : null}
+                  <span className="w-4 h-4 rounded border flex items-center justify-center" style={{ borderColor: remember ? (logoColor || palette.gold) : "rgba(255,255,255,0.2)", background: remember ? `${logoColor}26` : "transparent" }}>
+                    {remember ? <div className="w-2 h-2 rounded-full" style={{ background: logoColor || palette.gold }} /> : null}
                   </span>
                   Manter conectado
                 </button>
-                <button className="hover:underline" style={{ color: palette.goldLight }}>
+                <button className="hover:underline" style={{ color: logoColor || palette.goldLight }}>
                   Esqueci a senha
                 </button>
               </div>
@@ -282,7 +284,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                 onClick={handleFirebaseLogin}
                 disabled={isLoading}
                 className="w-full h-12 rounded-2xl text-base font-medium transition-all hover:scale-[1.01] disabled:opacity-70 disabled:hover:scale-100"
-                style={{ background: `linear-gradient(135deg, ${palette.gold} 0%, ${palette.goldLight} 100%)`, color: palette.bg }}
+                style={{ background: logoColor || palette.gold, color: palette.white }}
               >
                 {isLoading ? "Conectando..." : (
                   <>
@@ -303,7 +305,7 @@ export default function LoginScreen({ onLoginSuccess }) {
                     className="rounded-2xl p-3 text-center border"
                     style={{ background: "rgba(16,18,22,0.52)", borderColor: "rgba(255,255,255,0.08)" }}
                   >
-                    <item.icon className="w-4 h-4 mx-auto mb-2" style={{ color: palette.gold }} />
+                    <item.icon className="w-4 h-4 mx-auto mb-2" style={{ color: logoColor || palette.gold }} />
                     <span className="text-xs" style={{ color: palette.text2 }}>{item.label}</span>
                   </div>
                 ))}
