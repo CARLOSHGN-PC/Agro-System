@@ -57,14 +57,14 @@ db.version(6).stores({
   // Estrutura Base
   modulos: '&id, nome, status',
 
-  // Operações Agrícolas
-  operacoes: '&id, moduloId, codigo, nome, status, companyId, syncStatus, [companyId+moduloId]',
+  // Protocolos (Receitas Mestres) de um Módulo
+  protocolos: '&id, moduloId, nome, status, companyId, syncStatus, [companyId+moduloId]',
 
-  // Protocolos de uma Operação
-  protocolos: '&id, operacaoId, nome, status, companyId, syncStatus, [companyId+operacaoId]',
+  // Operações que compõem o Protocolo (agora nascem dentro da Receita)
+  protocoloOperacoes: '&id, protocoloId, nome, status, ordem, syncStatus, [protocoloId+ordem]',
 
   // Itens (Produtos) que compõem o Protocolo. Representa a Subcoleção no Firestore.
-  protocoloItens: '&id, protocoloId, produtoId, ordem, syncStatus, [protocoloId+ordem]',
+  protocoloItens: '&id, protocoloId, produtoId, status, ordem, syncStatus, [protocoloId+ordem]',
 
   // === Cadastros Mestres ===
   produtos: '&id, codigo, nome, categoriaId, unidadePadraoId, status, companyId, syncStatus, [companyId+categoriaId]',

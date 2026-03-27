@@ -10,45 +10,6 @@ import { logAuditoria } from '../../logService.js';
 
 const MODULO_ID = 'tratos-culturais';
 
-export const getOperacoes = async (companyId) => {
-    return await db.operacoes.where('companyId').equals(companyId).toArray();
-};
-
-export const saveOperacao = async (operacao, usuarioId, companyId) => {
-    const isNew = !operacao.id;
-    const id = isNew ? uuidv4() : operacao.id;
-
-    const payload = {
-        ...operacao,
-        id,
-        moduloId: MODULO_ID,
-        companyId,
-        status: operacao.status || 'ATIVO',
-        syncStatus: 'pending',
-        updatedAt: new Date().toISOString(),
-        updatedBy: usuarioId
-    };
-
-    if (isNew) {
-        payload.createdAt = new Date().toISOString();
-        payload.createdBy = usuarioId;
-    }
-
-    await db.operacoes.put(payload);
-    await enqueueTask('createOrUpdate', 'operacoes', id, payload);
-
-    await logAuditoria(
-        'operacoes',
-        id,
-        isNew ? 'CREATE' : 'UPDATE',
-        { diff: payload },
-        usuarioId,
-        companyId
-    );
-
-    return payload;
-};
-
 export const getProtocolos = async (companyId) => {
     return await db.protocolos.where('companyId').equals(companyId).toArray();
 };
@@ -58,14 +19,20 @@ export const getProtocoloItens = async (protocoloId) => {
     return itens.sort((a, b) => a.ordem - b.ordem);
 };
 
-export const saveProtocolo = async (protocolo, itens, usuarioId, companyId) => {
+export const getProtocoloOperacoes = async (protocoloId) => {
+    const operacoes = await db.protocoloOperacoes.where('protocoloId').equals(protocoloId).toArray();
+    return operacoes.sort((a, b) => a.ordem - b.ordem);
+};
+
+export const saveProtocolo = async (protocolo, operacoes, itens, usuarioId, companyId) => {
     const isNew = !protocolo.id;
     const protocoloId = isNew ? uuidv4() : protocolo.id;
 
-    // 1. Salvar o Protocolo (Capa)
+    // 1. Salvar o Protocolo (Capa da Receita)
     const payloadProtocolo = {
         ...protocolo,
         id: protocoloId,
+        moduloId: MODULO_ID,
         companyId,
         status: protocolo.status || 'ATIVO',
         syncStatus: 'pending',
@@ -90,31 +57,43 @@ export const saveProtocolo = async (protocolo, itens, usuarioId, companyId) => {
         companyId
     );
 
-    // 2. Salvar os Itens (Produtos do Protocolo)
-    // Para simplificar a sincronização offline, apagamos os itens antigos localmente
-    // e recriamos. O `syncService` enfileirará as ações como createOrUpdate,
-    // que farão um setDoc com merge no Firestore.
+    // 2. Salvar Operações da Receita (Múltiplas operações por protocolo)
+    // Deletar ou inativar operações antigas (por simplicidade: inativar ou substituir soft)
+    const oldOperacoes = await db.protocoloOperacoes.where('protocoloId').equals(protocoloId).toArray();
+    for (const old of oldOperacoes) {
+        await db.protocoloOperacoes.delete(old.id);
+    }
 
+    for (const op of operacoes) {
+        const opId = op.id || uuidv4();
+        const payloadOp = {
+            ...op,
+            id: opId,
+            protocoloId: protocoloId,
+            syncStatus: 'pending',
+            status: op.status || 'ATIVO'
+        };
+        await db.protocoloOperacoes.put(payloadOp);
+        await enqueueTask('createOrUpdate', `protocolos/${protocoloId}/operacoes`, opId, payloadOp);
+    }
+
+
+    // 3. Salvar os Itens (Produtos do Protocolo)
     const oldItens = await db.protocoloItens.where('protocoloId').equals(protocoloId).toArray();
     for (const old of oldItens) {
         await db.protocoloItens.delete(old.id);
-        // Observação: Para remoção definitiva de subcoleções no Firestore via offline,
-        // a engine de syncService precisaria ter um 'delete'.
-        // Como o foco é soft-delete ou reescrita, usaremos a ordem para sobrescrever ou inativar.
     }
 
     for (const item of itens) {
-        const itemId = uuidv4();
+        const itemId = item.id || uuidv4();
         const payloadItem = {
             ...item,
             id: itemId,
             protocoloId: protocoloId,
-            syncStatus: 'pending'
+            syncStatus: 'pending',
+            status: item.status || 'ATIVO'
         };
         await db.protocoloItens.put(payloadItem);
-        // O caminho no Firebase seria protocolos/{protocoloId}/itens/{itemId}
-        // Isso precisará de ajuste no syncService caso não usemos Collections raízes.
-        // Para fins deste módulo, assumiremos a gravação com o ID do protocolo como pai.
         await enqueueTask('createOrUpdate', `protocolos/${protocoloId}/itens`, itemId, payloadItem);
     }
 

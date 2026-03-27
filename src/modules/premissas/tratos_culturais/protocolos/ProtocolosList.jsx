@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../../constants/theme.js';
 import { Beaker, Plus, Edit2, Trash2, ArrowRight } from 'lucide-react';
-import { getProtocolos, getOperacoes } from '../../../../services/premissas/tratos_culturais/tratosCulturaisService.js';
+import { getProtocolos, getProtocoloOperacoes } from '../../../../services/premissas/tratos_culturais/tratosCulturaisService.js';
 import { useAuth } from '../../../../hooks/useAuth.js';
 import ProtocoloFormModal from './ProtocoloFormModal.jsx';
 
@@ -16,7 +16,7 @@ export default function ProtocolosList() {
   const companyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || "AgroSystem_Demo";
 
   const [protocolos, setProtocolos] = useState([]);
-  const [operacoes, setOperacoes] = useState([]);
+  const [protocoloOperacoesMap, setProtocoloOperacoesMap] = useState({});
   const [loading, setLoading] = useState(true);
 
   // Modal State
@@ -30,15 +30,17 @@ export default function ProtocolosList() {
   const loadData = async () => {
     setLoading(true);
     const dataProtocolos = await getProtocolos(companyId);
-    const dataOperacoes = await getOperacoes(companyId);
-    setProtocolos(dataProtocolos);
-    setOperacoes(dataOperacoes);
-    setLoading(false);
-  };
 
-  const getNomeOperacao = (operacaoId) => {
-    const op = operacoes.find(o => o.id === operacaoId);
-    return op ? op.nome : 'Desconhecida';
+    // Buscar nomes de operações de cada protocolo para mostrar na tabela (Opcional, mas útil para preview)
+    const opsMap = {};
+    for (const p of dataProtocolos) {
+        const ops = await getProtocoloOperacoes(p.id);
+        opsMap[p.id] = ops.filter(o => o.status === 'ATIVO').map(o => o.nome).join(', ');
+    }
+
+    setProtocoloOperacoesMap(opsMap);
+    setProtocolos(dataProtocolos);
+    setLoading(false);
   };
 
   return (
@@ -60,8 +62,8 @@ export default function ProtocolosList() {
         <table className="w-full text-left text-sm">
             <thead className="bg-black/40 text-white/50 border-b border-white/5 sticky top-0">
                 <tr>
-                    <th className="px-6 py-4 font-semibold">Nome do Protocolo</th>
-                    <th className="px-6 py-4 font-semibold">Operação Mãe</th>
+                    <th className="px-6 py-4 font-semibold">Nome do Protocolo (Receita)</th>
+                    <th className="px-6 py-4 font-semibold">Operações Vinculadas</th>
                     <th className="px-6 py-4 font-semibold">Observação</th>
                     <th className="px-6 py-4 font-semibold">Status</th>
                     <th className="px-6 py-4 font-semibold text-right">Ações</th>
@@ -74,8 +76,8 @@ export default function ProtocolosList() {
                 {protocolos.map(p => (
                     <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                         <td className="px-6 py-4 font-medium text-white">{p.nome}</td>
-                        <td className="px-6 py-4 text-white/80">{getNomeOperacao(p.operacaoId)}</td>
-                        <td className="px-6 py-4 text-white/60 truncate max-w-[200px]">{p.observacoesTecnicas || '-'}</td>
+                        <td className="px-6 py-4 text-white/80 truncate max-w-[200px]" title={protocoloOperacoesMap[p.id]}>{protocoloOperacoesMap[p.id] || <span className="text-white/30 italic">Nenhuma</span>}</td>
+                        <td className="px-6 py-4 text-white/60 truncate max-w-[200px]" title={p.observacoesTecnicas}>{p.observacoesTecnicas || '-'}</td>
                         <td className="px-6 py-4">
                             <span className={`px-2 py-1 rounded-full text-xs font-semibold ${p.status === 'ATIVO' ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
                                 {p.status}
@@ -98,7 +100,6 @@ export default function ProtocolosList() {
             protocoloId={currentProtocoloId}
             onClose={() => setIsModalOpen(false)}
             onSaveSuccess={() => { setIsModalOpen(false); loadData(); }}
-            operacoesDisponiveis={operacoes.filter(o => o.status === 'ATIVO')}
         />
       )}
     </div>
