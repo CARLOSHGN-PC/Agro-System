@@ -1,13 +1,12 @@
 import React from 'react';
 import { palette } from '../../../constants/theme.js';
 import { ArrowLeft } from 'lucide-react';
-import OperacoesList from './operacoes/OperacoesList.jsx';
 import ProtocolosList from './protocolos/ProtocolosList.jsx';
 import AuditoriaList from './historico/AuditoriaList.jsx';
 
 /**
  * @file TratosCulturaisModule.jsx
- * @description Módulo de Tratos Culturais contendo Operações e Protocolos.
+ * @description Módulo de Tratos Culturais focado no cadastro de Protocolos/Receitas.
  * @module TratosCulturaisModule
  */
 
@@ -15,14 +14,14 @@ import AuditoriaList from './historico/AuditoriaList.jsx';
  * Tela interna do módulo de Tratos Culturais.
  *
  * O que este bloco faz: Renderiza a interface principal dos Tratos Culturais com navegação e abas.
- * Por que ele existe: Para cumprir a prioridade máxima solicitada, focada em Operações e Protocolos.
+ * Por que ele existe: Para cumprir a prioridade solicitada focando em Protocolos como Receitas Mestres.
  * O que entra e sai: Recebe `onBack` da navegação principal para voltar aos cards mestres.
  *
  * @param {{onBack: Function}} props
  * @returns {JSX.Element} Estrutura de abas do Módulo Tratos Culturais.
  */
 export default function TratosCulturaisModule({ onBack }) {
-  const [activeTab, setActiveTab] = React.useState('operacoes');
+  const [activeTab, setActiveTab] = React.useState('protocolos');
 
   return (
     <div className="h-full flex flex-col p-6 animate-fade-in text-white overflow-y-auto" style={{ background: palette.background }}>
@@ -45,17 +44,6 @@ export default function TratosCulturaisModule({ onBack }) {
 
       {/* Navegação por Abas (Tabs) */}
       <div className="flex items-center border-b border-white/10 mb-6 gap-6">
-        <button
-          onClick={() => setActiveTab('operacoes')}
-          className={`pb-3 font-semibold transition-all relative ${
-            activeTab === 'operacoes' ? 'text-white' : 'text-white/40 hover:text-white/80'
-          }`}
-        >
-          Operações
-          {activeTab === 'operacoes' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: palette.gold }}></div>
-          )}
-        </button>
         <button
           onClick={() => setActiveTab('protocolos')}
           className={`pb-3 font-semibold transition-all relative ${
@@ -82,7 +70,6 @@ export default function TratosCulturaisModule({ onBack }) {
 
       {/* Conteúdo da Aba */}
       <div className="flex-1 rounded-[24px] border overflow-hidden bg-[#0A0A0A] border-white/5 p-6 relative">
-        {activeTab === 'operacoes' && <OperacoesList />}
         {activeTab === 'protocolos' && <ProtocolosList />}
         {activeTab === 'historico' && <AuditoriaList />}
       </div>

@@ -1,28 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../../constants/theme.js';
-import { Beaker, Plus, Trash2, GripVertical, Save, X } from 'lucide-react';
-import { getProtocoloItens, saveProtocolo } from '../../../../services/premissas/tratos_culturais/tratosCulturaisService.js';
+import { Beaker, Plus, Trash2, Save, X, Settings2 } from 'lucide-react';
+import { getProtocoloItens, getProtocoloOperacoes, saveProtocolo } from '../../../../services/premissas/tratos_culturais/tratosCulturaisService.js';
 import { getProdutos } from '../../../../services/cadastros_mestres/produtosService.js';
 import db from '../../../../services/localDb.js';
 import { useAuth } from '../../../../hooks/useAuth.js';
 
 /**
  * @file ProtocoloFormModal.jsx
- * @description Formulário avançado para criação/edição de Protocolo e seus Produtos (Receituário).
+ * @description Formulário para criação/edição de Protocolo (Guarda-chuva) com suas Operações e Produtos.
  * @module ProtocoloFormModal
  */
 
-export default function ProtocoloFormModal({ protocoloId, onClose, onSaveSuccess, operacoesDisponiveis }) {
+export default function ProtocoloFormModal({ protocoloId, onClose, onSaveSuccess }) {
   const { user } = useAuth();
   const companyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || "AgroSystem_Demo";
 
-  // Estado do Protocolo (Capa)
-  const [protocolo, setProtocolo] = useState({ nome: '', operacaoId: '', observacoesTecnicas: '', status: 'ATIVO' });
+  // Estado do Protocolo (Capa / Guarda-chuva)
+  const [protocolo, setProtocolo] = useState({ nome: '', observacoesTecnicas: '', status: 'ATIVO' });
 
-  // Estado dos Itens (Receita)
-  const [itens, setItens] = useState([]);
+  // Listas internas do Protocolo
+  const [operacoes, setOperacoes] = useState([]);
+  const [itens, setItens] = useState([]); // Produtos
 
-  // Catálogos
+  // Catálogos Mestres
   const [produtosDisponiveis, setProdutosDisponiveis] = useState([]);
 
   useEffect(() => {
@@ -30,23 +31,41 @@ export default function ProtocoloFormModal({ protocoloId, onClose, onSaveSuccess
   }, []);
 
   const loadData = async () => {
-    // Carregar Cadastro Mestre de Produtos
     const prods = await getProdutos(companyId);
     setProdutosDisponiveis(prods.filter(p => p.status === 'ATIVO'));
 
     if (protocoloId) {
-        // Modo Edição
         const pCapa = await db.protocolos.get(protocoloId);
         if (pCapa) setProtocolo(pCapa);
 
+        const pOps = await getProtocoloOperacoes(protocoloId);
+        setOperacoes(pOps.sort((a,b) => a.ordem - b.ordem));
+
         const pItens = await getProtocoloItens(protocoloId);
-        // Garante que a ordem esteja correta visualmente
         setItens(pItens.sort((a,b) => a.ordem - b.ordem));
     }
   };
 
+  // --- Handlers para Operações ---
+  const addOperacao = () => {
+      setOperacoes([...operacoes, { id: `temp-op-${Date.now()}`, nome: '', status: 'ATIVO', ordem: operacoes.length + 1 }]);
+  };
+
+  const updateOperacao = (index, field, value) => {
+      const newOps = [...operacoes];
+      newOps[index][field] = value;
+      setOperacoes(newOps);
+  };
+
+  const removeOperacao = (index) => {
+      const newOps = operacoes.filter((_, i) => i !== index);
+      newOps.forEach((op, i) => op.ordem = i + 1);
+      setOperacoes(newOps);
+  };
+
+  // --- Handlers para Produtos (Itens) ---
   const addItem = () => {
-      setItens([...itens, { id: `temp-${Date.now()}`, produtoId: '', dosagem: '', unidadeMedidaId: '', ordem: itens.length + 1 }]);
+      setItens([...itens, { id: `temp-item-${Date.now()}`, produtoId: '', dosagem: '', unidadeMedidaId: '', status: 'ATIVO', ordem: itens.length + 1 }]);
   };
 
   const updateItem = (index, field, value) => {
@@ -57,45 +76,32 @@ export default function ProtocoloFormModal({ protocoloId, onClose, onSaveSuccess
 
   const removeItem = (index) => {
       const newItens = itens.filter((_, i) => i !== index);
-      // Reordena
       newItens.forEach((item, i) => item.ordem = i + 1);
       setItens(newItens);
   };
 
-  // Simples Drag & Drop Handler (Para fins didáticos, pode ser aprimorado com lib react-beautiful-dnd depois)
-  const moveItem = (index, direction) => {
-      if (direction === 'up' && index > 0) {
-          const newItens = [...itens];
-          const temp = newItens[index];
-          newItens[index] = newItens[index - 1];
-          newItens[index - 1] = temp;
-          newItens.forEach((item, i) => item.ordem = i + 1);
-          setItens(newItens);
-      } else if (direction === 'down' && index < itens.length - 1) {
-          const newItens = [...itens];
-          const temp = newItens[index];
-          newItens[index] = newItens[index + 1];
-          newItens[index + 1] = temp;
-          newItens.forEach((item, i) => item.ordem = i + 1);
-          setItens(newItens);
-      }
-  };
-
+  // --- Salvar ---
   const handleSave = async () => {
-      if (!protocolo.nome || !protocolo.operacaoId) {
-          alert('Preencha o Nome e selecione a Operação.');
+      if (!protocolo.nome) {
+          alert('Preencha o Nome do Protocolo/Receita.');
           return;
       }
 
-      // Validação de itens
-      for (const item of itens) {
-          if (!item.produtoId || !item.dosagem) {
-              alert('Todos os itens da receita devem ter Produto e Dosagem definidos.');
+      for (const op of operacoes) {
+          if (!op.nome) {
+              alert('Todas as Operações devem ter um nome preenchido.');
               return;
           }
       }
 
-      await saveProtocolo(protocolo, itens, user?.uid || 'system', companyId);
+      for (const item of itens) {
+          if (!item.produtoId || !item.dosagem) {
+              alert('Todos os produtos da receita devem ter Produto e Dosagem definidos.');
+              return;
+          }
+      }
+
+      await saveProtocolo(protocolo, operacoes, itens, user?.uid || 'system', companyId);
       onSaveSuccess();
   };
 
@@ -118,47 +124,22 @@ export default function ProtocoloFormModal({ protocoloId, onClose, onSaveSuccess
         </div>
 
         {/* Corpo (Scrollable) */}
-        <div className="flex-1 overflow-y-auto p-6 flex flex-col md:flex-row gap-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col gap-6">
 
-            {/* Coluna Esquerda: Capa do Protocolo */}
-            <div className="md:w-1/3 flex flex-col gap-4">
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
-                    <h4 className="font-semibold text-white/80 border-b border-white/10 pb-2 mb-4">Dados da Operação</h4>
+            {/* Seção 1: Capa do Protocolo */}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+                <h4 className="font-semibold text-white/80 border-b border-white/10 pb-2 mb-4">Dados da Receita (Protocolo)</h4>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <label className="block text-xs font-medium text-white/50 mb-1">Nome do Protocolo *</label>
                         <input
                             value={protocolo.nome}
                             onChange={(e) => setProtocolo({...protocolo, nome: e.target.value})}
-                            className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold focus:ring-1 focus:ring-gold transition-all"
-                            placeholder="Ex: Secagem Soja Fase 1"
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold transition-all"
+                            placeholder="Ex: 1º Vegetativo - Aplicação Aérea"
                         />
                     </div>
-
-                    <div>
-                        <label className="block text-xs font-medium text-white/50 mb-1">Vincular a Operação *</label>
-                        <select
-                            value={protocolo.operacaoId}
-                            onChange={(e) => setProtocolo({...protocolo, operacaoId: e.target.value})}
-                            className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold transition-all appearance-none"
-                        >
-                            <option value="">Selecione...</option>
-                            {operacoesDisponiveis.map(op => (
-                                <option key={op.id} value={op.id}>{op.codigo ? `${op.codigo} - ` : ''}{op.nome}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-medium text-white/50 mb-1">Observações Técnicas</label>
-                        <textarea
-                            value={protocolo.observacoesTecnicas}
-                            onChange={(e) => setProtocolo({...protocolo, observacoesTecnicas: e.target.value})}
-                            className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold transition-all resize-none h-24"
-                            placeholder="Ex: Aplicar em temperatura abaixo de 30°C e ventos de no máx 10km/h."
-                        />
-                    </div>
-
                     <div>
                         <label className="block text-xs font-medium text-white/50 mb-1">Status</label>
                         <select
@@ -170,84 +151,134 @@ export default function ProtocoloFormModal({ protocoloId, onClose, onSaveSuccess
                             <option value="INATIVO">Inativo</option>
                         </select>
                     </div>
+                    <div className="md:col-span-2">
+                        <label className="block text-xs font-medium text-white/50 mb-1">Observações Técnicas</label>
+                        <textarea
+                            value={protocolo.observacoesTecnicas}
+                            onChange={(e) => setProtocolo({...protocolo, observacoesTecnicas: e.target.value})}
+                            className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-gold transition-all resize-none h-20"
+                            placeholder="Instruções gerais, restrições climáticas..."
+                        />
+                    </div>
                 </div>
             </div>
 
-            {/* Coluna Direita: Construtor de Receita (Itens) */}
-            <div className="md:w-2/3 flex flex-col gap-4">
-                <div className="bg-white/5 border border-white/10 rounded-2xl p-5 h-full flex flex-col">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+                {/* Seção 2: Operações Vinculadas */}
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex flex-col min-h-[300px]">
                     <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-4">
                         <div>
-                            <h4 className="font-semibold text-white">Receituário (Produtos)</h4>
-                            <p className="text-xs text-white/50">Defina a dosagem e a ordem da mistura de tanque</p>
+                            <h4 className="font-semibold text-white flex items-center gap-2">
+                                <Settings2 className="w-5 h-5 opacity-70"/> Operações
+                            </h4>
+                            <p className="text-xs text-white/50 mt-1">Quais operações compõem esta receita?</p>
                         </div>
-                        <button
-                            onClick={addItem}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition-all border border-white/10"
-                        >
+                        <button onClick={addOperacao} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition-all border border-white/10">
+                            <Plus className="w-4 h-4" /> Add Operação
+                        </button>
+                    </div>
+
+                    <div className="flex-1 overflow-auto space-y-3 pr-2">
+                        {operacoes.length === 0 ? (
+                            <div className="h-full flex flex-col items-center justify-center text-center text-white/30 p-4 border border-dashed border-white/5 rounded-xl">
+                                <p className="text-sm">Nenhuma operação adicionada.</p>
+                            </div>
+                        ) : (
+                            operacoes.map((op, index) => (
+                                <div key={op.id} className={`flex flex-col sm:flex-row gap-3 bg-black/40 border p-3 rounded-xl items-center ${op.status === 'INATIVO' ? 'border-red-500/20 opacity-60' : 'border-white/10'}`}>
+                                    <div className="flex-1 w-full">
+                                        <input
+                                            value={op.nome}
+                                            onChange={(e) => updateOperacao(index, 'nome', e.target.value)}
+                                            className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gold"
+                                            placeholder="Nome da Operação (ex: Pulverização)"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
+                                        <select
+                                            value={op.status}
+                                            onChange={(e) => updateOperacao(index, 'status', e.target.value)}
+                                            className="bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-xs text-white focus:outline-none"
+                                        >
+                                            <option value="ATIVO">Ativo</option>
+                                            <option value="INATIVO">Desativado</option>
+                                        </select>
+                                        <button onClick={() => removeOperacao(index)} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg" title="Remover Operação">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+                {/* Seção 3: Receituário / Produtos */}
+                <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex flex-col min-h-[300px]">
+                    <div className="flex items-center justify-between mb-4 border-b border-white/10 pb-4">
+                        <div>
+                            <h4 className="font-semibold text-white flex items-center gap-2">
+                                <Beaker className="w-5 h-5 opacity-70"/> Produtos
+                            </h4>
+                            <p className="text-xs text-white/50 mt-1">Produtos utilizados na calda da receita</p>
+                        </div>
+                        <button onClick={addItem} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-white/10 hover:bg-white/20 text-white transition-all border border-white/10">
                             <Plus className="w-4 h-4" /> Add Produto
                         </button>
                     </div>
 
                     <div className="flex-1 overflow-auto space-y-3 pr-2">
                         {itens.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-center text-white/30 p-8 border-2 border-dashed border-white/5 rounded-xl">
-                                <Beaker className="w-10 h-10 mb-2 opacity-50" />
-                                <p>Nenhum produto adicionado à receita.</p>
-                                <p className="text-xs">Clique em "Add Produto" para começar a construir a calda.</p>
+                            <div className="h-full flex flex-col items-center justify-center text-center text-white/30 p-4 border border-dashed border-white/5 rounded-xl">
+                                <p className="text-sm">Nenhum produto adicionado.</p>
                             </div>
                         ) : (
                             itens.map((item, index) => (
-                                <div key={item.id} className="flex flex-col sm:flex-row gap-3 bg-black/40 border border-white/10 p-3 rounded-xl items-center group">
-                                    <div className="flex flex-col items-center justify-center w-8">
-                                        <button onClick={() => moveItem(index, 'up')} className={`p-1 text-white/30 hover:text-white ${index === 0 ? 'invisible' : ''}`}>▲</button>
-                                        <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white/60 select-none">
-                                            {item.ordem}
-                                        </div>
-                                        <button onClick={() => moveItem(index, 'down')} className={`p-1 text-white/30 hover:text-white ${index === itens.length - 1 ? 'invisible' : ''}`}>▼</button>
-                                    </div>
-
-                                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-3 w-full">
-                                        <div className="sm:col-span-6">
+                                <div key={item.id} className={`flex flex-col gap-3 bg-black/40 border p-3 rounded-xl ${item.status === 'INATIVO' ? 'border-red-500/20 opacity-60' : 'border-white/10'}`}>
+                                    <div className="flex flex-col sm:flex-row gap-3 w-full items-center">
+                                        <div className="flex-1 w-full">
                                             <select
                                                 value={item.produtoId}
                                                 onChange={(e) => updateItem(index, 'produtoId', e.target.value)}
-                                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold transition-all appearance-none"
+                                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold appearance-none"
                                             >
-                                                <option value="">Selecione o Produto...</option>
+                                                <option value="">Selecione o Produto (Mestre)...</option>
                                                 {produtosDisponiveis.map(p => (
                                                     <option key={p.id} value={p.id}>{p.codigo ? `${p.codigo} - ` : ''}{p.nome}</option>
                                                 ))}
                                             </select>
                                         </div>
-                                        <div className="sm:col-span-3">
+                                        <div className="w-full sm:w-24">
                                             <input
                                                 type="number"
                                                 step="0.01"
                                                 value={item.dosagem}
                                                 onChange={(e) => updateItem(index, 'dosagem', e.target.value)}
-                                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold transition-all"
+                                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold"
                                                 placeholder="Dose"
                                             />
                                         </div>
-                                        <div className="sm:col-span-3">
-                                            <input
-                                                value={item.unidadeMedidaId}
-                                                onChange={(e) => updateItem(index, 'unidadeMedidaId', e.target.value)}
-                                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold transition-all"
-                                                placeholder="Unid. (L/ha)"
-                                            />
+                                        <div className="flex items-center gap-2 justify-end w-full sm:w-auto">
+                                            <select
+                                                value={item.status}
+                                                onChange={(e) => updateItem(index, 'status', e.target.value)}
+                                                className="bg-black/50 border border-white/10 rounded-lg px-2 py-2.5 text-xs text-white focus:outline-none"
+                                            >
+                                                <option value="ATIVO">Ativ.</option>
+                                                <option value="INATIVO">Desat.</option>
+                                            </select>
+                                            <button onClick={() => removeItem(index)} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg">
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </div>
                                     </div>
-
-                                    <button onClick={() => removeItem(index)} className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition-colors ml-auto sm:ml-0" title="Remover da Receita">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
                                 </div>
                             ))
                         )}
                     </div>
                 </div>
+
             </div>
         </div>
 
