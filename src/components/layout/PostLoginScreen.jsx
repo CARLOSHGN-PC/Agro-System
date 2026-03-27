@@ -20,6 +20,9 @@ import CadastroProfissionalPage from "../../modules/cadastroProfissional/Cadastr
 // Relatório Estimativa
 import RelatorioEstimativaPage from "../../modules/relatorioEstimativa/components/RelatorioEstimativaPage";
 
+// Premissas
+import Premissas from "../../modules/premissas/Premissas";
+
 // Gerenciamento Ordem de Corte
 import GerenciamentoOrdemCortePage from "../../modules/gerenciamentoOrdemCorte/GerenciamentoOrdemCortePage";
 
@@ -298,7 +301,11 @@ export default function PostLoginScreen({ onLogout }) {
                 safra={currentSafra}
               />
             </>
-          ) : activeModule === "premissas" || activeModule === "configuracao" ? (
+          ) : activeModule === "premissas" ? (
+            <div className="absolute inset-0 z-10 overflow-auto bg-black/20 pb-16">
+              <Premissas />
+            </div>
+          ) : activeModule === "configuracao" ? (
             <div className="absolute inset-0 z-10 overflow-auto bg-black/20 pb-16">
               <CompanyConfig
                 currentCompanyId={currentCompanyId}

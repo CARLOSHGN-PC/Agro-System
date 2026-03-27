@@ -6,6 +6,10 @@ import { getUniqueTalhaoId } from "../utils/geoHelpers";
 import { saveEstimate } from "../services/estimativa";
 import { parseBrazilianFloat } from "../utils/formatters";
 import { importShapefile, validateShapefileSet } from "../services/shpImport";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "../services/firebase";
+import { useCompanyConfig } from "../contexts/ConfigContext";
+import { Palette } from "lucide-react";
 
 export default function CompanyConfig({ onUploadSuccess, currentCompanyId, currentSafra, geoJsonData, allEstimates, refetchEstimates }) {
   const [files, setFiles] = useState([]);
@@ -17,6 +21,23 @@ export default function CompanyConfig({ onUploadSuccess, currentCompanyId, curre
   const [estStatus, setEstStatus] = useState("idle");
   const [estErrorMessage, setEstErrorMessage] = useState("");
   const [estProgress, setEstProgress] = useState({ current: 0, total: 0 });
+  const { logoColor } = useCompanyConfig();
+  const [localColor, setLocalColor] = useState(logoColor || "#55AB52");
+  const [colorStatus, setColorStatus] = useState("idle");
+
+  const handleSaveColor = async () => {
+    setColorStatus("processing");
+    try {
+      const companyRef = doc(db, "empresas", currentCompanyId);
+      await updateDoc(companyRef, { logoColor: localColor });
+      setColorStatus("success");
+      setTimeout(() => setColorStatus("idle"), 3000);
+    } catch (err) {
+      console.error(err);
+      setColorStatus("error");
+      setTimeout(() => setColorStatus("idle"), 3000);
+    }
+  };
 
   const palette = {
     bg: "#050505",
@@ -274,6 +295,58 @@ export default function CompanyConfig({ onUploadSuccess, currentCompanyId, curre
           Gerencie as áreas da sua fazenda importando arquivos Shapefile (SHP).
           Eles serão processados e utilizados nos módulos de Estimativa de Safra.
         </p>
+      </div>
+
+      <div
+        className="rounded-[28px] border overflow-hidden shadow-2xl backdrop-blur-md relative mb-8"
+        style={{
+          background: "linear-gradient(180deg, rgba(22,24,28,0.78), rgba(18,20,24,0.66))",
+          borderColor: "rgba(230,199,107,0.18)",
+        }}
+      >
+        <div className="p-4 sm:p-6 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <h2 className="text-lg sm:text-xl font-medium">Personalização Visual</h2>
+          <p className="text-sm mt-1" style={{ color: palette.text2 }}>
+            Ajuste a cor principal da identidade visual da empresa no sistema.
+          </p>
+        </div>
+
+        <div className="p-4 sm:p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-[20px] transition-colors duration-200" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="flex items-center gap-4">
+               <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.05)" }}>
+                 <Palette className="w-6 h-6" style={{ color: localColor }} />
+               </div>
+               <div>
+                 <h3 className="font-medium text-[15px]">Cor do Ícone Principal</h3>
+                 <p className="text-xs" style={{ color: palette.text2 }}>Altera a cor do logo em todas as telas</p>
+               </div>
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+               <input
+                 type="color"
+                 value={localColor}
+                 onChange={(e) => setLocalColor(e.target.value)}
+                 className="w-10 h-10 p-1 rounded-lg cursor-pointer bg-transparent border-none"
+                 title="Escolha uma cor"
+               />
+               <span className="text-sm font-mono" style={{ color: palette.text2 }}>{localColor.toUpperCase()}</span>
+
+               <button
+                  onClick={handleSaveColor}
+                  disabled={colorStatus === "processing"}
+                  className="ml-auto sm:ml-4 px-4 py-2 rounded-xl text-sm font-medium transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 flex items-center gap-2"
+                  style={{
+                    background: `linear-gradient(135deg, ${palette.gold} 0%, ${palette.goldLight} 100%)`,
+                    color: palette.bg
+                  }}
+               >
+                 {colorStatus === "processing" ? "Salvando..." : colorStatus === "success" ? "Salvo!" : "Salvar Cor"}
+               </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div

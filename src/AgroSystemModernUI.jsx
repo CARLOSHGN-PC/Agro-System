@@ -9,6 +9,7 @@ import { useAuth } from "./hooks/useAuth";
 // Telas principais
 import LoginScreen from "./components/auth/LoginScreen";
 import PostLoginScreen from "./components/layout/PostLoginScreen";
+import { ConfigProvider } from "./contexts/ConfigContext";
 
 /**
  * AgroSystemModernUI.jsx
@@ -42,13 +43,25 @@ export default function AgroSystemModernUI() {
     );
   }
 
+  // Lê os dados de autenticação do localStorage para obter o companyId
+  const storedAuth = localStorage.getItem('@AgroSystem:auth');
+  let currentCompanyId = "AgroSystem_Demo";
+  if (storedAuth) {
+    try {
+      const parsed = JSON.parse(storedAuth);
+      if (parsed.companyId) currentCompanyId = parsed.companyId;
+    } catch (e) {}
+  }
+
   // Com a inicialização pronta, usamos o AnimatePresence para fazer a transição Crossfade
   // entre o Login e o Dashboard (PostLoginScreen) sem hard refresh.
   return (
     <AnimatePresence mode="wait">
       {logged ? (
         <motion.div key="success" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <PostLoginScreen onLogout={handleLogout} />
+          <ConfigProvider currentCompanyId={currentCompanyId}>
+            <PostLoginScreen onLogout={handleLogout} />
+          </ConfigProvider>
         </motion.div>
       ) : (
         <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
