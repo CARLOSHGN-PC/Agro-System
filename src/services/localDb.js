@@ -50,4 +50,29 @@ db.version(5).stores({
   ordensCorteTalhoes: '&id, companyId, safra, talhaoId, ordemCorteId, status, syncStatus, [companyId+safra], [companyId+safra+talhaoId], [companyId+safra+talhaoId+status]'
 });
 
+// Aumentamos a versão do Dexie para acomodar o Módulo Premissas e Cadastros Mestres.
+// É crítico não quebrar os dados antigos, então fazemos apenas um upgrade incremental.
+db.version(6).stores({
+  // === Módulo Premissas / Tratos Culturais ===
+  // Estrutura Base
+  modulos: '&id, nome, status',
+
+  // Operações Agrícolas
+  operacoes: '&id, moduloId, codigo, nome, status, companyId, syncStatus, [companyId+moduloId]',
+
+  // Protocolos de uma Operação
+  protocolos: '&id, operacaoId, nome, status, companyId, syncStatus, [companyId+operacaoId]',
+
+  // Itens (Produtos) que compõem o Protocolo. Representa a Subcoleção no Firestore.
+  protocoloItens: '&id, protocoloId, produtoId, ordem, syncStatus, [protocoloId+ordem]',
+
+  // === Cadastros Mestres ===
+  produtos: '&id, codigo, nome, categoriaId, unidadePadraoId, status, companyId, syncStatus, [companyId+categoriaId]',
+  categoriasProduto: '&id, nome, sigla, status, companyId, syncStatus',
+  unidadesMedida: '&id, nome, sigla, status, companyId, syncStatus',
+
+  // === Log Centralizado / Auditoria ===
+  auditoriaLogs: '&id, entidade, entidadeId, acao, usuarioId, timestamp, companyId, syncStatus, [companyId+entidade]'
+});
+
 export default db;

@@ -101,6 +101,20 @@ export const processQueue = async () => {
                              await db.ordensCorteTalhoes.update(task.documentId, { syncStatus: "synced" });
                         } else if (task.targetCollection === "profissionais") {
                              await db.profissionais.update(task.documentId, { syncStatus: "synced" });
+                        } else if (task.targetCollection === "premissas_modulos") {
+                             await db.modulos.update(task.documentId, { syncStatus: "synced" });
+                        } else if (task.targetCollection === "operacoes") {
+                             await db.operacoes.update(task.documentId, { syncStatus: "synced" });
+                        } else if (task.targetCollection === "protocolos") {
+                             await db.protocolos.update(task.documentId, { syncStatus: "synced" });
+                        } else if (task.targetCollection === "produtos") {
+                             await db.produtos.update(task.documentId, { syncStatus: "synced" });
+                        } else if (task.targetCollection === "categorias_produto") {
+                             await db.categoriasProduto.update(task.documentId, { syncStatus: "synced" });
+                        } else if (task.targetCollection === "unidades_medida") {
+                             await db.unidadesMedida.update(task.documentId, { syncStatus: "synced" });
+                        } else if (task.targetCollection === "auditoria_logs") {
+                             await db.auditoriaLogs.update(task.documentId, { syncStatus: "synced" });
                         }
                     } else if (task.type === 'addHistory') {
                         // Tira o id falso local e sobe só o conteúdo pro firebase criar um id gerado.

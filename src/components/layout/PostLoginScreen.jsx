@@ -22,6 +22,7 @@ import RelatorioEstimativaPage from "../../modules/relatorioEstimativa/component
 
 // Premissas
 import Premissas from "../../modules/premissas/Premissas";
+import CadastrosMestresModule from "../../modules/cadastros_mestres/CadastrosMestresModule";
 
 // Gerenciamento Ordem de Corte
 import GerenciamentoOrdemCortePage from "../../modules/gerenciamentoOrdemCorte/GerenciamentoOrdemCortePage";
@@ -304,6 +305,10 @@ export default function PostLoginScreen({ onLogout }) {
           ) : activeModule === "premissas" ? (
             <div className="absolute inset-0 z-10 overflow-auto bg-black/20 pb-16">
               <Premissas />
+            </div>
+          ) : activeModule === "cadastros_mestres" ? (
+            <div className="absolute inset-0 z-10 overflow-auto bg-black/20 pb-16">
+              <CadastrosMestresModule />
             </div>
           ) : activeModule === "configuracao" ? (
             <div className="absolute inset-0 z-10 overflow-auto bg-black/20 pb-16">

@@ -61,6 +61,19 @@ export default function SidebarMenu({ activeModule, setActiveModule, setMenuOpen
           <span className="text-[15px] font-medium">Premissas</span>
         </button>
 
+        <button
+          onClick={() => { setActiveModule("cadastros_mestres"); setMenuOpen(false); }}
+          className="w-full flex items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all hover:bg-white/5"
+          style={{
+            background: activeModule === "cadastros_mestres" ? "rgba(212,175,55,0.12)" : "transparent",
+            border: activeModule === "cadastros_mestres" ? "1px solid rgba(230,199,107,0.18)" : "1px solid transparent",
+            color: activeModule === "cadastros_mestres" ? palette.white : palette.text2,
+          }}
+        >
+          <Sliders className="w-5 h-5 shrink-0 transition-colors" style={{ color: activeModule === "cadastros_mestres" ? palette.gold : palette.text2 }} />
+          <span className="text-[15px] font-medium">Cadastros Mestres</span>
+        </button>
+
         <div>
           <button
             onClick={() => setSolicitacoesOpen(!solicitacoesOpen)}
