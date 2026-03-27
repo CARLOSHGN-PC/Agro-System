@@ -6,6 +6,7 @@ import { palette } from "../../constants/theme";
 import db from "../../services/localDb";
 import { showSuccess } from "../../utils/alert";
 import { markAllAsRead, clearAllNotifications } from "../../services/notificationService";
+import { useCompanyConfig } from "../../contexts/ConfigContext";
 
 /**
  * TopNavbar.jsx
@@ -37,6 +38,7 @@ export default function TopNavbar({
   const [isOffline, setIsOffline] = React.useState(!navigator.onLine);
   const [pendingCount, setPendingCount] = React.useState(0);
   const [isSyncing, setIsSyncing] = React.useState(false);
+  const { logoColor } = useCompanyConfig();
 
   // Monitora o estado da conexão e exibe toast de conclusão quando houver sync finalizado
   React.useEffect(() => {
@@ -131,7 +133,7 @@ export default function TopNavbar({
       {/* Centro: Logo e Status de Conexão/Sincronização */}
       <div className="flex flex-col items-center absolute left-1/2 transform -translate-x-1/2">
         <div className="flex items-center gap-2 sm:gap-3 text-white font-semibold text-lg sm:text-xl">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl flex items-center justify-center" style={{ background: "rgba(85,171,82,0.14)", color: "#55AB52" }}>
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl sm:rounded-2xl flex items-center justify-center" style={{ background: `rgba(${parseInt(logoColor.slice(1,3),16)},${parseInt(logoColor.slice(3,5),16)},${parseInt(logoColor.slice(5,7),16)},0.14)`, color: logoColor }}>
             <Leaf className="w-4 h-4 sm:w-5 sm:h-5" />
           </div>
           <span className="hidden sm:inline">AgroSystem - Usina Caçu</span>

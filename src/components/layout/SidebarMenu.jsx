@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Leaf, Wheat, Settings, Users, FileText, FolderOpen, ChevronDown, ChevronRight, Sliders } from "lucide-react";
 import { palette } from "../../constants/theme";
+import { useCompanyConfig } from "../../contexts/ConfigContext";
 
 /**
  * SidebarMenu.jsx
@@ -20,12 +21,13 @@ import { palette } from "../../constants/theme";
  */
 export default function SidebarMenu({ activeModule, setActiveModule, setMenuOpen }) {
   const [solicitacoesOpen, setSolicitacoesOpen] = useState(activeModule === "gerenciamentoOrdemCorte");
+  const { logoColor } = useCompanyConfig();
 
   return (
     <div className="h-full flex flex-col" style={{ background: "linear-gradient(180deg, rgba(10,10,10,0.98), rgba(13,27,42,0.98))" }}>
       <div className="h-16 px-5 flex items-center border-b shrink-0" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
         <div className="flex items-center gap-3 text-white font-semibold text-[18px]">
-          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: "rgba(85,171,82,0.14)", color: "#55AB52" }}>
+          <div className="w-10 h-10 rounded-2xl flex items-center justify-center" style={{ background: `rgba(${parseInt(logoColor.slice(1,3),16)},${parseInt(logoColor.slice(3,5),16)},${parseInt(logoColor.slice(5,7),16)},0.14)`, color: logoColor }}>
             <Leaf className="w-5 h-5" />
           </div>
           <span>AgroSystem - Usina Caçu</span>
@@ -118,6 +120,19 @@ export default function SidebarMenu({ activeModule, setActiveModule, setMenuOpen
         >
           <FileText className="w-5 h-5 shrink-0 transition-colors" style={{ color: activeModule === "relatorioEstimativa" ? palette.gold : palette.text2 }} />
           <span className="text-[15px] font-medium">Relatórios</span>
+        </button>
+
+        <button
+          onClick={() => { setActiveModule("configuracao"); setMenuOpen(false); }}
+          className="w-full flex items-center gap-4 rounded-2xl px-4 py-3 text-left transition-all hover:bg-white/5"
+          style={{
+            background: activeModule === "configuracao" ? "rgba(212,175,55,0.12)" : "transparent",
+            border: activeModule === "configuracao" ? "1px solid rgba(230,199,107,0.18)" : "1px solid transparent",
+            color: activeModule === "configuracao" ? palette.white : palette.text2,
+          }}
+        >
+          <Settings className="w-5 h-5 shrink-0 transition-colors" style={{ color: activeModule === "configuracao" ? palette.gold : palette.text2 }} />
+          <span className="text-[15px] font-medium">Configuração da Empresa</span>
         </button>
 
       </div>
