@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { firestore as db } from '../services/firebase';
 
 const ConfigContext = createContext();
 

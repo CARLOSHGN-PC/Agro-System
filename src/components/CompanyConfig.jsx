@@ -7,7 +7,7 @@ import { saveEstimate } from "../services/estimativa";
 import { parseBrazilianFloat } from "../utils/formatters";
 import { importShapefile, validateShapefileSet } from "../services/shpImport";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "../services/firebase";
+import { firestore as db } from "../services/firebase";
 import { useCompanyConfig } from "../contexts/ConfigContext";
 import { Palette } from "lucide-react";
 
