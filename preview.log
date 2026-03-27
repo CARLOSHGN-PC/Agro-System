@@ -2,5 +2,6 @@
 > agrosystem-react-pages@1.0.0 preview
 > vite preview
 
-  ➜  Local:   http://localhost:4173/Agro-System/
+Port 4173 is in use, trying another one...
+  ➜  Local:   http://localhost:4174/Agro-System/
   ➜  Network: use --host to expose

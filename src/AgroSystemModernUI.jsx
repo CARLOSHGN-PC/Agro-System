@@ -65,7 +65,9 @@ export default function AgroSystemModernUI() {
         </motion.div>
       ) : (
         <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <LoginScreen onLoginSuccess={forceLoginState} />
+          <ConfigProvider currentCompanyId={currentCompanyId}>
+            <LoginScreen onLoginSuccess={forceLoginState} />
+          </ConfigProvider>
         </motion.div>
       )}
     </AnimatePresence>
