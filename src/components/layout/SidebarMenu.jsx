@@ -71,7 +71,7 @@ export default function SidebarMenu({ activeModule, setActiveModule, setMenuOpen
           }}
         >
           <Sliders className="w-5 h-5 shrink-0 transition-colors" style={{ color: activeModule === "cadastros_mestres" ? palette.gold : palette.text2 }} />
-          <span className="text-[15px] font-medium">Cadastros Mestres</span>
+          <span className="text-[15px] font-medium">Cadastro Geral</span>
         </button>
 
         <div>

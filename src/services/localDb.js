@@ -52,7 +52,13 @@ db.version(5).stores({
 
 // Aumentamos a versão do Dexie para acomodar o Módulo Premissas e Cadastros Mestres.
 // É crítico não quebrar os dados antigos, então fazemos apenas um upgrade incremental.
-db.version(6).stores({
+db.version(7).stores({
+  // === Cadastro Geral: Propriedades Agrícolas (Fazendas e Talhões baseados em planilha) ===
+  fazendas: '&id, companyId, codFaz, desFazenda, syncStatus, [companyId+codFaz]',
+
+  // Guardamos todos os 45 campos aqui no Talhão
+  talhoes: '&id, fazendaId, companyId, talhao, syncStatus, [companyId+fazendaId], [companyId+fazendaId+talhao]',
+
   // === Módulo Premissas / Tratos Culturais ===
   // Estrutura Base
   modulos: '&id, nome, status',
