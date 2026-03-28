@@ -6,6 +6,7 @@ import ProdutosList from './produtos/ProdutosList.jsx';
 import { MapPin } from 'lucide-react';
 import FazendasList from './fazendas/FazendasList.jsx';
 import VariedadesList from './variedades/VariedadesList.jsx';
+import OperacoesList from './operacoes/OperacoesList.jsx';
 
 /**
  * @file CadastrosMestresModule.jsx
@@ -35,6 +36,18 @@ export default function CadastrosMestresModule() {
         >
           <MapPin className="w-4 h-4" /> Fazendas e Talhões
           {activeTab === 'fazendas' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: palette.gold }}></div>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('operacoes')}
+          className={`pb-3 font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'operacoes' ? 'text-white' : 'text-white/40 hover:text-white/80'
+          }`}
+        >
+          <Package className="w-4 h-4" /> Operações
+          {activeTab === 'operacoes' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: palette.gold }}></div>
           )}
         </button>
@@ -87,6 +100,7 @@ export default function CadastrosMestresModule() {
       {/* Renderização Condicional da Aba */}
       <div className="flex-1 flex flex-col min-h-0 relative">
           {activeTab === 'fazendas' && <FazendasList />}
+          {activeTab === 'operacoes' && <OperacoesList />}
           {activeTab === 'produtos' && <ProdutosList />}
           {activeTab === 'variedades' && <VariedadesList />}
       {activeTab === 'categorias' && (

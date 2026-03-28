@@ -115,6 +115,8 @@ export const processQueue = async () => {
                              await db.categoriasProduto.update(task.documentId, { syncStatus: "synced" });
                         } else if (task.targetCollection === "unidades_medida") {
                              await db.unidadesMedida.update(task.documentId, { syncStatus: "synced" });
+                        } else if (task.targetCollection === "operacoes_geral") {
+                            await db.operacoes_geral.update(task.documentId, { syncStatus: 'synced' });
                         } else if (task.targetCollection === "auditoria_logs") {
                              await db.auditoriaLogs.update(task.documentId, { syncStatus: "synced" });
                         }
