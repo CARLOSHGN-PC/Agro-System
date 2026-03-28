@@ -43,11 +43,11 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 sm:p-6 animate-fade-in">
-      <div className="bg-[#121212] border border-white/10 rounded-2xl w-full max-w-7xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 p-2 sm:p-6 animate-fade-in">
+      <div className="bg-[#121212] border border-white/10 rounded-2xl w-[95vw] lg:w-full lg:max-w-7xl max-h-[95vh] lg:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-scale-in">
 
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between p-6 border-b border-white/10 bg-black/40 relative overflow-hidden">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 bg-black/40 relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-transparent pointer-events-none"></div>
             <div className="z-10">
                 <h3 className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
@@ -61,14 +61,9 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
             </button>
         </div>
 
-        {/* Corpo principal dividido em lista e detalhes do Talhão selecionado */}
-        {/* O que este bloco faz: Define um flex container que em telas pequenas quebra linha (flex-col) se não ajustarmos, mas o usuário pediu para adaptar pra qualquer tamanho de tela web lado a lado. */}
-        <div className="flex-1 flex flex-row overflow-hidden relative">
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
 
-            {/* Coluna Esquerda: Lista de Talhões */}
-            {/* O que este bloco faz: Ajusta as larguras para telas de diferentes tamanhos, mantendo um menu lateral flexível entre w-1/3 e larguras fixas.
-                Por que ele existe: Para não esconder a listagem de talhões em telas de laptop ou monitores menores (ex: 1366x768). */}
-            <div className={`w-1/3 min-w-[280px] max-w-[350px] flex flex-col border-r border-white/10 bg-[#0A0A0A]`}>
+            <div className={`w-full lg:w-1/3 lg:min-w-[280px] lg:max-w-[350px] flex flex-col border-r border-white/10 bg-[#0A0A0A] ${selectedTalhao ? 'hidden lg:flex' : 'flex'}`}>
                 <div className="p-4 border-b border-white/5">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
@@ -109,9 +104,7 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
                 </div>
             </div>
 
-            {/* Coluna Direita: Os 45 Detalhes do Talhão (Planilha Master) */}
-            {/* O que este bloco faz: Painel principal que exibe todos os dados sem sobrepor a lista à esquerda em telas médias/pequenas (desktop). */}
-            <div className={`flex-1 bg-[#121212] overflow-y-auto relative p-4 sm:p-6`}>
+            <div className={`flex-1 bg-[#121212] overflow-y-auto relative p-4 sm:p-6 ${!selectedTalhao ? 'hidden lg:block' : 'block'}`}>
                 {!selectedTalhao ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-white/20">
                         <Target className="w-16 h-16 mb-4 opacity-50" />
@@ -125,7 +118,7 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
                             <button onClick={() => setSelectedTalhao(null)} className="lg:hidden p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
                                 <X className="w-5 h-5 text-white/70" />
                             </button>
-                            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-xl font-bold text-white border border-white/10">
+                            <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-xl font-bold text-white border border-white/10 shrink-0">
                                 {selectedTalhao.TALHAO}
                             </div>
                             <div>
