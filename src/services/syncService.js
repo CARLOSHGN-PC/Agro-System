@@ -109,6 +109,8 @@ export const processQueue = async () => {
                              await db.protocolos.update(task.documentId, { syncStatus: "synced" });
                         } else if (task.targetCollection === "produtos") {
                              await db.produtos.update(task.documentId, { syncStatus: "synced" });
+                        } else if (task.targetCollection === "variedades") {
+                             await db.variedades.update(task.documentId, { syncStatus: "synced" });
                         } else if (task.targetCollection === "categorias_produto") {
                              await db.categoriasProduto.update(task.documentId, { syncStatus: "synced" });
                         } else if (task.targetCollection === "unidades_medida") {
