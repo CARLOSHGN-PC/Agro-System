@@ -81,4 +81,11 @@ db.version(7).stores({
   auditoriaLogs: '&id, entidade, entidadeId, acao, usuarioId, timestamp, companyId, syncStatus, [companyId+entidade]'
 });
 
+// Aumentamos a versão do Dexie para acomodar o Cadastro de Variedades.
+db.version(8).stores({
+  // === Cadastros Mestres: Variedades ===
+  // Armazena as variedades da cana de açúcar importadas via planilha.
+  variedades: '&id, codigo, variedade, tipoMaturacao, inicioJanela, fimJanela, status, companyId, syncStatus, [companyId+variedade]'
+});
+
 export default db;

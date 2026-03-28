@@ -1,10 +1,11 @@
 import React from 'react';
 import { palette } from '../../constants/theme.js';
-import { Package, Shapes, Scale } from 'lucide-react';
+import { Package, Shapes, Scale, Leaf } from 'lucide-react';
 import ProdutosList from './produtos/ProdutosList.jsx';
 
 import { MapPin } from 'lucide-react';
 import FazendasList from './fazendas/FazendasList.jsx';
+import VariedadesList from './variedades/VariedadesList.jsx';
 
 /**
  * @file CadastrosMestresModule.jsx
@@ -20,7 +21,7 @@ export default function CadastrosMestresModule() {
       <div className="mb-6 shrink-0">
         <h1 className="text-3xl font-bold tracking-tight mb-2">Cadastro Geral</h1>
         <p className="text-[15px] text-white/60">
-          Gerencie propriedades agrícolas, produtos, categorias e unidades de medida.
+          Gerencie propriedades agrícolas, produtos, categorias, unidades de medida e variedades de cana.
         </p>
       </div>
 
@@ -34,6 +35,17 @@ export default function CadastrosMestresModule() {
         >
           <MapPin className="w-4 h-4" /> Fazendas e Talhões
           {activeTab === 'fazendas' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: palette.gold }}></div>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('variedades')}
+          className={`pb-3 font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'variedades' ? 'text-white' : 'text-white/40 hover:text-white/80'
+          }`}
+        >
+          <Leaf className="w-4 h-4" /> Variedades
+          {activeTab === 'variedades' && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: palette.gold }}></div>
           )}
         </button>
@@ -76,6 +88,7 @@ export default function CadastrosMestresModule() {
       <div className="flex-1 flex flex-col min-h-0 relative">
           {activeTab === 'fazendas' && <FazendasList />}
           {activeTab === 'produtos' && <ProdutosList />}
+          {activeTab === 'variedades' && <VariedadesList />}
       {activeTab === 'categorias' && (
          <div className="flex-1 rounded-[24px] border overflow-hidden bg-[#0A0A0A] border-white/5 p-6 flex items-center justify-center text-white/40">
            Em construção: CRUD de Categorias
