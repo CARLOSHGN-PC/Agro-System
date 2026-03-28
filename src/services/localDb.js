@@ -88,4 +88,11 @@ db.version(8).stores({
   variedades: '&id, codigo, variedade, tipoMaturacao, inicioJanela, fimJanela, status, companyId, syncStatus, [companyId+variedade]'
 });
 
+// Aumentamos a versão do Dexie para acomodar o Cadastro de Operações.
+db.version(9).stores({
+  // === Cadastros Mestres: Operações ===
+  // Armazena as operações importadas via planilha.
+  operacoes: '&id, codCcustoRateio, cdCcusto, deCcusto, cdOperacao, deOperacao, unidade, tipoOperacao, classe, status, companyId, syncStatus, [companyId+cdOperacao]'
+});
+
 export default db;
