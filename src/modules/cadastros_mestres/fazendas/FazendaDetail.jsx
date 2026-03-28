@@ -93,9 +93,9 @@ export default function FazendaDetail({ fazendaId, onBack }) {
   );
 
   return (
-    <div className="flex flex-col h-full bg-[#0A0A0A] animate-fade-in relative z-10 w-full overflow-hidden">
+    <div className="flex flex-col bg-[#0A0A0A] animate-fade-in relative z-10 w-full min-h-[calc(100vh-100px)]">
         {/* Cabeçalho */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 bg-black/40 relative shrink-0">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 bg-black/40 relative shrink-0 sticky top-0 z-20 backdrop-blur-md">
             <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-transparent pointer-events-none"></div>
             <div className="z-10 flex items-center gap-4">
                 <button
@@ -116,10 +116,10 @@ export default function FazendaDetail({ fazendaId, onBack }) {
             </div>
         </div>
 
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        <div className="flex-1 flex flex-col md:flex-row relative">
             {/* Lista Lateral de Talhões */}
-            <div className={`w-full md:w-1/3 md:min-w-[280px] md:max-w-[350px] flex flex-col border-r border-white/10 bg-[#0A0A0A] ${selectedTalhao ? 'hidden md:flex' : 'flex'} shrink-0`}>
-                <div className="p-4 border-b border-white/5 shrink-0">
+            <div className={`w-full md:w-1/3 md:min-w-[280px] md:max-w-[350px] flex flex-col border-r border-white/10 bg-[#0A0A0A] ${selectedTalhao ? 'hidden md:flex' : 'flex'} shrink-0 min-h-[500px]`}>
+                <div className="p-4 border-b border-white/5 shrink-0 sticky top-[80px] z-10 bg-[#0A0A0A]">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
                         <input
@@ -131,7 +131,7 @@ export default function FazendaDetail({ fazendaId, onBack }) {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar relative">
+                <div className="flex-1 p-2 space-y-1 relative">
                     {loading ? (
                         <p className="p-4 text-center text-white/30 text-sm">Carregando dados...</p>
                     ) : filteredTalhoes.length === 0 ? (
@@ -160,9 +160,9 @@ export default function FazendaDetail({ fazendaId, onBack }) {
             </div>
 
             {/* Painel de Detalhes Principal */}
-            <div className={`flex-1 bg-[#121212] overflow-y-auto relative p-4 sm:p-6 custom-scrollbar ${!selectedTalhao ? 'hidden md:flex flex-col' : 'block'}`}>
+            <div className={`flex-1 bg-[#121212] relative p-4 sm:p-6 ${!selectedTalhao ? 'hidden md:flex flex-col min-h-[500px]' : 'block'}`}>
                 {!selectedTalhao ? (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white/20">
+                    <div className="flex-1 flex flex-col items-center justify-center text-white/20 min-h-[400px]">
                         <Target className="w-16 h-16 mb-4 opacity-50" />
                         <p className="text-lg">Selecione um talhão na lista</p>
                         <p className="text-sm">Para visualizar e editar as informações de plantio e georreferenciamento</p>
