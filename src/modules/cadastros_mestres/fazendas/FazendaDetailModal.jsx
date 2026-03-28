@@ -62,10 +62,13 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
         </div>
 
         {/* Corpo principal dividido em lista e detalhes do Talhão selecionado */}
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        {/* O que este bloco faz: Define um flex container que em telas pequenas quebra linha (flex-col) se não ajustarmos, mas o usuário pediu para adaptar pra qualquer tamanho de tela web lado a lado. */}
+        <div className="flex-1 flex flex-row overflow-hidden relative">
 
             {/* Coluna Esquerda: Lista de Talhões */}
-            <div className={`w-full lg:w-1/3 flex flex-col border-b lg:border-b-0 lg:border-r border-white/10 bg-[#0A0A0A] ${selectedTalhao && window.innerWidth < 1024 ? 'hidden' : 'flex'}`}>
+            {/* O que este bloco faz: Ajusta as larguras para telas de diferentes tamanhos, mantendo um menu lateral flexível entre w-1/3 e larguras fixas.
+                Por que ele existe: Para não esconder a listagem de talhões em telas de laptop ou monitores menores (ex: 1366x768). */}
+            <div className={`w-1/3 min-w-[280px] max-w-[350px] flex flex-col border-r border-white/10 bg-[#0A0A0A]`}>
                 <div className="p-4 border-b border-white/5">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
@@ -107,9 +110,10 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
             </div>
 
             {/* Coluna Direita: Os 45 Detalhes do Talhão (Planilha Master) */}
-            <div className={`w-full lg:w-2/3 bg-[#121212] overflow-y-auto relative p-6 ${!selectedTalhao && window.innerWidth < 1024 ? 'hidden' : 'block'}`}>
+            {/* O que este bloco faz: Painel principal que exibe todos os dados sem sobrepor a lista à esquerda em telas médias/pequenas (desktop). */}
+            <div className={`flex-1 bg-[#121212] overflow-y-auto relative p-4 sm:p-6`}>
                 {!selectedTalhao ? (
-                    <div className="absolute inset-0 hidden lg:flex flex-col items-center justify-center text-white/20">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-white/20">
                         <Target className="w-16 h-16 mb-4 opacity-50" />
                         <p className="text-lg">Selecione um talhão na lista</p>
                         <p className="text-sm">Para visualizar todas as informações de plantio e georreferenciamento</p>
@@ -131,14 +135,14 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
                         </div>
 
                         {/* Grid de Informações Densas (As 45 colunas divididas por contexto) */}
-                        <div className="space-y-6">
+                        <div className="space-y-4">
 
                             {/* Bloco 1: Identificação Básica */}
-                            <div className="bg-black/30 border border-white/5 rounded-2xl p-5">
-                                <h5 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-4 flex items-center gap-2">
+                            <div className="bg-black/30 border border-white/5 rounded-2xl p-4">
+                                <h5 className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3 flex items-center gap-2">
                                     <Info className="w-4 h-4"/> Identificação & Localização
                                 </h5>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                                     <DataPoint label="Empresa" value={selectedTalhao.EMPRESA} />
                                     <DataPoint label="Cluster / U.I" value={`${selectedTalhao.CLUSTER} / ${selectedTalhao.UM_INDUSTRIAL}`} />
                                     <DataPoint label="Município" value={selectedTalhao.DE_MUNICIPIO} />
@@ -152,11 +156,11 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
                             </div>
 
                             {/* Bloco 2: Agronômico */}
-                            <div className="bg-black/30 border border-white/5 rounded-2xl p-5">
-                                <h5 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-4 flex items-center gap-2">
+                            <div className="bg-black/30 border border-white/5 rounded-2xl p-4">
+                                <h5 className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3 flex items-center gap-2">
                                     <Info className="w-4 h-4"/> Agronômico & Plantio
                                 </h5>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                                     <DataPoint label="Variedade" value={selectedTalhao.VARIEDADE} highlight />
                                     <DataPoint label="Área (ha)" value={selectedTalhao.AREA_TALHAO} highlight />
                                     <DataPoint label="Estágio / Corte" value={selectedTalhao.ESTAGIO} />
@@ -175,11 +179,11 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
                             </div>
 
                             {/* Bloco 3: Logística e Contratos */}
-                            <div className="bg-black/30 border border-white/5 rounded-2xl p-5">
-                                <h5 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-4 flex items-center gap-2">
+                            <div className="bg-black/30 border border-white/5 rounded-2xl p-4">
+                                <h5 className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3 flex items-center gap-2">
                                     <Info className="w-4 h-4"/> Logística & Contratos
                                 </h5>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                                     <DataPoint label="Dist. Asfalto" value={selectedTalhao.DIST_ASFALTO} />
                                     <DataPoint label="Dist. Terra" value={selectedTalhao.DIST_TERRA} />
                                     <DataPoint label="Dist. Total" value={selectedTalhao.DIST_TOTAL} />
@@ -193,11 +197,11 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
                             </div>
 
                             {/* Bloco 4: Restrições & Certificações */}
-                            <div className="bg-black/30 border border-white/5 rounded-2xl p-5">
-                                <h5 className="text-sm font-semibold uppercase tracking-wider text-white/40 mb-4 flex items-center gap-2">
+                            <div className="bg-black/30 border border-white/5 rounded-2xl p-4">
+                                <h5 className="text-xs font-semibold uppercase tracking-wider text-white/40 mb-3 flex items-center gap-2">
                                     <Info className="w-4 h-4"/> Restrições & Certificações
                                 </h5>
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                                     <DataPoint label="Restrição 1" value={selectedTalhao.RESTRICAO_1} />
                                     <DataPoint label="Restrição 2" value={selectedTalhao.RESTRICAO_2} />
                                     <DataPoint label="Restrição 3" value={selectedTalhao.RESTRICAO_3} />
@@ -220,10 +224,11 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
 }
 
 // Mini Componente para exibição dos dados das 45 colunas uniformemente
+// O que este bloco faz: Exibe o rótulo e o valor de cada propriedade do talhão de forma padronizada. Foi ajustado (padding reduzido p-2 e text-xs) para caberem melhor em telas menores.
 const DataPoint = ({ label, value, highlight = false }) => (
-    <div className={`p-3 rounded-xl border ${highlight ? 'bg-white/5 border-white/10' : 'border-transparent'}`}>
-        <div className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-1">{label}</div>
-        <div className={`text-sm font-medium ${!value || value === '0' || value === 'N' ? 'text-white/30 italic' : 'text-white'}`}>
+    <div className={`p-2 rounded-xl border ${highlight ? 'bg-white/5 border-white/10' : 'border-transparent'}`}>
+        <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-white/40 mb-0.5">{label}</div>
+        <div className={`text-xs sm:text-sm font-medium ${!value || value === '0' || value === 'N' ? 'text-white/30 italic' : 'text-white'} truncate`} title={value || '-'}>
             {value || '-'}
         </div>
     </div>
