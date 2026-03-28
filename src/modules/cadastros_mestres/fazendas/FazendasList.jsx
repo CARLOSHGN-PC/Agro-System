@@ -171,12 +171,16 @@ export default function FazendasList() {
 
   // Se o modo for 'detail', renderiza apenas a tela cheia e oculta a lista
   if (viewMode === 'detail' && currentFazendaId) {
-      return <FazendaDetail fazendaId={currentFazendaId} onBack={() => { setViewMode('list'); loadData(); }} />;
+      return (
+        <div className="flex-1 flex flex-col min-h-0 bg-[#0A0A0A] rounded-[24px] border border-white/5 overflow-hidden">
+            <FazendaDetail fazendaId={currentFazendaId} onBack={() => { setViewMode('list'); loadData(); }} />
+        </div>
+      );
   }
 
   return (
-    <div className="flex flex-col h-full animate-fade-in">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+    <div className="flex flex-col h-full animate-fade-in relative min-h-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4 shrink-0">
         <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
                 <MapPin className="w-6 h-6" style={{ color: palette.gold }} />
@@ -217,9 +221,9 @@ export default function FazendasList() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/5 bg-[#0A0A0A]">
+      <div className="flex-1 rounded-2xl border border-white/5 bg-[#0A0A0A] overflow-y-auto custom-scrollbar relative">
         <table className="w-full text-left text-sm">
-            <thead className="bg-black/40 text-white/50 border-b border-white/5 z-10">
+            <thead className="bg-black/80 text-white/50 border-b border-white/5 z-20 sticky top-0 backdrop-blur-md">
                 <tr>
                     <th className="px-6 py-4 font-semibold">Código da Fazenda</th>
                     <th className="px-6 py-4 font-semibold">Nome / Descrição</th>
