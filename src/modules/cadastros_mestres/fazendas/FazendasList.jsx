@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
-import { Download, Upload, MapPin, Eye, FileSpreadsheet, Search } from 'lucide-react';
+import { Download, Upload, MapPin, Eye, FileSpreadsheet, Search, Edit } from 'lucide-react';
 import { getFazendas, saveFazendaAndTalhoes } from '../../../services/cadastros_mestres/fazendas/fazendasService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
 import * as XLSX from 'xlsx';
@@ -224,12 +224,22 @@ export default function FazendasList() {
                                     {f.syncStatus === 'synced' ? 'Nuvem OK' : 'Sincronizando...'}
                                 </span>
                             </td>
-                            <td className="px-6 py-4 flex items-center justify-end">
+                            <td className="px-6 py-4 flex items-center justify-end gap-2">
+                                <button
+                                    onClick={() => {
+                                        // TODO: Implementar lógica de edição direta da Fazenda (futuro componente EditFazendaModal ou inline)
+                                        alert("Edição manual de fazenda estará disponível em breve. Por enquanto, utilize a reimportação via planilha para atualizar dados em massa.");
+                                    }}
+                                    className="p-2 hover:bg-white/10 rounded-xl text-white/60 hover:text-blue-400 flex items-center transition-all border border-transparent group-hover:border-white/10"
+                                    title="Editar Fazenda"
+                                >
+                                    <Edit className="w-4 h-4" />
+                                </button>
                                 <button
                                     onClick={() => { setCurrentFazendaId(f.id); setIsModalOpen(true); }}
                                     className="p-2 hover:bg-white/10 rounded-xl text-white/60 hover:text-white flex items-center gap-2 transition-all border border-transparent group-hover:border-white/10"
                                 >
-                                    <span className="text-xs font-semibold uppercase tracking-wider">Consultar Talhões</span>
+                                    <span className="text-xs font-semibold uppercase tracking-wider hidden sm:block">Consultar Talhões</span>
                                     <Eye className="w-4 h-4" />
                                 </button>
                             </td>

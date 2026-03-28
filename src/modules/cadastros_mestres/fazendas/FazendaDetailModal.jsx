@@ -44,7 +44,7 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 p-2 sm:p-6 animate-fade-in">
-      <div className="bg-[#121212] border border-white/10 rounded-2xl w-[95vw] lg:w-full lg:max-w-7xl max-h-[95vh] lg:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+      <div className="bg-[#121212] border border-white/10 rounded-2xl w-[95vw] md:w-[90vw] max-w-7xl max-h-[95vh] md:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-scale-in">
 
         {/* Cabeçalho */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 bg-black/40 relative overflow-hidden">
@@ -61,9 +61,12 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
             </button>
         </div>
 
-        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
-            <div className={`w-full lg:w-1/3 lg:min-w-[280px] lg:max-w-[350px] flex flex-col border-r border-white/10 bg-[#0A0A0A] ${selectedTalhao ? 'hidden lg:flex' : 'flex'}`}>
+            {/* A lista de talhões agora não usa overflow interno para evitar duplos scrolls de forma agressiva, delegando pro app ou container principal se possível,
+                ou mantendo um scroll minimalista se estritamente necessário pro design. O usuário quer evitar duplo scroll da página vs modal.
+                Aqui limitamos as larguras para caberem lado a lado corretamente. */}
+            <div className={`w-full md:w-1/3 md:min-w-[280px] md:max-w-[350px] flex flex-col border-r border-white/10 bg-[#0A0A0A] ${selectedTalhao ? 'hidden md:flex' : 'flex'}`}>
                 <div className="p-4 border-b border-white/5">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
@@ -76,7 +79,7 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
                     {loading ? (
                         <p className="p-4 text-center text-white/30 text-sm">Carregando dados...</p>
                     ) : filteredTalhoes.length === 0 ? (
@@ -104,7 +107,7 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
                 </div>
             </div>
 
-            <div className={`flex-1 bg-[#121212] overflow-y-auto relative p-4 sm:p-6 ${!selectedTalhao ? 'hidden lg:block' : 'block'}`}>
+            <div className={`flex-1 bg-[#121212] overflow-y-auto relative p-4 sm:p-6 custom-scrollbar ${!selectedTalhao ? 'hidden md:flex flex-col' : 'block'}`}>
                 {!selectedTalhao ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center text-white/20">
                         <Target className="w-16 h-16 mb-4 opacity-50" />
@@ -115,7 +118,7 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
                     <div className="animate-fade-in space-y-6 pb-8">
 
                         <div className="flex items-center gap-4 pb-4 border-b border-white/10">
-                            <button onClick={() => setSelectedTalhao(null)} className="lg:hidden p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                            <button onClick={() => setSelectedTalhao(null)} className="md:hidden p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors">
                                 <X className="w-5 h-5 text-white/70" />
                             </button>
                             <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center text-xl font-bold text-white border border-white/10 shrink-0">
