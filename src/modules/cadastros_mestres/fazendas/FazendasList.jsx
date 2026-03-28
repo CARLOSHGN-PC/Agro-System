@@ -184,9 +184,9 @@ export default function FazendasList() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto rounded-2xl border border-white/5 bg-[#0A0A0A]">
+      <div className="rounded-2xl border border-white/5 bg-[#0A0A0A]">
         <table className="w-full text-left text-sm">
-            <thead className="bg-black/40 text-white/50 border-b border-white/5 sticky top-0 backdrop-blur-sm z-10">
+            <thead className="bg-black/40 text-white/50 border-b border-white/5 z-10">
                 <tr>
                     <th className="px-6 py-4 font-semibold">Código da Fazenda</th>
                     <th className="px-6 py-4 font-semibold">Nome / Descrição</th>
