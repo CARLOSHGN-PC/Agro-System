@@ -43,8 +43,9 @@ export default function FazendaDetailModal({ fazendaId, onClose }) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 p-2 sm:p-6 animate-fade-in">
-      <div className="bg-[#121212] border border-white/10 rounded-2xl w-[95vw] md:w-[90vw] max-w-7xl max-h-[95vh] md:max-h-[90vh] shadow-2xl flex flex-col overflow-hidden animate-scale-in">
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 p-2 sm:p-4 animate-fade-in">
+      {/* Ajustado max-h para 85vh para garantir que não cubra a navbar ou corte em telas de laptop */}
+      <div className="bg-[#121212] border border-white/10 rounded-2xl w-[95vw] md:w-[90vw] max-w-7xl h-[85vh] shadow-2xl flex flex-col overflow-hidden animate-scale-in">
 
         {/* Cabeçalho */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 bg-black/40 relative overflow-hidden">

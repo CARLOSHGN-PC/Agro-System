@@ -6,6 +6,7 @@ import { useAuth } from '../../../hooks/useAuth.js';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import FazendaDetailModal from './FazendaDetailModal.jsx';
+import EditFazendaModal from './EditFazendaModal.jsx';
 
 /**
  * @file FazendasList.jsx
@@ -40,6 +41,7 @@ export default function FazendasList() {
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentFazendaId, setCurrentFazendaId] = useState(null);
 
   useEffect(() => {
@@ -226,10 +228,7 @@ export default function FazendasList() {
                             </td>
                             <td className="px-6 py-4 flex items-center justify-end gap-2">
                                 <button
-                                    onClick={() => {
-                                        // TODO: Implementar lógica de edição direta da Fazenda (futuro componente EditFazendaModal ou inline)
-                                        alert("Edição manual de fazenda estará disponível em breve. Por enquanto, utilize a reimportação via planilha para atualizar dados em massa.");
-                                    }}
+                                    onClick={() => { setCurrentFazendaId(f.id); setIsEditModalOpen(true); }}
                                     className="p-2 hover:bg-white/10 rounded-xl text-white/60 hover:text-blue-400 flex items-center transition-all border border-transparent group-hover:border-white/10"
                                     title="Editar Fazenda"
                                 >
@@ -254,6 +253,17 @@ export default function FazendasList() {
         <FazendaDetailModal
             fazendaId={currentFazendaId}
             onClose={() => setIsModalOpen(false)}
+        />
+      )}
+
+      {isEditModalOpen && (
+        <EditFazendaModal
+            fazendaId={currentFazendaId}
+            onClose={() => setIsEditModalOpen(false)}
+            onSave={() => {
+                setIsEditModalOpen(false);
+                loadData();
+            }}
         />
       )}
     </div>
