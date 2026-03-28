@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
-import { Download, Upload, MapPin, Eye, FileSpreadsheet } from 'lucide-react';
+import { Download, Upload, MapPin, Eye, FileSpreadsheet, Search } from 'lucide-react';
 import { getFazendas, saveFazendaAndTalhoes } from '../../../services/cadastros_mestres/fazendas/fazendasService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
 import * as XLSX from 'xlsx';
@@ -34,6 +34,10 @@ export default function FazendasList() {
   const [loading, setLoading] = useState(true);
   const [isImporting, setIsImporting] = useState(false);
 
+  // O que este estado faz: Armazena o termo de busca digitado pelo usuário para filtrar a lista de fazendas.
+  // Por que ele existe: Para que o usuário possa encontrar facilmente uma fazenda pelo código ou descrição, caso precise editá-la manualmente no futuro.
+  const [searchTerm, setSearchTerm] = useState('');
+
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentFazendaId, setCurrentFazendaId] = useState(null);
@@ -45,7 +49,21 @@ export default function FazendasList() {
   const loadData = async () => {
     setLoading(true);
     const dataFazendas = await getFazendas(companyId);
-    setFazendas(dataFazendas);
+
+    /**
+     * Ordena a lista de fazendas pelo código (codFaz) de forma crescente.
+     * Tenta converter para número, se for numérico, compara. Se não, compara como string.
+     */
+    const sortedFazendas = dataFazendas.sort((a, b) => {
+        const codA = parseInt(a.codFaz, 10);
+        const codB = parseInt(b.codFaz, 10);
+        if (!isNaN(codA) && !isNaN(codB)) {
+            return codA - codB;
+        }
+        return String(a.codFaz).localeCompare(String(b.codFaz), undefined, { numeric: true });
+    });
+
+    setFazendas(sortedFazendas);
     setLoading(false);
   };
 
@@ -117,6 +135,12 @@ export default function FazendasList() {
     reader.readAsArrayBuffer(file);
   };
 
+  const filteredFazendas = fazendas.filter(f => {
+      const term = searchTerm.toLowerCase();
+      return (f.codFaz && String(f.codFaz).toLowerCase().includes(term)) ||
+             (f.desFazenda && String(f.desFazenda).toLowerCase().includes(term));
+  });
+
   return (
     <div className="flex flex-col h-full animate-fade-in">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
@@ -126,6 +150,17 @@ export default function FazendasList() {
                 Fazendas Cadastradas
             </h2>
             <p className="text-sm text-white/50 mt-1">Base mestre de propriedades e talhões (via planilha)</p>
+        </div>
+
+        <div className="flex-1 max-w-md relative mx-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+            <input
+                type="text"
+                placeholder="Pesquisar por Código ou Fazenda..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-gold transition-colors"
+            />
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
@@ -160,37 +195,47 @@ export default function FazendasList() {
                 </tr>
             </thead>
             <tbody>
-                {fazendas.length === 0 && !loading && (
+                {fazendas.length === 0 && !loading ? (
                     <tr>
                         <td colSpan="4" className="text-center py-16 text-white/40">
                             <div className="flex flex-col items-center justify-center">
                                 <FileSpreadsheet className="w-12 h-12 mb-4 opacity-20" />
-                                <p className="text-lg">Nenhuma fazenda cadastrada.</p>
-                                <p className="text-xs mt-2">Baixe o modelo, preencha as 45 colunas e importe a planilha mestre.</p>
+                                <p className="text-lg mb-2">Nenhuma fazenda cadastrada no momento.</p>
+                                <p className="text-sm">Baixe o modelo e importe sua planilha para começar.</p>
                             </div>
                         </td>
                     </tr>
-                )}
-                {fazendas.map(f => (
-                    <tr key={f.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
-                        <td className="px-6 py-4 font-mono text-white/80">{f.codFaz}</td>
-                        <td className="px-6 py-4 font-medium text-white">{f.desFazenda}</td>
-                        <td className="px-6 py-4">
-                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${f.syncStatus === 'synced' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
-                                {f.syncStatus === 'synced' ? 'Nuvem OK' : 'Sincronizando...'}
-                            </span>
-                        </td>
-                        <td className="px-6 py-4 flex items-center justify-end">
-                            <button
-                                onClick={() => { setCurrentFazendaId(f.id); setIsModalOpen(true); }}
-                                className="p-2 hover:bg-white/10 rounded-xl text-white/60 hover:text-white flex items-center gap-2 transition-all border border-transparent group-hover:border-white/10"
-                            >
-                                <span className="text-xs font-semibold uppercase tracking-wider">Consultar Talhões</span>
-                                <Eye className="w-4 h-4" />
-                            </button>
+                ) : filteredFazendas.length === 0 && !loading ? (
+                    <tr>
+                        <td colSpan="4" className="text-center py-16 text-white/40">
+                            <div className="flex flex-col items-center justify-center">
+                                <Search className="w-12 h-12 mb-4 opacity-20" />
+                                <p className="text-lg">Nenhuma fazenda encontrada com esse filtro.</p>
+                            </div>
                         </td>
                     </tr>
-                ))}
+                ) : (
+                    filteredFazendas.map(f => (
+                        <tr key={f.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
+                            <td className="px-6 py-4 font-mono text-white/80">{f.codFaz}</td>
+                            <td className="px-6 py-4 font-medium text-white">{f.desFazenda}</td>
+                            <td className="px-6 py-4">
+                                <span className={`px-2 py-1 rounded-full text-xs font-semibold ${f.syncStatus === 'synced' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                                    {f.syncStatus === 'synced' ? 'Nuvem OK' : 'Sincronizando...'}
+                                </span>
+                            </td>
+                            <td className="px-6 py-4 flex items-center justify-end">
+                                <button
+                                    onClick={() => { setCurrentFazendaId(f.id); setIsModalOpen(true); }}
+                                    className="p-2 hover:bg-white/10 rounded-xl text-white/60 hover:text-white flex items-center gap-2 transition-all border border-transparent group-hover:border-white/10"
+                                >
+                                    <span className="text-xs font-semibold uppercase tracking-wider">Consultar Talhões</span>
+                                    <Eye className="w-4 h-4" />
+                                </button>
+                            </td>
+                        </tr>
+                    ))
+                )}
             </tbody>
         </table>
       </div>
