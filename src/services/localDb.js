@@ -88,4 +88,21 @@ db.version(8).stores({
   variedades: '&id, codigo, variedade, tipoMaturacao, inicioJanela, fimJanela, status, companyId, syncStatus, [companyId+variedade]'
 });
 
+/**
+ * Atualização de versão (v9) para adicionar o módulo de Operações (Cadastro Mestre)
+ *
+ * O que este bloco faz:
+ * Adiciona a tabela "operacoes_geral" ao schema do Dexie. Ela vai armazenar todas
+ * as operações que vêm da planilha Excel, vinculando o código da operação e o centro de custo.
+ *
+ * Por que ele existe:
+ * Para permitir CRUD completo e rápido no modo offline, garantindo que o filtro de tela e as edições
+ * funcionem mesmo sem internet, antes de subir para o Firebase.
+ */
+db.version(9).stores({
+  // === Cadastros Mestres: Operações Gerais ===
+  // Armazena as operações importadas da planilha contendo CD_OPERACAO, DE_OPERACAO, UNIDADE, etc.
+  operacoes_geral: '&id, cdOperacao, deOperacao, cdCcusto, deCcusto, codCcustoRateio, unidade, tipoOperacao, classe, status, companyId, syncStatus, [companyId+cdOperacao]'
+});
+
 export default db;
