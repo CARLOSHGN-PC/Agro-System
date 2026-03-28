@@ -3,6 +3,7 @@ import { palette } from '../../../constants/theme.js';
 import { MapPin, X, Target, Info, Search, ArrowLeft, Edit2, Save } from 'lucide-react';
 import { getTalhoesPorFazenda, updateTalhao } from '../../../services/cadastros_mestres/fazendas/fazendasService.js';
 import db from '../../../services/localDb.js';
+import { useLiveQuery } from 'dexie-react-hooks';
 
 /**
  * @file FazendaDetail.jsx
@@ -13,6 +14,9 @@ import db from '../../../services/localDb.js';
 export default function FazendaDetail({ fazendaId, onBack }) {
   const companyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || "AgroSystem_Demo";
   const authUser = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.uid || "system";
+
+  const rawFazenda = useLiveQuery(() => db.fazendas.get(fazendaId), [fazendaId]);
+  const rawTalhoes = useLiveQuery(() => db.talhoes.where('[companyId+fazendaId]').equals([companyId, fazendaId]).toArray(), [companyId, fazendaId]);
 
   const [fazenda, setFazenda] = useState(null);
   const [talhoes, setTalhoes] = useState([]);
