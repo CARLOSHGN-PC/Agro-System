@@ -93,9 +93,9 @@ export default function FazendaDetail({ fazendaId, onBack }) {
   );
 
   return (
-    <div className="flex flex-col bg-[#0A0A0A] animate-fade-in relative z-10 w-full h-[calc(100vh-80px)] overflow-hidden">
+    <div className="flex flex-col bg-[#0A0A0A] animate-fade-in relative z-10 w-full h-full overflow-hidden">
         {/* Cabeçalho Fixo */}
-        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 bg-black/40 relative shrink-0 z-30 sticky top-0 backdrop-blur-md">
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 bg-black/40 shrink-0 z-30 sticky top-0 backdrop-blur-md">
             <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 to-transparent pointer-events-none"></div>
             <div className="z-10 flex items-center gap-4">
                 <button
@@ -118,7 +118,7 @@ export default function FazendaDetail({ fazendaId, onBack }) {
 
         <div className="flex-1 flex flex-col md:flex-row relative overflow-hidden">
             {/* Lista Lateral de Talhões */}
-            <div className={`w-full md:w-1/3 md:min-w-[280px] md:max-w-[350px] flex flex-col border-r border-white/10 bg-[#0A0A0A] ${selectedTalhao ? 'hidden md:flex' : 'flex'} shrink-0 h-full`}>
+            <div className={`w-full md:w-1/3 md:min-w-[280px] md:max-w-[350px] flex flex-col border-r border-white/10 bg-[#0A0A0A] ${selectedTalhao ? 'hidden md:flex' : 'flex'} shrink-0 h-full relative`}>
                 <div className="p-4 border-b border-white/5 shrink-0 bg-[#0A0A0A] sticky top-0 z-20 backdrop-blur-md">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
