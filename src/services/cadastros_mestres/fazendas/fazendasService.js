@@ -83,3 +83,34 @@ export const saveFazendaAndTalhoes = async (fazendaData, talhoesDataArray, usuar
 
     return payloadFazenda;
 };
+
+/**
+ * Atualiza um talhão específico no banco local e enfileira para a nuvem.
+ */
+export const updateTalhao = async (companyId, fazendaId, talhaoId, updatedData, usuarioId) => {
+    const existing = await db.talhoes.get(talhaoId);
+    if (!existing) throw new Error("Talhão não encontrado.");
+
+    const payload = {
+        ...existing,
+        ...updatedData,
+        talhao: updatedData.TALHAO || existing.TALHAO,
+        syncStatus: 'pending',
+        updatedAt: new Date().toISOString(),
+        updatedBy: usuarioId
+    };
+
+    await db.talhoes.put(payload);
+    await enqueueTask('createOrUpdate', `fazendas/${fazendaId}/talhoes`, talhaoId, payload);
+
+    await logAuditoria(
+        'talhoes',
+        talhaoId,
+        'UPDATE',
+        { diff: updatedData, context: 'Edição Manual de Talhão' },
+        usuarioId,
+        companyId
+    );
+
+    return payload;
+};

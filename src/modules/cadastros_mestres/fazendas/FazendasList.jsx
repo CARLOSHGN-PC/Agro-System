@@ -5,7 +5,7 @@ import { getFazendas, saveFazendaAndTalhoes } from '../../../services/cadastros_
 import { useAuth } from '../../../hooks/useAuth.js';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import FazendaDetailModal from './FazendaDetailModal.jsx';
+import FazendaDetail from './FazendaDetail.jsx';
 import EditFazendaModal from './EditFazendaModal.jsx';
 
 /**
@@ -39,10 +39,13 @@ export default function FazendasList() {
   // Por que ele existe: Para que o usuário possa encontrar facilmente uma fazenda pelo código ou descrição, caso precise editá-la manualmente no futuro.
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  // Navegação e Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentFazendaId, setCurrentFazendaId] = useState(null);
+
+  // O que este estado faz: Controla se estamos na visão de lista ou na visão de detalhes (tela cheia)
+  // Por que ele existe: Para alternar as views sem a necessidade do react-router-dom, já que essa seção inteira renderiza condicionalmente dentro do main App.
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'detail'
 
   useEffect(() => {
     loadData();
@@ -143,6 +146,11 @@ export default function FazendasList() {
              (f.desFazenda && String(f.desFazenda).toLowerCase().includes(term));
   });
 
+  // Se o modo for 'detail', renderiza apenas a tela cheia e oculta a lista
+  if (viewMode === 'detail' && currentFazendaId) {
+      return <FazendaDetail fazendaId={currentFazendaId} onBack={() => { setViewMode('list'); loadData(); }} />;
+  }
+
   return (
     <div className="flex flex-col h-full animate-fade-in">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
@@ -235,7 +243,7 @@ export default function FazendasList() {
                                     <Edit className="w-4 h-4" />
                                 </button>
                                 <button
-                                    onClick={() => { setCurrentFazendaId(f.id); setIsModalOpen(true); }}
+                                    onClick={() => { setCurrentFazendaId(f.id); setViewMode('detail'); }}
                                     className="p-2 hover:bg-white/10 rounded-xl text-white/60 hover:text-white flex items-center gap-2 transition-all border border-transparent group-hover:border-white/10"
                                 >
                                     <span className="text-xs font-semibold uppercase tracking-wider hidden sm:block">Consultar Talhões</span>
@@ -248,13 +256,6 @@ export default function FazendasList() {
             </tbody>
         </table>
       </div>
-
-      {isModalOpen && (
-        <FazendaDetailModal
-            fazendaId={currentFazendaId}
-            onClose={() => setIsModalOpen(false)}
-        />
-      )}
 
       {isEditModalOpen && (
         <EditFazendaModal
