@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
 import { Download, Upload, MapPin, Eye, FileSpreadsheet, Search, Edit } from 'lucide-react';
-import { getFazendas, saveFazendaAndTalhoes } from '../../../services/cadastros_mestres/fazendas/fazendasService.js';
+import { getFazendas, saveFazendaAndTalhoes, subscribeToFazendasRealtime, subscribeToTalhoesRealtime } from '../../../services/cadastros_mestres/fazendas/fazendasService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
+import { useLiveQuery } from 'dexie-react-hooks';
+import db from '../../../services/localDb.js';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import FazendaDetail from './FazendaDetail.jsx';
@@ -31,8 +33,25 @@ export default function FazendasList() {
   const { user } = useAuth();
   const companyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || "AgroSystem_Demo";
 
+  const rawFazendas = useLiveQuery(() => db.fazendas.where('companyId').equals(companyId).toArray(), [companyId]) || [];
   const [fazendas, setFazendas] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Sync state whenever Dexie updates
+  useEffect(() => {
+    if (rawFazendas) {
+        const sortedFazendas = [...rawFazendas].sort((a, b) => {
+            const codA = parseInt(a.codFaz, 10);
+            const codB = parseInt(b.codFaz, 10);
+            if (!isNaN(codA) && !isNaN(codB)) {
+                return codA - codB;
+            }
+            return String(a.codFaz).localeCompare(String(b.codFaz), undefined, { numeric: true });
+        });
+        setFazendas(sortedFazendas);
+        setLoading(false);
+    }
+  }, [rawFazendas]);
   const [isImporting, setIsImporting] = useState(false);
 
   // O que este estado faz: Armazena o termo de busca digitado pelo usuário para filtrar a lista de fazendas.
@@ -49,16 +68,20 @@ export default function FazendasList() {
 
   useEffect(() => {
     loadData();
-  }, []);
+
+      const unsubFazendas = subscribeToFazendasRealtime(companyId);
+      const unsubTalhoes = subscribeToTalhoesRealtime(companyId);
+
+      return () => {
+          unsubFazendas();
+          unsubTalhoes();
+      };
+  }, [companyId]);
 
   const loadData = async () => {
     setLoading(true);
     const dataFazendas = await getFazendas(companyId);
 
-    /**
-     * Ordena a lista de fazendas pelo código (codFaz) de forma crescente.
-     * Tenta converter para número, se for numérico, compara. Se não, compara como string.
-     */
     const sortedFazendas = dataFazendas.sort((a, b) => {
         const codA = parseInt(a.codFaz, 10);
         const codB = parseInt(b.codFaz, 10);

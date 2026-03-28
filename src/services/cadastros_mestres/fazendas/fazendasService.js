@@ -1,3 +1,5 @@
+import { collection, query, where, collectionGroup, onSnapshot } from 'firebase/firestore';
+import { firestore } from '../../../services/firebase.js';
 import db from '../../../services/localDb.js';
 import { enqueueTask } from '../../../services/syncService.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -113,4 +115,104 @@ export const updateTalhao = async (companyId, fazendaId, talhaoId, updatedData, 
     );
 
     return payload;
+};
+
+/**
+ * Escuta mudanças em tempo real na coleção de Fazendas.
+ */
+export const subscribeToFazendasRealtime = (companyId) => {
+    if (!navigator.onLine) return () => {};
+
+    const q = query(
+        collection(firestore, 'fazendas'),
+        where("companyId", "==", companyId)
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        let hasChanges = false;
+        const toAddOrUpdate = [];
+        const toDeleteIds = [];
+
+        snapshot.docChanges().forEach((change) => {
+            const data = change.doc.data();
+            const id = change.doc.id;
+
+            if (change.type === "added" || change.type === "modified") {
+                toAddOrUpdate.push({
+                    ...data,
+                    id: id,
+                    syncStatus: 'synced'
+                });
+                hasChanges = true;
+            } else if (change.type === "removed") {
+                toDeleteIds.push(id);
+                hasChanges = true;
+            }
+        });
+
+        if (hasChanges) {
+            try {
+                if (toAddOrUpdate.length > 0) {
+                    await db.fazendas.bulkPut(toAddOrUpdate);
+                }
+                if (toDeleteIds.length > 0) {
+                    await db.fazendas.bulkDelete(toDeleteIds);
+                }
+            } catch (err) {
+                console.error("[Fazendas Realtime] Erro ao sincronizar para o Dexie:", err);
+            }
+        }
+    });
+
+    return unsubscribe;
+};
+
+/**
+ * Escuta mudanças em tempo real em todas as subcoleções de Talhões (usando collectionGroup).
+ */
+export const subscribeToTalhoesRealtime = (companyId) => {
+    if (!navigator.onLine) return () => {};
+
+    const q = query(
+        collectionGroup(firestore, 'talhoes'),
+        where("companyId", "==", companyId)
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        let hasChanges = false;
+        const toAddOrUpdate = [];
+        const toDeleteIds = [];
+
+        snapshot.docChanges().forEach((change) => {
+            const data = change.doc.data();
+            const id = change.doc.id;
+
+            if (change.type === "added" || change.type === "modified") {
+                toAddOrUpdate.push({
+                    ...data,
+                    id: id,
+                    syncStatus: 'synced'
+                });
+                hasChanges = true;
+            } else if (change.type === "removed") {
+                toDeleteIds.push(id);
+                hasChanges = true;
+            }
+        });
+
+        if (hasChanges) {
+            try {
+                if (toAddOrUpdate.length > 0) {
+                    await db.talhoes.bulkPut(toAddOrUpdate);
+                }
+                if (toDeleteIds.length > 0) {
+                    await db.talhoes.bulkDelete(toDeleteIds);
+                }
+            } catch (err) {
+                console.error("[Talhoes Realtime] Erro ao sincronizar para o Dexie:", err);
+            }
+        }
+    });
+
+    return unsubscribe;
 };
