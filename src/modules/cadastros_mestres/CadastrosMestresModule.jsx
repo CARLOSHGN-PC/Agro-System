@@ -1,7 +1,6 @@
 import React from 'react';
 import { palette } from '../../constants/theme.js';
-import { Package, Shapes, Scale, Leaf, Sprout } from 'lucide-react';
-import ProdutosList from './produtos/ProdutosList.jsx';
+import { Leaf, Sprout } from 'lucide-react';
 
 import { MapPin, Wrench, Tractor, ClipboardList } from 'lucide-react';
 import FazendasList from './fazendas/FazendasList.jsx';
@@ -11,6 +10,9 @@ import InsumosList from './insumos/InsumosList.jsx';
 import ProducaoAgricolaList from './producao_agricola/ProducaoAgricolaList.jsx';
 import ApontamentoInsumoList from './apontamentos_insumo/ApontamentoInsumoList.jsx';
 
+import { subscribeToProducaoAgricolaRealtime } from '../../services/cadastros_mestres/producaoAgricolaService.js';
+import { subscribeToApontamentosInsumoRealtime } from '../../services/cadastros_mestres/apontamentoInsumoService.js';
+
 /**
  * @file CadastrosMestresModule.jsx
  * @description Módulo de Cadastro Geral (Fazendas, Produtos, Unidades, Categorias).
@@ -19,6 +21,19 @@ import ApontamentoInsumoList from './apontamentos_insumo/ApontamentoInsumoList.j
 
 export default function CadastrosMestresModule() {
   const [activeTab, setActiveTab] = React.useState('fazendas');
+  const companyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || "AgroSystem_Demo";
+
+  // Inicia os listeners pesados apenas uma vez aqui no módulo mestre.
+  // Isso evita que milhares de registros sejam baixados toda vez que a aba "monta".
+  React.useEffect(() => {
+    const unsubProducao = subscribeToProducaoAgricolaRealtime(companyId);
+    const unsubApontamentos = subscribeToApontamentosInsumoRealtime(companyId);
+
+    return () => {
+      unsubProducao();
+      unsubApontamentos();
+    };
+  }, [companyId]);
 
   return (
     <div className="h-full flex flex-col p-6 animate-fade-in text-white overflow-y-auto custom-scrollbar" style={{ background: palette.background }}>

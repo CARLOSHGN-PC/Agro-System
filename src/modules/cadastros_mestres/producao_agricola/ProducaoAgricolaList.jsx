@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
 import { Tractor, Plus, Edit2, Trash2, Download, Upload, Search, FileSpreadsheet } from 'lucide-react';
-import { getProducoes, saveProducao, inactivateProducao, saveProducaoEmMassa, subscribeToProducaoAgricolaRealtime } from '../../../services/cadastros_mestres/producaoAgricolaService.js';
+import { saveProducao, inactivateProducao, saveProducaoEmMassa } from '../../../services/cadastros_mestres/producaoAgricolaService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
 import { useLiveQuery } from 'dexie-react-hooks';
 import db from '../../../services/localDb.js';
@@ -24,6 +24,10 @@ export default function ProducaoAgricolaList() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Paginação simples
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 50;
+
   // Sync state whenever Dexie updates
   useEffect(() => {
     if (rawProducoes) {
@@ -37,11 +41,6 @@ export default function ProducaoAgricolaList() {
   const [currentProducao, setCurrentProducao] = useState({
       codFaz: '', desFazenda: '', talhao: '', areaHa: '', corte: '', dtUltCorte: '', tchEst: '', tonEst: '', tchFechado: '', tonFechada: '', atrReal: ''
   });
-
-  useEffect(() => {
-    const unsubscribe = subscribeToProducaoAgricolaRealtime(companyId);
-    return () => unsubscribe();
-  }, [companyId]);
 
   const handleSaveManual = async () => {
     if (!currentProducao.codFaz || !currentProducao.talhao) {
@@ -198,9 +197,12 @@ export default function ProducaoAgricolaList() {
              (prod.talhao && String(prod.talhao).toLowerCase().includes(term));
   });
 
+  const totalPages = Math.ceil(filteredProducoes.length / itemsPerPage);
+  const currentData = filteredProducoes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
-    <div className="flex flex-col h-full animate-fade-in relative min-h-0">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4 shrink-0">
+    <div className="flex flex-col h-full animate-fade-in relative min-h-0 bg-[#0A0A0A] rounded-[24px]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4 shrink-0 p-6 border-b border-white/10">
         <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
                 <Tractor className="w-6 h-6" style={{ color: palette.gold }} />
@@ -215,7 +217,7 @@ export default function ProducaoAgricolaList() {
                 type="text"
                 placeholder="Pesquisar por Código, Fazenda ou Talhão..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-gold transition-colors"
             />
         </div>
@@ -275,7 +277,7 @@ export default function ProducaoAgricolaList() {
                         </td>
                     </tr>
                 ) : (
-                    filteredProducoes.map(prod => (
+                    currentData.map(prod => (
                         <tr key={prod.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                             <td className="px-6 py-4 font-mono font-medium text-white">{prod.codFaz || '-'}</td>
                             <td className="px-6 py-4 font-medium text-white">{prod.desFazenda || '-'}</td>
@@ -310,6 +312,31 @@ export default function ProducaoAgricolaList() {
             </tbody>
         </table>
       </div>
+
+      {/* PAGINAÇÃO */}
+      {totalPages > 1 && (
+        <div className="shrink-0 border-t border-white/10 bg-[#0A0A0A] p-4 flex items-center justify-between text-sm text-white/60">
+            <div>
+                Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, filteredProducoes.length)} de {filteredProducoes.length}
+            </div>
+            <div className="flex gap-2">
+                <button
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    className="px-3 py-1 bg-white/5 border border-white/10 rounded disabled:opacity-50 hover:bg-white/10 transition-colors"
+                >
+                    Anterior
+                </button>
+                <button
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    className="px-3 py-1 bg-white/5 border border-white/10 rounded disabled:opacity-50 hover:bg-white/10 transition-colors"
+                >
+                    Próxima
+                </button>
+            </div>
+        </div>
+      )}
 
       {/* Modal Manual */}
       {isModalOpen && (
