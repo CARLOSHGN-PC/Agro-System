@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { palette } from '../../../../constants/theme.js';
 import { Beaker, Plus, Trash2, Save, X, Settings2 } from 'lucide-react';
 import { getProtocoloItens, getProtocoloOperacoes, saveProtocolo } from '../../../../services/premissas/tratos_culturais/tratosCulturaisService.js';
-import { getProdutos } from '../../../../services/cadastros_mestres/produtosService.js';
+import { getOperacoes } from '../../../../services/cadastros_mestres/operacoesService.js';
+import { getInsumos } from '../../../../services/cadastros_mestres/insumosService.js';
 import db from '../../../../services/localDb.js';
 import { useAuth } from '../../../../hooks/useAuth.js';
 
@@ -25,14 +26,18 @@ export default function ProtocoloFormModal({ protocoloId, onClose, onSaveSuccess
 
   // Catálogos Mestres
   const [produtosDisponiveis, setProdutosDisponiveis] = useState([]);
+  const [operacoesDisponiveis, setOperacoesDisponiveis] = useState([]);
 
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    const prods = await getProdutos(companyId);
-    setProdutosDisponiveis(prods.filter(p => p.status === 'ATIVO'));
+    const ops = await getOperacoes(companyId);
+    setOperacoesDisponiveis(ops.filter(o => o.status === 'ATIVO'));
+
+    const insumos = await getInsumos(companyId);
+    setProdutosDisponiveis(insumos.filter(i => i.status === 'ATIVO'));
 
     if (protocoloId) {
         const pCapa = await db.protocolos.get(protocoloId);
@@ -48,7 +53,7 @@ export default function ProtocoloFormModal({ protocoloId, onClose, onSaveSuccess
 
   // --- Handlers para Operações ---
   const addOperacao = () => {
-      setOperacoes([...operacoes, { id: `temp-op-${Date.now()}`, nome: '', status: 'ATIVO', ordem: operacoes.length + 1 }]);
+      setOperacoes([...operacoes, { id: `temp-op-${Date.now()}`, operacaoId: '', nome: '', status: 'ATIVO', ordem: operacoes.length + 1 }]);
   };
 
   const updateOperacao = (index, field, value) => {
@@ -65,7 +70,7 @@ export default function ProtocoloFormModal({ protocoloId, onClose, onSaveSuccess
 
   // --- Handlers para Produtos (Itens) ---
   const addItem = () => {
-      setItens([...itens, { id: `temp-item-${Date.now()}`, produtoId: '', dosagem: '', unidadeMedidaId: '', status: 'ATIVO', ordem: itens.length + 1 }]);
+      setItens([...itens, { id: `temp-item-${Date.now()}`, insumoId: '', dosagem: '', unidadeMedidaId: '', status: 'ATIVO', ordem: itens.length + 1 }]);
   };
 
   const updateItem = (index, field, value) => {
@@ -188,12 +193,23 @@ export default function ProtocoloFormModal({ protocoloId, onClose, onSaveSuccess
                             operacoes.map((op, index) => (
                                 <div key={op.id} className={`flex flex-col sm:flex-row gap-3 bg-black/40 border p-3 rounded-xl items-center ${op.status === 'INATIVO' ? 'border-red-500/20 opacity-60' : 'border-white/10'}`}>
                                     <div className="flex-1 w-full">
-                                        <input
-                                            value={op.nome}
-                                            onChange={(e) => updateOperacao(index, 'nome', e.target.value)}
-                                            className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gold"
-                                            placeholder="Nome da Operação (ex: Pulverização)"
-                                        />
+                                        <select
+                                            value={op.operacaoId || op.nome}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                updateOperacao(index, 'operacaoId', val);
+                                                const selectedOp = operacoesDisponiveis.find(o => o.id === val);
+                                                if (selectedOp) updateOperacao(index, 'nome', `${selectedOp.cdOperacao} - ${selectedOp.deOperacao}`);
+                                            }}
+                                            className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gold appearance-none"
+                                        >
+                                            <option value="">Selecione a Operação...</option>
+                                            {operacoesDisponiveis.map(o => (
+                                                <option key={o.id} value={o.id}>
+                                                    {o.cdOperacao} - {o.deOperacao}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                     <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
                                         <select
@@ -239,13 +255,15 @@ export default function ProtocoloFormModal({ protocoloId, onClose, onSaveSuccess
                                     <div className="flex flex-col sm:flex-row gap-3 w-full items-center">
                                         <div className="flex-1 w-full">
                                             <select
-                                                value={item.produtoId}
-                                                onChange={(e) => updateItem(index, 'produtoId', e.target.value)}
+                                                value={item.insumoId || item.produtoId}
+                                                onChange={(e) => updateItem(index, 'insumoId', e.target.value)}
                                                 className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-gold appearance-none"
                                             >
                                                 <option value="">Selecione o Produto (Mestre)...</option>
                                                 {produtosDisponiveis.map(p => (
-                                                    <option key={p.id} value={p.id}>{p.codigo ? `${p.codigo} - ` : ''}{p.nome}</option>
+                                                    <option key={p.id} value={p.id}>
+                                                        {p.codInsumo} - {p.descInsumo} {p.und ? `(${p.und})` : ''}
+                                                    </option>
                                                 ))}
                                             </select>
                                         </div>
