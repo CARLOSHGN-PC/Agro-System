@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
 import { Sprout, Plus, Edit2, Trash2, Download, Upload, Search, FileSpreadsheet } from 'lucide-react';
-import { getInsumos, saveInsumo, inactivateInsumo, saveInsumosEmMassa } from '../../../services/cadastros_mestres/insumosService.js';
+import { getInsumos, saveInsumo, inactivateInsumo, saveInsumosEmMassa, subscribeToInsumosRealtime } from '../../../services/cadastros_mestres/insumosService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
+import { useLiveQuery } from 'dexie-react-hooks';
+import db from '../../../services/localDb.js';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import Swal from 'sweetalert2';
@@ -17,9 +19,18 @@ export default function InsumosList() {
   const { user } = useAuth();
   const companyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || "AgroSystem_Demo";
 
+  const rawInsumos = useLiveQuery(() => db.insumos.where('companyId').equals(companyId).toArray(), [companyId]) || [];
   const [insumos, setInsumos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Sync state whenever Dexie updates
+  useEffect(() => {
+    if (rawInsumos) {
+        setInsumos(rawInsumos.filter(ins => ins.status === 'ATIVO'));
+        setLoading(false);
+    }
+  }, [rawInsumos]);
 
   // State para o modal de criação/edição manual
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,15 +39,9 @@ export default function InsumosList() {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    const data = await getInsumos(companyId);
-    setInsumos(data.filter(ins => ins.status === 'ATIVO')); // Oculta inativados da lista principal
-    setLoading(false);
-  };
+    const unsubscribe = subscribeToInsumosRealtime(companyId);
+    return () => unsubscribe();
+  }, [companyId]);
 
   const handleSaveManual = async () => {
     if (!currentInsumo.codInsumo || !currentInsumo.descInsumo) {
@@ -55,7 +60,6 @@ export default function InsumosList() {
 
     await saveInsumo(payload, user?.uid || 'system', companyId);
     setIsModalOpen(false);
-    loadData();
   };
 
   const handleInactivate = async (id) => {
@@ -73,7 +77,6 @@ export default function InsumosList() {
     }).then(async (result) => {
         if (result.isConfirmed) {
             await inactivateInsumo(id, user?.uid || 'system', companyId);
-            loadData();
             Swal.fire({ title: 'Inativado!', text: 'Insumo inativado com sucesso.', icon: 'success', background: '#121212', color: '#fff' });
         }
     });
@@ -161,8 +164,6 @@ export default function InsumosList() {
             };
 
             await saveInsumosEmMassa(json, user?.uid || 'system', companyId, updateProgress);
-
-            await loadData(); // Recarrega os dados na tela do Dexie
 
             // Sucesso! Tira a trava da tela e avisa o usuário
             Swal.fire({

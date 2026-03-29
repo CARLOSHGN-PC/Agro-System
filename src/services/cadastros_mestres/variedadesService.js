@@ -1,3 +1,5 @@
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { firestore } from '../firebase.js';
 import db from '../localDb.js';
 import { enqueueTask } from '../syncService.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -165,4 +167,54 @@ export const saveVariedadesEmMassa = async (variedadesRows, usuarioId, companyId
             companyId
         );
     }
+};
+
+/**
+ * Escuta mudanças em tempo real na coleção de Variedades.
+ */
+export const subscribeToVariedadesRealtime = (companyId) => {
+    if (!navigator.onLine) return () => {};
+
+    const q = query(
+        collection(firestore, 'variedades'),
+        where("companyId", "==", companyId)
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        let hasChanges = false;
+        const toAddOrUpdate = [];
+        const toDeleteIds = [];
+
+        snapshot.docChanges().forEach((change) => {
+            const data = change.doc.data();
+            const id = change.doc.id;
+
+            if (change.type === "added" || change.type === "modified") {
+                toAddOrUpdate.push({
+                    ...data,
+                    id: id,
+                    syncStatus: 'synced'
+                });
+                hasChanges = true;
+            } else if (change.type === "removed") {
+                toDeleteIds.push(id);
+                hasChanges = true;
+            }
+        });
+
+        if (hasChanges) {
+            try {
+                if (toAddOrUpdate.length > 0) {
+                    await db.variedades.bulkPut(toAddOrUpdate);
+                }
+                if (toDeleteIds.length > 0) {
+                    await db.variedades.bulkDelete(toDeleteIds);
+                }
+            } catch (err) {
+                console.error("[Variedades Realtime] Erro ao sincronizar para o Dexie:", err);
+            }
+        }
+    });
+
+    return unsubscribe;
 };

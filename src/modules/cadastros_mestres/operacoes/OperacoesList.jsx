@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
 import { Wrench, Plus, Edit2, Trash2, Download, Upload, Search, FileSpreadsheet } from 'lucide-react';
-import { getOperacoes, saveOperacao, inactivateOperacao, saveOperacoesEmMassa } from '../../../services/cadastros_mestres/operacoesService.js';
+import { getOperacoes, saveOperacao, inactivateOperacao, saveOperacoesEmMassa, subscribeToOperacoesRealtime } from '../../../services/cadastros_mestres/operacoesService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
+import { useLiveQuery } from 'dexie-react-hooks';
+import db from '../../../services/localDb.js';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import Swal from 'sweetalert2';
@@ -17,9 +19,18 @@ export default function OperacoesList() {
   const { user } = useAuth();
   const companyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || "AgroSystem_Demo";
 
+  const rawOperacoes = useLiveQuery(() => db.operacoes.where('companyId').equals(companyId).toArray(), [companyId]) || [];
   const [operacoes, setOperacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Sync state whenever Dexie updates
+  useEffect(() => {
+    if (rawOperacoes) {
+        setOperacoes(rawOperacoes.filter(op => op.status === 'ATIVO'));
+        setLoading(false);
+    }
+  }, [rawOperacoes]);
 
   // State para o modal de criação/edição manual
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,15 +39,9 @@ export default function OperacoesList() {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    const data = await getOperacoes(companyId);
-    setOperacoes(data.filter(op => op.status === 'ATIVO')); // Oculta inativados da lista principal
-    setLoading(false);
-  };
+    const unsubscribe = subscribeToOperacoesRealtime(companyId);
+    return () => unsubscribe();
+  }, [companyId]);
 
   const handleSaveManual = async () => {
     if (!currentOperacao.cdOperacao || !currentOperacao.deOperacao) {
@@ -55,7 +60,6 @@ export default function OperacoesList() {
 
     await saveOperacao(payload, user?.uid || 'system', companyId);
     setIsModalOpen(false);
-    loadData();
   };
 
   const handleInactivate = async (id) => {
@@ -73,7 +77,6 @@ export default function OperacoesList() {
     }).then(async (result) => {
         if (result.isConfirmed) {
             await inactivateOperacao(id, user?.uid || 'system', companyId);
-            loadData();
             Swal.fire({ title: 'Inativado!', text: 'Operação inativada com sucesso.', icon: 'success', background: '#121212', color: '#fff' });
         }
     });
@@ -147,8 +150,6 @@ export default function OperacoesList() {
 
             // Atualiza as operações existentes (baseado no CD_OPERACAO) e cria as novas.
             await saveOperacoesEmMassa(json, user?.uid || 'system', companyId);
-
-            await loadData(); // Recarrega os dados na tela do Dexie
 
             // Sucesso! Tira a trava da tela e avisa o usuário
             Swal.fire({

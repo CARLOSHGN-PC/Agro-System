@@ -1,3 +1,5 @@
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { firestore } from '../firebase.js';
 import db from '../localDb.js';
 import { enqueueTask } from '../syncService.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -182,4 +184,54 @@ export const saveProducaoEmMassa = async (rows, usuarioId, companyId, onProgress
             companyId
         );
     }
+};
+
+/**
+ * Escuta mudanças em tempo real na coleção de Produção Agrícola.
+ */
+export const subscribeToProducaoAgricolaRealtime = (companyId) => {
+    if (!navigator.onLine) return () => {};
+
+    const q = query(
+        collection(firestore, 'producaoAgricola'),
+        where("companyId", "==", companyId)
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        let hasChanges = false;
+        const toAddOrUpdate = [];
+        const toDeleteIds = [];
+
+        snapshot.docChanges().forEach((change) => {
+            const data = change.doc.data();
+            const id = change.doc.id;
+
+            if (change.type === "added" || change.type === "modified") {
+                toAddOrUpdate.push({
+                    ...data,
+                    id: id,
+                    syncStatus: 'synced'
+                });
+                hasChanges = true;
+            } else if (change.type === "removed") {
+                toDeleteIds.push(id);
+                hasChanges = true;
+            }
+        });
+
+        if (hasChanges) {
+            try {
+                if (toAddOrUpdate.length > 0) {
+                    await db.producaoAgricola.bulkPut(toAddOrUpdate);
+                }
+                if (toDeleteIds.length > 0) {
+                    await db.producaoAgricola.bulkDelete(toDeleteIds);
+                }
+            } catch (err) {
+                console.error("[ProducaoAgricola Realtime] Erro ao sincronizar para o Dexie:", err);
+            }
+        }
+    });
+
+    return unsubscribe;
 };
