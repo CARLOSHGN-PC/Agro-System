@@ -21,13 +21,15 @@ export function useAuth() {
   // seja por hash offline ou login real online. Não destrói a sessão nativa do Firebase.
   const [logged, setLogged] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     // Nós apenas aguardamos o Firebase inicializar seu estado interno para sabermos se ele já
     // estava autenticado ou não. Não forçamos signOut() aqui porque isso mataria a sessão
     // offline, impedindo o envio do sync queue pro Firestore quando a internet voltar.
     // Em vez disso, a variável `logged` inicia como false, exibindo a LoginScreen.
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
       // Note que intencionalmente não definimos setLogged(true) aqui.
       // O usuário sempre tem que passar pela tela de login ao abrir o app para provar que é ele (ou offline com hash).
       setIsInitializing(false);
@@ -56,5 +58,5 @@ export function useAuth() {
     }
   };
 
-  return { logged, isInitializing, handleLogout, forceLoginState };
+  return { logged, isInitializing, handleLogout, forceLoginState, user };
 }

@@ -29,6 +29,21 @@ app.use('/api/cadastros/apontamentos-insumo', apontamentoInsumoRoutes);
 // Serve static files from the React Vite build (dist folder)
 app.use(express.static(path.join(__dirname, 'dist')));
 
+// Error handler global de API para garantir retorno em JSON e evitar HTML Trace de erros internos do Express (Ex: PayloadTooLargeError)
+app.use('/api', (err, req, res, next) => {
+    console.error("Express /api error:", err);
+    res.status(err.status || 500).json({
+        success: false,
+        message: err.message || 'Erro interno no servidor.',
+        error: process.env.NODE_ENV === 'development' ? err : {}
+    });
+});
+
+// Fallback 404 handler estrito para rotas /api não encontradas
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ success: false, message: 'Endpoint da API não encontrado.' });
+});
+
 // Catch-all handler for React SPA (Single Page Application) routing
 // If a request doesn't match an API route or a static file, serve index.html
 app.get(/^(?!\/api).+/, (req, res) => {
