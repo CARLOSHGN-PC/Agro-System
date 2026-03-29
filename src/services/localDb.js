@@ -102,4 +102,11 @@ db.version(10).stores({
   insumos: '&id, codInsumoRateio, codInsumo, descInsumo, descGrupo, descSubgrupo, und, vlrUnit, dtVlrUnit, nomeComercial, doseMedia, doseMinima, doseMaxima, status, companyId, syncStatus, [companyId+codInsumo]'
 });
 
+// Aumentamos a versão do Dexie para acomodar a Produção Agrícola.
+db.version(11).stores({
+  // === Cadastros Mestres: Produção Agrícola ===
+  // Armazena os dados de produção importados via planilha.
+  producaoAgricola: '&id, codFaz, desFazenda, talhao, areaHa, corte, dtUltCorte, tchEst, tonEst, tchFechado, tonFechada, atrReal, status, companyId, syncStatus, [companyId+codFaz], [companyId+codFaz+talhao]'
+});
+
 export default db;
