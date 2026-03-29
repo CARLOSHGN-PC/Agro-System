@@ -95,4 +95,11 @@ db.version(9).stores({
   operacoes: '&id, codCcustoRateio, cdCcusto, deCcusto, cdOperacao, deOperacao, unidade, tipoOperacao, classe, status, companyId, syncStatus, [companyId+cdOperacao]'
 });
 
+// Aumentamos a versão do Dexie para acomodar o Cadastro de Insumos.
+db.version(10).stores({
+  // === Cadastros Mestres: Insumos ===
+  // Armazena os insumos importados via planilha.
+  insumos: '&id, codInsumoRateio, codInsumo, descInsumo, descGrupo, descSubgrupo, und, vlrUnit, dtVlrUnit, nomeComercial, doseMedia, doseMinima, doseMaxima, status, companyId, syncStatus, [companyId+codInsumo]'
+});
+
 export default db;
