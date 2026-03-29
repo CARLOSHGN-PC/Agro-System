@@ -288,13 +288,17 @@ export default function CompanyConfig({ onUploadSuccess, currentCompanyId, curre
     try {
       const token = user ? await user.getIdToken() : '';
       const apiUrl = import.meta.env.VITE_API_URL || '';
+
+      // Garante que usa o mesmo companyId real com o qual os cadastros (Producao/Apontamento) foram salvos
+      const realCompanyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || currentCompanyId || "AgroSystem_Demo";
+
       const res = await fetch(`${apiUrl}/api/cadastros/apontamentos-insumo/migrar-datas`, {
           method: 'POST',
           headers: {
               'Content-Type': 'application/json',
               ...(token ? { 'Authorization': `Bearer ${token}` } : {})
           },
-          body: JSON.stringify({ companyId: currentCompanyId || "AgroSystem_Demo" })
+          body: JSON.stringify({ companyId: realCompanyId })
       });
       const data = await res.json();
       if (res.ok && data.success) {
