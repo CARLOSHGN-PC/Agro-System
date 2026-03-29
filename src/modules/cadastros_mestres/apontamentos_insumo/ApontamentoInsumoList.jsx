@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
 import { ClipboardList, Trash2, Download, Upload, Search, FileSpreadsheet } from 'lucide-react';
-import { getApontamentosInsumo, inactivateApontamentoInsumo, subscribeToApontamentosInsumoRealtime } from '../../../services/cadastros_mestres/apontamentoInsumoService.js';
+import { inactivateApontamentoInsumo } from '../../../services/cadastros_mestres/apontamentoInsumoService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
 import { useLiveQuery } from 'dexie-react-hooks';
 import db from '../../../services/localDb.js';
@@ -35,11 +35,6 @@ export default function ApontamentoInsumoList() {
         setLoading(false);
     }
   }, [rawApontamentos]);
-
-  useEffect(() => {
-    const unsubscribe = subscribeToApontamentosInsumoRealtime(companyId);
-    return () => unsubscribe();
-  }, [companyId]);
 
   const handleInactivate = async (id) => {
     const result = await Swal.fire({
