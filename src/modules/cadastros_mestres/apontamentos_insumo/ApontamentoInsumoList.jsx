@@ -138,31 +138,55 @@ export default function ApontamentoInsumoList() {
                 };
 
                 const apiUrl = import.meta.env.VITE_API_URL || '';
-                const token = user ? await user.getIdToken() : '';
 
                 try {
                     for (let i = 0; i < totalChunks; i++) {
                         const chunk = data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+                        let retries = 3;
+                        let success = false;
+                        let lastError = null;
 
-                        const response = await fetch(`${apiUrl}/api/cadastros/apontamentos-insumo/import-chunk`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                            },
-                            body: JSON.stringify({
-                                companyId,
-                                userId: user?.uid || 'user_demo',
-                                chunk,
-                                currentBatch: i + 1,
-                                totalBatches: totalChunks
-                            })
-                        });
+                        while (retries > 0 && !success) {
+                            try {
+                                // Atualizamos o token a cada requisição (ou retry) para evitar expiração em uploads muito longos
+                                const token = user ? await user.getIdToken() : '';
 
-                        const result = await response.json();
+                                const response = await fetch(`${apiUrl}/api/cadastros/apontamentos-insumo/import-chunk`, {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                                    },
+                                    body: JSON.stringify({
+                                        companyId,
+                                        userId: user?.uid || 'user_demo',
+                                        chunk,
+                                        currentBatch: i + 1,
+                                        totalBatches: totalChunks
+                                    })
+                                });
 
-                        if (!response.ok || !result.success) {
-                            throw new Error(result.message || `Erro no lote ${i + 1}`);
+                                const result = await response.json();
+
+                                if (!response.ok || !result.success) {
+                                    throw new Error(result.message || `Erro no lote ${i + 1}`);
+                                }
+
+                                success = true; // Deu certo, sai do loop de retry
+
+                            } catch (error) {
+                                lastError = error;
+                                retries--;
+                                if (retries > 0) {
+                                    console.warn(`Lote ${i + 1} falhou (${error.message}). Tentando novamente em 3 segundos... Restam ${retries} tentativas.`);
+                                    await new Promise(resolve => setTimeout(resolve, 3000)); // Espera 3s antes de tentar de novo
+                                }
+                            }
+                        }
+
+                        if (!success) {
+                            // Se esgotou as 3 tentativas e continuou falhando, aborta o for
+                            throw lastError;
                         }
 
                         updateProgress(i + 1, totalChunks);
