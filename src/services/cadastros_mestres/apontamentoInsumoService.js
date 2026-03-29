@@ -1,4 +1,4 @@
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, orderBy, limit, startAfter } from 'firebase/firestore';
 import { firestore } from '../firebase.js';
 import db from '../localDb.js';
 import { enqueueTask } from '../syncService.js';
@@ -9,6 +9,46 @@ import { logAuditoria } from '../logService.js';
  * @file apontamentoInsumoService.js
  * @description Lógica de negócios e persistência do Apontamento de Insumos.
  */
+
+export const getApontamentosPaginados = async (companyId, pageSize = 50, lastVisible = null, searchTerm = '', dtInicialIso = '', dtFinalIso = '') => {
+    let q = collection(firestore, 'apontamentosInsumo');
+    let queryConstraints = [where("companyId", "==", companyId), where("status", "==", "ATIVO")];
+
+    // Se dtHistoricoIso será nossa ordenação principal:
+    if (dtInicialIso) queryConstraints.push(where("dtHistoricoIso", ">=", dtInicialIso));
+    if (dtFinalIso) queryConstraints.push(where("dtHistoricoIso", "<=", dtFinalIso));
+
+    queryConstraints.push(orderBy("dtHistoricoIso", "desc"));
+
+    if (lastVisible) {
+        queryConstraints.push(startAfter(lastVisible));
+    }
+
+    queryConstraints.push(limit(pageSize));
+
+    const finalQuery = query(q, ...queryConstraints);
+    const snapshot = await getDocs(finalQuery);
+
+    const data = [];
+    snapshot.forEach(doc => {
+        data.push({ id: doc.id, ...doc.data() });
+    });
+
+    const newLastVisible = snapshot.docs[snapshot.docs.length - 1];
+
+    let filteredData = data;
+    if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        filteredData = data.filter(ap =>
+            ap.codInsumo?.toLowerCase().includes(term) ||
+            ap.descInsumo?.toLowerCase().includes(term) ||
+            ap.desFazenda?.toLowerCase().includes(term) ||
+            ap.deOperacao?.toLowerCase().includes(term)
+        );
+    }
+
+    return { data: filteredData, lastVisible: newLastVisible, hasMore: snapshot.docs.length === pageSize };
+};
 
 export const getApontamentosInsumo = async (companyId) => {
     return await db.apontamentosInsumo.where('companyId').equals(companyId).toArray();
@@ -42,52 +82,7 @@ export const inactivateApontamentoInsumo = async (id, usuarioId, companyId) => {
     );
 };
 
-/**
- * Escuta mudanças em tempo real na coleção de Apontamentos de Insumo.
- */
+// Sincronização em tempo real desativada para aliviar o Dexie.
 export const subscribeToApontamentosInsumoRealtime = (companyId) => {
-    if (!navigator.onLine) return () => {};
-
-    const q = query(
-        collection(firestore, 'apontamentosInsumo'),
-        where("companyId", "==", companyId)
-    );
-
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-        let hasChanges = false;
-        const toAddOrUpdate = [];
-        const toDeleteIds = [];
-
-        snapshot.docChanges().forEach((change) => {
-            const data = change.doc.data();
-            const id = change.doc.id;
-
-            if (change.type === "added" || change.type === "modified") {
-                toAddOrUpdate.push({
-                    ...data,
-                    id: id,
-                    syncStatus: 'synced'
-                });
-                hasChanges = true;
-            } else if (change.type === "removed") {
-                toDeleteIds.push(id);
-                hasChanges = true;
-            }
-        });
-
-        if (hasChanges) {
-            try {
-                if (toAddOrUpdate.length > 0) {
-                    await db.apontamentosInsumo.bulkPut(toAddOrUpdate);
-                }
-                if (toDeleteIds.length > 0) {
-                    await db.apontamentosInsumo.bulkDelete(toDeleteIds);
-                }
-            } catch (err) {
-                console.error("[ApontamentosInsumo Realtime] Erro ao sincronizar para o Dexie:", err);
-            }
-        }
-    });
-
-    return unsubscribe;
+    return () => {};
 };

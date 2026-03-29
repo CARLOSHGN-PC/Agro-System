@@ -35,6 +35,9 @@ export const apontamentoInsumoController = {
                     modAdm: (row['MOD_ADM'] || "").toString().trim(),
                     instancia: (row['INSTANCIA'] || "").toString().trim(),
                     dtHistorico: (row['DT_HISTORICO'] || "").toString().trim(),
+                    dtHistoricoIso: ((row['DT_HISTORICO'] || "").toString().trim() && (row['DT_HISTORICO'] || "").toString().trim().includes('/'))
+                                    ? (row['DT_HISTORICO'] || "").toString().trim().split('/').reverse().join('-')
+                                    : "",
                     cdCcusto: (row['CD_CCUSTO'] || "").toString().trim(),
                     deCcusto: (row['DE_CCUSTO'] || "").toString().trim(),
                     cdOp: (row['CD_OP'] || "").toString().trim(),
@@ -86,6 +89,74 @@ export const apontamentoInsumoController = {
         } catch (error) {
             console.error("Erro ao processar lote (chunk) no servidor:", error);
             return res.status(500).json({ success: false, message: 'Erro interno ao processar lote no servidor.', error: error.message });
+        }
+    },
+
+    migrarDatasParaIso: async (req, res) => {
+        try {
+            const { companyId } = req.body;
+            if (!companyId) return res.status(400).json({ success: false, message: 'companyId obrigatório.' });
+
+            // 1. Migrar Apontamentos (em lotes de 500 para evitar limite do Firestore)
+            let apontamentosRef = adminDb.collection('apontamentosInsumo');
+            let snapApt = await apontamentosRef.where('companyId', '==', companyId).get();
+            let batch = adminDb.batch();
+            let countApt = 0;
+            let totalAptOps = 0;
+
+            for (let i = 0; i < snapApt.docs.length; i++) {
+                const doc = snapApt.docs[i];
+                const data = doc.data();
+                if (data.dtHistorico && !data.dtHistoricoIso) {
+                    const iso = data.dtHistorico.includes('/') ? data.dtHistorico.split('/').reverse().join('-') : "";
+                    if (iso) {
+                        batch.update(doc.ref, { dtHistoricoIso: iso });
+                        countApt++;
+                        totalAptOps++;
+                        if (countApt === 500) {
+                            await batch.commit();
+                            batch = adminDb.batch();
+                            countApt = 0;
+                        }
+                    }
+                }
+            }
+            if (countApt > 0) await batch.commit();
+
+            // 2. Migrar Produção Agrícola (em lotes de 500)
+            let prodRef = adminDb.collection('producaoAgricola');
+            let snapProd = await prodRef.where('companyId', '==', companyId).get();
+            let batchProd = adminDb.batch();
+            let countProd = 0;
+            let totalProdOps = 0;
+
+            for (let i = 0; i < snapProd.docs.length; i++) {
+                const doc = snapProd.docs[i];
+                const data = doc.data();
+                if (data.dtUltCorte && !data.dtUltCorteIso) {
+                    const iso = data.dtUltCorte.includes('/') ? data.dtUltCorte.split('/').reverse().join('-') : "";
+                    if (iso) {
+                        batchProd.update(doc.ref, { dtUltCorteIso: iso });
+                        countProd++;
+                        totalProdOps++;
+                        if (countProd === 500) {
+                            await batchProd.commit();
+                            batchProd = adminDb.batch();
+                            countProd = 0;
+                        }
+                    }
+                }
+            }
+            if (countProd > 0) await batchProd.commit();
+
+            return res.status(200).json({
+                success: true,
+                message: `Migração concluída. ${totalAptOps} apontamentos e ${totalProdOps} produções atualizadas.`
+            });
+
+        } catch (error) {
+            console.error("Erro na migração de datas:", error);
+            return res.status(500).json({ success: false, message: 'Erro interno ao migrar datas.', error: error.message });
         }
     }
 };

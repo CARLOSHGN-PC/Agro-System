@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
-import { ClipboardList, Trash2, Download, Upload, Search, FileSpreadsheet } from 'lucide-react';
-import { inactivateApontamentoInsumo } from '../../../services/cadastros_mestres/apontamentoInsumoService.js';
+import { ClipboardList, Trash2, Download, Upload, Search, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { inactivateApontamentoInsumo, getApontamentosPaginados } from '../../../services/cadastros_mestres/apontamentoInsumoService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
-import { useLiveQuery } from 'dexie-react-hooks';
-import db from '../../../services/localDb.js';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import Swal from 'sweetalert2';
@@ -19,22 +17,51 @@ export default function ApontamentoInsumoList() {
   const { user } = useAuth();
   const companyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || "AgroSystem_Demo";
 
-  const rawApontamentos = useLiveQuery(() => db.apontamentosInsumo.where('companyId').equals(companyId).toArray(), [companyId]) || [];
   const [apontamentos, setApontamentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Paginação simples
-  const [currentPage, setCurrentPage] = useState(1);
+  // Filtros de Data
+  const [dtInicial, setDtInicial] = useState('');
+  const [dtFinal, setDtFinal] = useState('');
+
+  // Paginação Direta do Firebase
+  const [lastVisible, setLastVisible] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
   const itemsPerPage = 50;
 
-  // Sync state whenever Dexie updates
-  useEffect(() => {
-    if (rawApontamentos) {
-        setApontamentos(rawApontamentos.filter(ap => ap.status === 'ATIVO'));
+  const loadData = async (reset = false) => {
+    setLoading(true);
+    try {
+        const currentLastVisible = reset ? null : lastVisible;
+        const dtInicialIso = dtInicial ? dtInicial : '';
+        const dtFinalIso = dtFinal ? dtFinal : '';
+
+        const result = await getApontamentosPaginados(companyId, itemsPerPage, currentLastVisible, searchTerm, dtInicialIso, dtFinalIso);
+
+        if (reset) {
+            setApontamentos(result.data);
+        } else {
+            setApontamentos(prev => [...prev, ...result.data]);
+        }
+
+        setLastVisible(result.lastVisible);
+        setHasMore(result.hasMore);
+    } catch (err) {
+        console.error("Erro ao carregar apontamentos:", err);
+        Swal.fire({ title: 'Erro', text: 'Não foi possível carregar os dados.', icon: 'error', background: '#121212', color: '#fff' });
+    } finally {
         setLoading(false);
     }
-  }, [rawApontamentos]);
+  };
+
+  useEffect(() => {
+      loadData(true);
+  }, [companyId]);
+
+  const handleSearch = () => {
+      loadData(true);
+  };
 
   const handleInactivate = async (id) => {
     const result = await Swal.fire({
@@ -61,6 +88,7 @@ export default function ApontamentoInsumoList() {
           color: '#fff',
           confirmButtonColor: palette.gold
         });
+        loadData(true);
       } catch (error) {
         Swal.fire({
           title: 'Erro!',
@@ -195,6 +223,7 @@ export default function ApontamentoInsumoList() {
                         color: '#fff',
                         confirmButtonColor: palette.primary
                     });
+                    loadData(true);
 
                 } catch (err) {
                     console.error("Erro no envio dos lotes:", err);
@@ -260,24 +289,6 @@ export default function ApontamentoInsumoList() {
   };
 
 
-  const filteredData = apontamentos.filter(ap =>
-    ap.codInsumo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ap.descInsumo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ap.desFazenda?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ap.deOperacao?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
-  const currentData = filteredData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center bg-[#0A0A0A] border border-white/5 rounded-[24px]">
-        <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: palette.primary, borderTopColor: 'transparent' }} />
-      </div>
-    );
-  }
-
   return (
     <div className="flex-1 flex flex-col min-h-0 bg-[#0A0A0A] border border-white/5 rounded-[24px] overflow-hidden">
 
@@ -289,20 +300,45 @@ export default function ApontamentoInsumoList() {
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">Apontamentos de Insumo</h2>
-              <p className="text-sm text-white/50">{apontamentos.length} registros cadastrados</p>
+              <p className="text-sm text-white/50">Gerencie a base de apontamentos</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <div className="relative flex-1 md:w-64">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
               <input
                 type="text"
                 placeholder="Buscar (Cod, Insumo, Fazenda, Op)..."
                 value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                 className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors"
               />
+            </div>
+
+            <div className="flex items-center gap-2">
+                <input
+                    type="date"
+                    value={dtInicial}
+                    onChange={e => setDtInicial(e.target.value)}
+                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white/70 focus:outline-none focus:border-gold"
+                    title="Data Inicial (Histórico)"
+                />
+                <span className="text-white/30">até</span>
+                <input
+                    type="date"
+                    value={dtFinal}
+                    onChange={e => setDtFinal(e.target.value)}
+                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white/70 focus:outline-none focus:border-gold"
+                    title="Data Final (Histórico)"
+                />
+                <button
+                    onClick={handleSearch}
+                    className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-sm font-medium transition-colors"
+                >
+                    Buscar
+                </button>
             </div>
 
             <input
@@ -340,11 +376,15 @@ export default function ApontamentoInsumoList() {
 
       {/* LISTA (TABELA) */}
       <div className="flex-1 overflow-auto custom-scrollbar">
-          {filteredData.length === 0 ? (
+          {loading && apontamentos.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-white/40">
+                <Loader2 className="w-8 h-8 animate-spin mb-4" style={{ color: palette.gold }} />
+                <p>Carregando apontamentos...</p>
+            </div>
+          ) : apontamentos.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-white/40">
                 <ClipboardList className="w-12 h-12 mb-4 opacity-20" />
                 <p>Nenhum apontamento encontrado.</p>
-                {searchTerm && <button onClick={() => setSearchTerm('')} className="mt-2 text-sm text-white/60 hover:text-white">Limpar busca</button>}
             </div>
           ) : (
             <div className="min-w-[1200px] p-6">
@@ -361,7 +401,7 @@ export default function ApontamentoInsumoList() {
                         </tr>
                     </thead>
                     <tbody>
-                        {currentData.map((ap) => (
+                        {apontamentos.map((ap) => (
                             <tr key={ap.id} className="border-b border-white/5 hover:bg-white/[0.02] transition-colors group">
                                 <td className="py-4 px-4 text-sm text-white whitespace-nowrap">{ap.dtHistorico || '-'}</td>
                                 <td className="py-4 px-4 text-sm text-white">
@@ -395,28 +435,17 @@ export default function ApontamentoInsumoList() {
           )}
       </div>
 
-      {/* PAGINAÇÃO */}
-      {totalPages > 1 && (
-        <div className="shrink-0 border-t border-white/10 bg-[#0A0A0A] p-4 flex items-center justify-between text-sm text-white/60">
-            <div>
-                Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, filteredData.length)} de {filteredData.length}
-            </div>
-            <div className="flex gap-2">
-                <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    className="px-3 py-1 bg-white/5 border border-white/10 rounded disabled:opacity-50 hover:bg-white/10 transition-colors"
-                >
-                    Anterior
-                </button>
-                <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    className="px-3 py-1 bg-white/5 border border-white/10 rounded disabled:opacity-50 hover:bg-white/10 transition-colors"
-                >
-                    Próxima
-                </button>
-            </div>
+      {/* CARREGAR MAIS */}
+      {hasMore && apontamentos.length > 0 && (
+        <div className="shrink-0 border-t border-white/10 bg-[#0A0A0A] p-4 flex items-center justify-center">
+            <button
+                onClick={() => loadData(false)}
+                disabled={loading}
+                className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-sm font-medium hover:bg-white/10 transition-colors flex items-center gap-2"
+            >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {loading ? 'Carregando...' : 'Carregar Mais'}
+            </button>
         </div>
       )}
     </div>

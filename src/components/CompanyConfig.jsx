@@ -9,9 +9,11 @@ import { importShapefile, validateShapefileSet } from "../services/shpImport";
 import { doc, updateDoc } from "firebase/firestore";
 import { firestore as db } from "../services/firebase";
 import { useCompanyConfig } from "../contexts/ConfigContext";
-import { Palette } from "lucide-react";
+import { Palette, DatabaseZap } from "lucide-react";
+import { useAuth } from "../hooks/useAuth";
 
 export default function CompanyConfig({ onUploadSuccess, currentCompanyId, currentSafra, geoJsonData, allEstimates, refetchEstimates }) {
+  const { user } = useAuth();
   const [files, setFiles] = useState([]);
   const [status, setStatus] = useState("idle"); // idle, processing, success, error
   const [errorMessage, setErrorMessage] = useState("");
@@ -24,6 +26,7 @@ export default function CompanyConfig({ onUploadSuccess, currentCompanyId, curre
   const { logoColor } = useCompanyConfig();
   const [localColor, setLocalColor] = useState(logoColor || "#55AB52");
   const [colorStatus, setColorStatus] = useState("idle");
+  const [migrationStatus, setMigrationStatus] = useState("idle");
 
   const handleSaveColor = async () => {
     setColorStatus("processing");
@@ -280,6 +283,35 @@ export default function CompanyConfig({ onUploadSuccess, currentCompanyId, curre
     }
   };
 
+  const handleMigrateDates = async () => {
+    setMigrationStatus("processing");
+    try {
+      const token = user ? await user.getIdToken() : '';
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${apiUrl}/api/cadastros/apontamentos-insumo/migrar-datas`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({ companyId: currentCompanyId || "AgroSystem_Demo" })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+          setMigrationStatus("success");
+          alert(data.message);
+      } else {
+          setMigrationStatus("error");
+          alert("Erro: " + data.message);
+      }
+    } catch (err) {
+      setMigrationStatus("error");
+      alert("Falha na migração: " + err.message);
+    } finally {
+      setTimeout(() => setMigrationStatus("idle"), 5000);
+    }
+  };
+
   const removeFile = (indexToRemove) => {
     setFiles(files.filter((_, idx) => idx !== indexToRemove));
   };
@@ -295,6 +327,47 @@ export default function CompanyConfig({ onUploadSuccess, currentCompanyId, curre
           Gerencie as áreas da sua fazenda importando arquivos Shapefile (SHP).
           Eles serão processados e utilizados nos módulos de Estimativa de Safra.
         </p>
+      </div>
+
+      <div
+        className="rounded-[28px] border overflow-hidden shadow-2xl backdrop-blur-md relative mb-8"
+        style={{
+          background: "linear-gradient(180deg, rgba(22,24,28,0.78), rgba(18,20,24,0.66))",
+          borderColor: "rgba(230,199,107,0.18)",
+        }}
+      >
+        <div className="p-4 sm:p-6 border-b" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+          <h2 className="text-lg sm:text-xl font-medium">Manutenção do Banco de Dados</h2>
+          <p className="text-sm mt-1" style={{ color: palette.text2 }}>
+            Ferramentas para correção ou migração de dados antigos.
+          </p>
+        </div>
+        <div className="p-4 sm:p-6 space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-[20px] transition-colors duration-200" style={{ background: "rgba(255,255,255,0.02)", borderColor: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="flex items-center gap-4">
+               <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0" style={{ background: "rgba(255,255,255,0.05)" }}>
+                 <DatabaseZap className="w-6 h-6" style={{ color: palette.gold }} />
+               </div>
+               <div>
+                 <h3 className="font-medium text-[15px]">Migração de Datas (Produção e Apontamento)</h3>
+                 <p className="text-xs" style={{ color: palette.text2 }}>Converte as datas de registros antigos para o novo formato pesquisável (ISO). Rode apenas uma vez.</p>
+               </div>
+            </div>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+               <button
+                  onClick={handleMigrateDates}
+                  disabled={migrationStatus === "processing"}
+                  className="ml-auto sm:ml-4 px-4 py-2 rounded-xl text-sm font-medium transition-transform hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 flex items-center gap-2"
+                  style={{
+                    background: `linear-gradient(135deg, ${palette.gold} 0%, ${palette.goldLight} 100%)`,
+                    color: palette.bg
+                  }}
+               >
+                 {migrationStatus === "processing" ? <><Loader2 className="w-4 h-4 animate-spin"/> Processando...</> : migrationStatus === "success" ? "Migração Concluída!" : "Rodar Migração"}
+               </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div
