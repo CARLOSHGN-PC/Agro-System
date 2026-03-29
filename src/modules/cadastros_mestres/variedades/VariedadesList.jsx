@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
 import { Leaf, Plus, Edit2, Trash2, Download, Upload, Search, FileSpreadsheet } from 'lucide-react';
-import { getVariedades, saveVariedade, inactivateVariedade, saveVariedadesEmMassa } from '../../../services/cadastros_mestres/variedadesService.js';
+import { getVariedades, saveVariedade, inactivateVariedade, saveVariedadesEmMassa, subscribeToVariedadesRealtime } from '../../../services/cadastros_mestres/variedadesService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
+import { useLiveQuery } from 'dexie-react-hooks';
+import db from '../../../services/localDb.js';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import Swal from 'sweetalert2';
@@ -17,9 +19,18 @@ export default function VariedadesList() {
   const { user } = useAuth();
   const companyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || "AgroSystem_Demo";
 
+  const rawVariedades = useLiveQuery(() => db.variedades.where('companyId').equals(companyId).toArray(), [companyId]) || [];
   const [variedades, setVariedades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Sync state whenever Dexie updates
+  useEffect(() => {
+    if (rawVariedades) {
+        setVariedades(rawVariedades.filter(v => v.status === 'ATIVO'));
+        setLoading(false);
+    }
+  }, [rawVariedades]);
 
   // State para o modal de criação/edição manual
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,15 +39,9 @@ export default function VariedadesList() {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    const data = await getVariedades(companyId);
-    setVariedades(data.filter(v => v.status === 'ATIVO')); // Oculta inativados da lista principal
-    setLoading(false);
-  };
+    const unsubscribe = subscribeToVariedadesRealtime(companyId);
+    return () => unsubscribe();
+  }, [companyId]);
 
   const handleSaveManual = async () => {
     if (!currentVariedade.variedade) {
@@ -60,7 +65,6 @@ export default function VariedadesList() {
 
     await saveVariedade(payload, user?.uid || 'system', companyId);
     setIsModalOpen(false);
-    loadData();
   };
 
   const handleInactivate = async (id) => {
@@ -78,7 +82,6 @@ export default function VariedadesList() {
     }).then(async (result) => {
         if (result.isConfirmed) {
             await inactivateVariedade(id, user?.uid || 'system', companyId);
-            loadData();
             Swal.fire({ title: 'Inativado!', text: 'Variedade inativada com sucesso.', icon: 'success', background: '#121212', color: '#fff' });
         }
     });
@@ -149,8 +152,6 @@ export default function VariedadesList() {
 
             // O `saveVariedadesEmMassa` vai atualizar as variedades existentes (baseado no nome uppercase) e criar as novas.
             await saveVariedadesEmMassa(json, user?.uid || 'system', companyId);
-
-            await loadData(); // Recarrega os dados na tela do Dexie
 
             // Sucesso! Tira a trava da tela e avisa o usuário
             Swal.fire({

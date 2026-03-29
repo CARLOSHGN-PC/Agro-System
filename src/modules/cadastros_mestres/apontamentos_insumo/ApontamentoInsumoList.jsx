@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
 import { ClipboardList, Trash2, Download, Upload, Search, FileSpreadsheet } from 'lucide-react';
-import { getApontamentosInsumo, inactivateApontamentoInsumo } from '../../../services/cadastros_mestres/apontamentoInsumoService.js';
+import { getApontamentosInsumo, inactivateApontamentoInsumo, subscribeToApontamentosInsumoRealtime } from '../../../services/cadastros_mestres/apontamentoInsumoService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
+import { useLiveQuery } from 'dexie-react-hooks';
+import db from '../../../services/localDb.js';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import Swal from 'sweetalert2';
@@ -17,6 +19,7 @@ export default function ApontamentoInsumoList() {
   const { user } = useAuth();
   const companyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || "AgroSystem_Demo";
 
+  const rawApontamentos = useLiveQuery(() => db.apontamentosInsumo.where('companyId').equals(companyId).toArray(), [companyId]) || [];
   const [apontamentos, setApontamentos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,20 +28,18 @@ export default function ApontamentoInsumoList() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 50;
 
+  // Sync state whenever Dexie updates
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-        const data = await getApontamentosInsumo(companyId);
-        setApontamentos(data.filter(ap => ap.status === 'ATIVO')); // Oculta inativados da lista principal
-    } catch (error) {
-        console.error("Erro ao carregar apontamentos:", error);
+    if (rawApontamentos) {
+        setApontamentos(rawApontamentos.filter(ap => ap.status === 'ATIVO'));
+        setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [rawApontamentos]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToApontamentosInsumoRealtime(companyId);
+    return () => unsubscribe();
+  }, [companyId]);
 
   const handleInactivate = async (id) => {
     const result = await Swal.fire({
@@ -65,7 +66,6 @@ export default function ApontamentoInsumoList() {
           color: '#fff',
           confirmButtonColor: palette.gold
         });
-        loadData();
       } catch (error) {
         Swal.fire({
           title: 'Erro!',
@@ -200,8 +200,6 @@ export default function ApontamentoInsumoList() {
                         color: '#fff',
                         confirmButtonColor: palette.primary
                     });
-
-                    loadData();
 
                 } catch (err) {
                     console.error("Erro no envio dos lotes:", err);

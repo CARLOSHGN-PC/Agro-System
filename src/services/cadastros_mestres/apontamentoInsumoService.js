@@ -1,3 +1,5 @@
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { firestore } from '../firebase.js';
 import db from '../localDb.js';
 import { enqueueTask } from '../syncService.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -38,4 +40,54 @@ export const inactivateApontamentoInsumo = async (id, usuarioId, companyId) => {
         usuarioId,
         companyId
     );
+};
+
+/**
+ * Escuta mudanças em tempo real na coleção de Apontamentos de Insumo.
+ */
+export const subscribeToApontamentosInsumoRealtime = (companyId) => {
+    if (!navigator.onLine) return () => {};
+
+    const q = query(
+        collection(firestore, 'apontamentosInsumo'),
+        where("companyId", "==", companyId)
+    );
+
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+        let hasChanges = false;
+        const toAddOrUpdate = [];
+        const toDeleteIds = [];
+
+        snapshot.docChanges().forEach((change) => {
+            const data = change.doc.data();
+            const id = change.doc.id;
+
+            if (change.type === "added" || change.type === "modified") {
+                toAddOrUpdate.push({
+                    ...data,
+                    id: id,
+                    syncStatus: 'synced'
+                });
+                hasChanges = true;
+            } else if (change.type === "removed") {
+                toDeleteIds.push(id);
+                hasChanges = true;
+            }
+        });
+
+        if (hasChanges) {
+            try {
+                if (toAddOrUpdate.length > 0) {
+                    await db.apontamentosInsumo.bulkPut(toAddOrUpdate);
+                }
+                if (toDeleteIds.length > 0) {
+                    await db.apontamentosInsumo.bulkDelete(toDeleteIds);
+                }
+            } catch (err) {
+                console.error("[ApontamentosInsumo Realtime] Erro ao sincronizar para o Dexie:", err);
+            }
+        }
+    });
+
+    return unsubscribe;
 };

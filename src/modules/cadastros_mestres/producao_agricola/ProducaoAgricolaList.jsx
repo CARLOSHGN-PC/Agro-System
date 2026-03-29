@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
 import { Tractor, Plus, Edit2, Trash2, Download, Upload, Search, FileSpreadsheet } from 'lucide-react';
-import { getProducoes, saveProducao, inactivateProducao, saveProducaoEmMassa } from '../../../services/cadastros_mestres/producaoAgricolaService.js';
+import { getProducoes, saveProducao, inactivateProducao, saveProducaoEmMassa, subscribeToProducaoAgricolaRealtime } from '../../../services/cadastros_mestres/producaoAgricolaService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
+import { useLiveQuery } from 'dexie-react-hooks';
+import db from '../../../services/localDb.js';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import Swal from 'sweetalert2';
@@ -17,9 +19,18 @@ export default function ProducaoAgricolaList() {
   const { user } = useAuth();
   const companyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || "AgroSystem_Demo";
 
+  const rawProducoes = useLiveQuery(() => db.producaoAgricola.where('companyId').equals(companyId).toArray(), [companyId]) || [];
   const [producoes, setProducoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Sync state whenever Dexie updates
+  useEffect(() => {
+    if (rawProducoes) {
+        setProducoes(rawProducoes.filter(prod => prod.status === 'ATIVO'));
+        setLoading(false);
+    }
+  }, [rawProducoes]);
 
   // State para o modal de criação/edição manual
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -28,15 +39,9 @@ export default function ProducaoAgricolaList() {
   });
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    setLoading(true);
-    const data = await getProducoes(companyId);
-    setProducoes(data.filter(prod => prod.status === 'ATIVO')); // Oculta inativados da lista principal
-    setLoading(false);
-  };
+    const unsubscribe = subscribeToProducaoAgricolaRealtime(companyId);
+    return () => unsubscribe();
+  }, [companyId]);
 
   const handleSaveManual = async () => {
     if (!currentProducao.codFaz || !currentProducao.talhao) {
@@ -55,7 +60,6 @@ export default function ProducaoAgricolaList() {
 
     await saveProducao(payload, user?.uid || 'system', companyId);
     setIsModalOpen(false);
-    loadData();
   };
 
   const handleInactivate = async (id) => {
@@ -73,7 +77,6 @@ export default function ProducaoAgricolaList() {
     }).then(async (result) => {
         if (result.isConfirmed) {
             await inactivateProducao(id, user?.uid || 'system', companyId);
-            loadData();
             Swal.fire({ title: 'Inativado!', text: 'Registro inativado com sucesso.', icon: 'success', background: '#121212', color: '#fff' });
         }
     });
@@ -160,8 +163,6 @@ export default function ProducaoAgricolaList() {
             };
 
             await saveProducaoEmMassa(json, user?.uid || 'system', companyId, updateProgress);
-
-            await loadData(); // Recarrega os dados na tela do Dexie
 
             // Sucesso! Tira a trava da tela e avisa o usuário
             Swal.fire({
