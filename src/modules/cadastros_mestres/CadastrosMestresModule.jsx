@@ -3,11 +3,12 @@ import { palette } from '../../constants/theme.js';
 import { Package, Shapes, Scale, Leaf, Sprout } from 'lucide-react';
 import ProdutosList from './produtos/ProdutosList.jsx';
 
-import { MapPin, Wrench } from 'lucide-react';
+import { MapPin, Wrench, Tractor } from 'lucide-react';
 import FazendasList from './fazendas/FazendasList.jsx';
 import VariedadesList from './variedades/VariedadesList.jsx';
 import OperacoesList from './operacoes/OperacoesList.jsx';
 import InsumosList from './insumos/InsumosList.jsx';
+import ProducaoAgricolaList from './producao_agricola/ProducaoAgricolaList.jsx';
 
 /**
  * @file CadastrosMestresModule.jsx
@@ -74,6 +75,17 @@ export default function CadastrosMestresModule() {
           )}
         </button>
         <button
+          onClick={() => setActiveTab('producao')}
+          className={`pb-3 font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'producao' ? 'text-white' : 'text-white/40 hover:text-white/80'
+          }`}
+        >
+          <Tractor className="w-4 h-4" /> Produção Agrícola
+          {activeTab === 'producao' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: palette.gold }}></div>
+          )}
+        </button>
+        <button
           onClick={() => setActiveTab('produtos')}
           className={`pb-3 font-semibold transition-all relative flex items-center gap-2 ${
             activeTab === 'produtos' ? 'text-white' : 'text-white/40 hover:text-white/80'
@@ -115,6 +127,7 @@ export default function CadastrosMestresModule() {
           {activeTab === 'variedades' && <VariedadesList />}
           {activeTab === 'operacoes' && <OperacoesList />}
           {activeTab === 'insumos' && <InsumosList />}
+          {activeTab === 'producao' && <ProducaoAgricolaList />}
       {activeTab === 'categorias' && (
          <div className="flex-1 rounded-[24px] border overflow-hidden bg-[#0A0A0A] border-white/5 p-6 flex items-center justify-center text-white/40">
            Em construção: CRUD de Categorias
