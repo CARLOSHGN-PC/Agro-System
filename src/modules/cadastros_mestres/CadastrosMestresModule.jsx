@@ -1,12 +1,13 @@
 import React from 'react';
 import { palette } from '../../constants/theme.js';
-import { Package, Shapes, Scale, Leaf } from 'lucide-react';
+import { Package, Shapes, Scale, Leaf, Sprout } from 'lucide-react';
 import ProdutosList from './produtos/ProdutosList.jsx';
 
 import { MapPin, Wrench } from 'lucide-react';
 import FazendasList from './fazendas/FazendasList.jsx';
 import VariedadesList from './variedades/VariedadesList.jsx';
 import OperacoesList from './operacoes/OperacoesList.jsx';
+import InsumosList from './insumos/InsumosList.jsx';
 
 /**
  * @file CadastrosMestresModule.jsx
@@ -62,6 +63,17 @@ export default function CadastrosMestresModule() {
           )}
         </button>
         <button
+          onClick={() => setActiveTab('insumos')}
+          className={`pb-3 font-semibold transition-all relative flex items-center gap-2 ${
+            activeTab === 'insumos' ? 'text-white' : 'text-white/40 hover:text-white/80'
+          }`}
+        >
+          <Sprout className="w-4 h-4" /> Insumos
+          {activeTab === 'insumos' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: palette.gold }}></div>
+          )}
+        </button>
+        <button
           onClick={() => setActiveTab('produtos')}
           className={`pb-3 font-semibold transition-all relative flex items-center gap-2 ${
             activeTab === 'produtos' ? 'text-white' : 'text-white/40 hover:text-white/80'
@@ -102,6 +114,7 @@ export default function CadastrosMestresModule() {
           {activeTab === 'produtos' && <ProdutosList />}
           {activeTab === 'variedades' && <VariedadesList />}
           {activeTab === 'operacoes' && <OperacoesList />}
+          {activeTab === 'insumos' && <InsumosList />}
       {activeTab === 'categorias' && (
          <div className="flex-1 rounded-[24px] border overflow-hidden bg-[#0A0A0A] border-white/5 p-6 flex items-center justify-center text-white/40">
            Em construção: CRUD de Categorias
