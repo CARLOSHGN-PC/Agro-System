@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
 import { ClipboardList, Trash2, Download, Upload, Search, FileSpreadsheet } from 'lucide-react';
-import { getApontamentosInsumo, inactivateApontamentoInsumo, saveApontamentosEmMassa } from '../../../services/cadastros_mestres/apontamentoInsumoService.js';
+import { getApontamentosInsumo, inactivateApontamentoInsumo } from '../../../services/cadastros_mestres/apontamentoInsumoService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
@@ -79,11 +79,11 @@ export default function ApontamentoInsumoList() {
     }
   };
 
-  const processarPlanilha = (e) => {
+  const processarPlanilha = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Reseta o input para permitir selecionar o mesmo arquivo novamente, se necessário
+    // Reseta o input
     e.target.value = null;
 
     const reader = new FileReader();
@@ -91,6 +91,7 @@ export default function ApontamentoInsumoList() {
     reader.onload = async (evt) => {
       try {
         const bstr = evt.target.result;
+        // Parse a planilha localmente em binário (mais eficiente que base64 e suporta grandes volumes com Type Array)
         const workbook = XLSX.read(bstr, { type: 'binary' });
         const wsname = workbook.SheetNames[0];
         const ws = workbook.Sheets[wsname];
@@ -108,12 +109,14 @@ export default function ApontamentoInsumoList() {
             return;
         }
 
-        // Abre SweetAlert bloqueante com barra de progresso
+        const CHUNK_SIZE = 500;
+        const totalChunks = Math.ceil(data.length / CHUNK_SIZE);
+
         Swal.fire({
             title: 'Importando Apontamentos',
             html: `
-              <div style="color: #ccc; margin-bottom: 15px;">Aguarde, os dados estão sendo salvos no banco de dados. Este processo pode levar alguns minutos.</div>
-              <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;" id="progress-text">Processando 0 de ${data.length} linhas...</div>
+              <div style="color: #ccc; margin-bottom: 15px;">Aguarde, os dados estão sendo enviados em lotes para o servidor...</div>
+              <div style="font-size: 14px; font-weight: bold; margin-bottom: 10px;" id="progress-text">Processando lote 0 de ${totalChunks}...</div>
               <div style="width: 100%; background-color: #333; border-radius: 4px; height: 10px; overflow: hidden;">
                   <div id="progress-bar" style="width: 0%; height: 100%; background-color: ${palette.primary}; transition: width 0.1s linear;"></div>
               </div>
@@ -130,27 +133,57 @@ export default function ApontamentoInsumoList() {
                     const progressText = document.getElementById('progress-text');
                     if (progressBar && progressText) {
                         progressBar.style.width = `${pct}%`;
-                        progressText.innerText = `Processando ${processed} de ${total} linhas...`;
+                        progressText.innerText = `Processando lote ${processed} de ${total}...`;
                     }
                 };
 
+                const apiUrl = import.meta.env.VITE_API_URL || '';
+                const token = user ? await user.getIdToken() : '';
+
                 try {
-                    await saveApontamentosEmMassa(data, user?.uid || 'user_demo', companyId, updateProgress);
+                    for (let i = 0; i < totalChunks; i++) {
+                        const chunk = data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+
+                        const response = await fetch(`${apiUrl}/api/cadastros/apontamentos-insumo/import-chunk`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                            },
+                            body: JSON.stringify({
+                                companyId,
+                                userId: user?.uid || 'user_demo',
+                                chunk,
+                                currentBatch: i + 1,
+                                totalBatches: totalChunks
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.message || `Erro no lote ${i + 1}`);
+                        }
+
+                        updateProgress(i + 1, totalChunks);
+                    }
 
                     Swal.fire({
                         title: 'Sucesso!',
-                        text: `${data.length} apontamentos importados.`,
+                        text: `${data.length} apontamentos importados com sucesso.`,
                         icon: 'success',
                         background: '#121212',
                         color: '#fff',
                         confirmButtonColor: palette.primary
                     });
+
                     loadData();
+
                 } catch (err) {
-                    console.error("Erro na importação:", err);
+                    console.error("Erro no envio dos lotes:", err);
                     Swal.fire({
                         title: 'Erro na Importação',
-                        text: 'Ocorreu um erro ao processar os dados. Verifique a planilha.',
+                        text: 'A importação foi interrompida. ' + (err.message || 'Ocorreu um erro de comunicação com o servidor.'),
                         icon: 'error',
                         background: '#121212',
                         color: '#fff',
@@ -161,7 +194,7 @@ export default function ApontamentoInsumoList() {
         });
 
       } catch (err) {
-        console.error(err);
+        console.error("Erro de leitura local:", err);
         Swal.fire({
             title: 'Erro ao ler arquivo',
             text: 'Não foi possível ler a planilha selecionada.',
