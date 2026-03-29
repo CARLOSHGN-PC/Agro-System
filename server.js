@@ -40,7 +40,7 @@ app.use('/api', (err, req, res, next) => {
 });
 
 // Fallback 404 handler estrito para rotas /api não encontradas
-app.use('/api/*', (req, res) => {
+app.all(/^\/api\/(.*)/, (req, res) => {
     res.status(404).json({ success: false, message: 'Endpoint da API não encontrado.' });
 });
 
