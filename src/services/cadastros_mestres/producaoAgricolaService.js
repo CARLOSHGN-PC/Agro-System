@@ -1,4 +1,4 @@
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, getDocs, orderBy, limit, startAfter } from 'firebase/firestore';
 import { firestore } from '../firebase.js';
 import db from '../localDb.js';
 import { enqueueTask } from '../syncService.js';
@@ -9,6 +9,49 @@ import { logAuditoria } from '../logService.js';
  * @file producaoAgricolaService.js
  * @description Lógica de negócios e persistência do Cadastro Mestre de Produção Agrícola.
  */
+
+export const getProducoesPaginadas = async (companyId, pageSize = 50, lastVisible = null, searchTerm = '', dtInicialIso = '', dtFinalIso = '') => {
+    let q = collection(firestore, 'producaoAgricola');
+    let queryConstraints = [where("companyId", "==", companyId), where("status", "==", "ATIVO")];
+
+    // Se houver busca por texto, não podemos usar ordenação complexa no Firestore facilmente sem índices compostos.
+    // Como dtUltCorteIso será nossa ordenação principal:
+    if (dtInicialIso) queryConstraints.push(where("dtUltCorteIso", ">=", dtInicialIso));
+    if (dtFinalIso) queryConstraints.push(where("dtUltCorteIso", "<=", dtFinalIso));
+
+    queryConstraints.push(orderBy("dtUltCorteIso", "desc"));
+
+    if (lastVisible) {
+        queryConstraints.push(startAfter(lastVisible));
+    }
+
+    queryConstraints.push(limit(pageSize));
+
+    const finalQuery = query(q, ...queryConstraints);
+    const snapshot = await getDocs(finalQuery);
+
+    const data = [];
+    snapshot.forEach(doc => {
+        data.push({ id: doc.id, ...doc.data() });
+    });
+
+    const newLastVisible = snapshot.docs[snapshot.docs.length - 1];
+
+    // Se houver searchTerm, aplicamos o filtro em memória na página trazida.
+    // Para buscas precisas em textos grandes no Firestore, o ideal é usar Algolia ou Typesense.
+    // Como estamos paginando, se tiver searchTerm, vamos filtrar no front end depois, ou trazer mais dados limitados.
+    let filteredData = data;
+    if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        filteredData = data.filter(prod =>
+            (prod.codFaz && String(prod.codFaz).toLowerCase().includes(term)) ||
+            (prod.desFazenda && String(prod.desFazenda).toLowerCase().includes(term)) ||
+            (prod.talhao && String(prod.talhao).toLowerCase().includes(term))
+        );
+    }
+
+    return { data: filteredData, lastVisible: newLastVisible, hasMore: snapshot.docs.length === pageSize };
+};
 
 export const getProducoes = async (companyId) => {
     return await db.producaoAgricola.where('companyId').equals(companyId).toArray();
@@ -132,6 +175,9 @@ export const saveProducaoEmMassa = async (rows, usuarioId, companyId, onProgress
 
         producaoId = uuidv4();
 
+        const dtUltCorte = (row['DT_ULTCORTE'] || "").toString().trim();
+        const dtUltCorteIso = (dtUltCorte && dtUltCorte.includes('/')) ? dtUltCorte.split('/').reverse().join('-') : "";
+
         const payload = {
             id: producaoId,
             companyId,
@@ -140,7 +186,8 @@ export const saveProducaoEmMassa = async (rows, usuarioId, companyId, onProgress
             talhao: talhaoExcel,
             areaHa: formatNumber(row['AREA_HA']),
             corte: (row['CORTE'] || "").toString().trim(),
-            dtUltCorte: (row['DT_ULTCORTE'] || "").toString().trim(),
+            dtUltCorte: dtUltCorte,
+            dtUltCorteIso: dtUltCorteIso,
             tchEst: formatNumber(row['TCH_EST']),
             tonEst: formatNumber(row['TON_EST']),
             tchFechado: formatNumber(row['TCH_FECHADO']),
@@ -186,52 +233,7 @@ export const saveProducaoEmMassa = async (rows, usuarioId, companyId, onProgress
     }
 };
 
-/**
- * Escuta mudanças em tempo real na coleção de Produção Agrícola.
- */
+// Sincronização em tempo real desativada para aliviar o Dexie.
 export const subscribeToProducaoAgricolaRealtime = (companyId) => {
-    if (!navigator.onLine) return () => {};
-
-    const q = query(
-        collection(firestore, 'producaoAgricola'),
-        where("companyId", "==", companyId)
-    );
-
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-        let hasChanges = false;
-        const toAddOrUpdate = [];
-        const toDeleteIds = [];
-
-        snapshot.docChanges().forEach((change) => {
-            const data = change.doc.data();
-            const id = change.doc.id;
-
-            if (change.type === "added" || change.type === "modified") {
-                toAddOrUpdate.push({
-                    ...data,
-                    id: id,
-                    syncStatus: 'synced'
-                });
-                hasChanges = true;
-            } else if (change.type === "removed") {
-                toDeleteIds.push(id);
-                hasChanges = true;
-            }
-        });
-
-        if (hasChanges) {
-            try {
-                if (toAddOrUpdate.length > 0) {
-                    await db.producaoAgricola.bulkPut(toAddOrUpdate);
-                }
-                if (toDeleteIds.length > 0) {
-                    await db.producaoAgricola.bulkDelete(toDeleteIds);
-                }
-            } catch (err) {
-                console.error("[ProducaoAgricola Realtime] Erro ao sincronizar para o Dexie:", err);
-            }
-        }
-    });
-
-    return unsubscribe;
+    return () => {};
 };

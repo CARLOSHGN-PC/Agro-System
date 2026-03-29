@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { palette } from '../../../constants/theme.js';
-import { Tractor, Plus, Edit2, Trash2, Download, Upload, Search, FileSpreadsheet } from 'lucide-react';
-import { saveProducao, inactivateProducao, saveProducaoEmMassa } from '../../../services/cadastros_mestres/producaoAgricolaService.js';
+import { Tractor, Plus, Edit2, Trash2, Download, Upload, Search, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { saveProducao, inactivateProducao, saveProducaoEmMassa, getProducoesPaginadas } from '../../../services/cadastros_mestres/producaoAgricolaService.js';
 import { useAuth } from '../../../hooks/useAuth.js';
-import { useLiveQuery } from 'dexie-react-hooks';
-import db from '../../../services/localDb.js';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import Swal from 'sweetalert2';
@@ -19,22 +17,51 @@ export default function ProducaoAgricolaList() {
   const { user } = useAuth();
   const companyId = JSON.parse(localStorage.getItem('@AgroSystem:auth'))?.companyId || "AgroSystem_Demo";
 
-  const rawProducoes = useLiveQuery(() => db.producaoAgricola.where('companyId').equals(companyId).toArray(), [companyId]) || [];
   const [producoes, setProducoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Paginação simples
-  const [currentPage, setCurrentPage] = useState(1);
+  // Filtros de Data
+  const [dtInicial, setDtInicial] = useState('');
+  const [dtFinal, setDtFinal] = useState('');
+
+  // Paginação Direta do Firebase
+  const [lastVisible, setLastVisible] = useState(null);
+  const [hasMore, setHasMore] = useState(true);
   const itemsPerPage = 50;
 
-  // Sync state whenever Dexie updates
-  useEffect(() => {
-    if (rawProducoes) {
-        setProducoes(rawProducoes.filter(prod => prod.status === 'ATIVO'));
+  const loadData = async (reset = false) => {
+    setLoading(true);
+    try {
+        const currentLastVisible = reset ? null : lastVisible;
+        const dtInicialIso = dtInicial ? dtInicial : '';
+        const dtFinalIso = dtFinal ? dtFinal : '';
+
+        const result = await getProducoesPaginadas(companyId, itemsPerPage, currentLastVisible, searchTerm, dtInicialIso, dtFinalIso);
+
+        if (reset) {
+            setProducoes(result.data);
+        } else {
+            setProducoes(prev => [...prev, ...result.data]);
+        }
+
+        setLastVisible(result.lastVisible);
+        setHasMore(result.hasMore);
+    } catch (err) {
+        console.error("Erro ao carregar produções paginadas:", err);
+        Swal.fire({ title: 'Erro', text: 'Não foi possível carregar os dados.', icon: 'error', background: '#121212', color: '#fff' });
+    } finally {
         setLoading(false);
     }
-  }, [rawProducoes]);
+  };
+
+  useEffect(() => {
+      loadData(true);
+  }, [companyId]); // Carrega a primeira página ao montar
+
+  const handleSearch = () => {
+      loadData(true);
+  };
 
   // State para o modal de criação/edição manual
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -59,6 +86,7 @@ export default function ProducaoAgricolaList() {
 
     await saveProducao(payload, user?.uid || 'system', companyId);
     setIsModalOpen(false);
+    loadData(true);
   };
 
   const handleInactivate = async (id) => {
@@ -77,6 +105,7 @@ export default function ProducaoAgricolaList() {
         if (result.isConfirmed) {
             await inactivateProducao(id, user?.uid || 'system', companyId);
             Swal.fire({ title: 'Inativado!', text: 'Registro inativado com sucesso.', icon: 'success', background: '#121212', color: '#fff' });
+            loadData(true);
         }
     });
   };
@@ -172,6 +201,7 @@ export default function ProducaoAgricolaList() {
                 background: '#121212',
                 color: '#fff'
             });
+            loadData(true);
 
         } catch (error) {
             console.error("Erro na importação:", error);
@@ -190,16 +220,6 @@ export default function ProducaoAgricolaList() {
     reader.readAsArrayBuffer(file);
   };
 
-  const filteredProducoes = producoes.filter(prod => {
-      const term = searchTerm.toLowerCase();
-      return (prod.codFaz && String(prod.codFaz).toLowerCase().includes(term)) ||
-             (prod.desFazenda && String(prod.desFazenda).toLowerCase().includes(term)) ||
-             (prod.talhao && String(prod.talhao).toLowerCase().includes(term));
-  });
-
-  const totalPages = Math.ceil(filteredProducoes.length / itemsPerPage);
-  const currentData = filteredProducoes.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
   return (
     <div className="flex flex-col h-full animate-fade-in relative min-h-0 bg-[#0A0A0A] rounded-[24px]">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4 shrink-0 p-6 border-b border-white/10">
@@ -211,15 +231,41 @@ export default function ProducaoAgricolaList() {
             <p className="text-sm text-white/50 mt-1">Gerencie a base de produção, áreas e cortes.</p>
         </div>
 
-        <div className="flex-1 max-w-md relative mx-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-            <input
-                type="text"
-                placeholder="Pesquisar por Código, Fazenda ou Talhão..."
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-gold transition-colors"
-            />
+        <div className="flex-1 flex flex-wrap items-center gap-2 mx-4">
+            <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <input
+                    type="text"
+                    placeholder="Pesquisar por Código, Fazenda ou Talhão..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-gold transition-colors"
+                />
+            </div>
+            <div className="flex items-center gap-2">
+                <input
+                    type="date"
+                    value={dtInicial}
+                    onChange={e => setDtInicial(e.target.value)}
+                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white/70 focus:outline-none focus:border-gold"
+                    title="Data Inicial (Corte)"
+                />
+                <span className="text-white/30">até</span>
+                <input
+                    type="date"
+                    value={dtFinal}
+                    onChange={e => setDtFinal(e.target.value)}
+                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white/70 focus:outline-none focus:border-gold"
+                    title="Data Final (Corte)"
+                />
+                <button
+                    onClick={handleSearch}
+                    className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl text-sm font-medium transition-colors"
+                >
+                    Buscar
+                </button>
+            </div>
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0">
@@ -257,27 +303,27 @@ export default function ProducaoAgricolaList() {
                 </tr>
             </thead>
             <tbody>
-                {producoes.length === 0 && !loading ? (
+                {loading && producoes.length === 0 ? (
+                    <tr>
+                        <td colSpan="8" className="text-center py-16 text-white/40">
+                            <div className="flex flex-col items-center justify-center">
+                                <Loader2 className="w-8 h-8 animate-spin mb-4" style={{ color: palette.gold }} />
+                                <p className="text-sm">Carregando produções...</p>
+                            </div>
+                        </td>
+                    </tr>
+                ) : producoes.length === 0 ? (
                     <tr>
                         <td colSpan="8" className="text-center py-16 text-white/40">
                             <div className="flex flex-col items-center justify-center">
                                 <FileSpreadsheet className="w-12 h-12 mb-4 opacity-20" />
-                                <p className="text-lg mb-2">Nenhuma produção agrícola cadastrada.</p>
-                                <p className="text-sm">Baixe o modelo e importe sua planilha, ou clique em Novo.</p>
-                            </div>
-                        </td>
-                    </tr>
-                ) : filteredProducoes.length === 0 && !loading ? (
-                    <tr>
-                        <td colSpan="8" className="text-center py-16 text-white/40">
-                            <div className="flex flex-col items-center justify-center">
-                                <Search className="w-12 h-12 mb-4 opacity-20" />
-                                <p className="text-lg">Nenhum registro encontrado com esse filtro.</p>
+                                <p className="text-lg mb-2">Nenhuma produção encontrada.</p>
+                                <p className="text-sm">Tente ajustar os filtros ou importe uma planilha.</p>
                             </div>
                         </td>
                     </tr>
                 ) : (
-                    currentData.map(prod => (
+                    producoes.map(prod => (
                         <tr key={prod.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                             <td className="px-6 py-4 font-mono font-medium text-white">{prod.codFaz || '-'}</td>
                             <td className="px-6 py-4 font-medium text-white">{prod.desFazenda || '-'}</td>
@@ -313,28 +359,17 @@ export default function ProducaoAgricolaList() {
         </table>
       </div>
 
-      {/* PAGINAÇÃO */}
-      {totalPages > 1 && (
-        <div className="shrink-0 border-t border-white/10 bg-[#0A0A0A] p-4 flex items-center justify-between text-sm text-white/60">
-            <div>
-                Mostrando {(currentPage - 1) * itemsPerPage + 1} a {Math.min(currentPage * itemsPerPage, filteredProducoes.length)} de {filteredProducoes.length}
-            </div>
-            <div className="flex gap-2">
-                <button
-                    disabled={currentPage === 1}
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    className="px-3 py-1 bg-white/5 border border-white/10 rounded disabled:opacity-50 hover:bg-white/10 transition-colors"
-                >
-                    Anterior
-                </button>
-                <button
-                    disabled={currentPage === totalPages}
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    className="px-3 py-1 bg-white/5 border border-white/10 rounded disabled:opacity-50 hover:bg-white/10 transition-colors"
-                >
-                    Próxima
-                </button>
-            </div>
+      {/* CARREGAR MAIS */}
+      {hasMore && producoes.length > 0 && (
+        <div className="shrink-0 border-t border-white/10 bg-[#0A0A0A] p-4 flex items-center justify-center">
+            <button
+                onClick={() => loadData(false)}
+                disabled={loading}
+                className="px-6 py-2 bg-white/5 border border-white/10 rounded-xl text-sm font-medium hover:bg-white/10 transition-colors flex items-center gap-2"
+            >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {loading ? 'Carregando...' : 'Carregar Mais'}
+            </button>
         </div>
       )}
 
