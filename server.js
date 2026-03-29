@@ -13,7 +13,8 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors());
-app.use(express.json());
+// Aumentando o limite global do body-parser para suportar o recebimento de chunks em JSON maiores que 100kb
+app.use(express.json({ limit: '50mb' }));
 
 // Future API routes can be added here
 app.get('/api/status', (req, res) => {
