@@ -109,4 +109,11 @@ db.version(11).stores({
   producaoAgricola: '&id, codFaz, desFazenda, talhao, areaHa, corte, dtUltCorte, tchEst, tonEst, tchFechado, tonFechada, atrReal, status, companyId, syncStatus, [companyId+codFaz], [companyId+codFaz+talhao]'
 });
 
+// Aumentamos a versão do Dexie para acomodar os Apontamentos de Insumo.
+db.version(12).stores({
+  // === Cadastros Mestres: Apontamentos de Insumo ===
+  // Armazena os apontamentos importados via planilha (cada linha é um novo registro).
+  apontamentosInsumo: '&id, cluster, empresa, modAdm, instancia, dtHistorico, cdCcusto, deCcusto, cdOp, deOperacao, undOper, codFaz, desFazenda, bloco, desBloco, talhao, etapa, codInsumo, descInsumo, haAplic, qtdeAplic, doseAplic, doseRec, vlrUnit, totalRs, status, companyId, syncStatus, [companyId+codInsumo]'
+});
+
 export default db;
