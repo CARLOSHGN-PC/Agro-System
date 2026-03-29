@@ -1,4 +1,4 @@
-import { adminFirestore as adminDb } from '../../../config/firebaseAdmin.js';
+import { adminFirestore as adminDb } from '../../config/firebaseAdmin.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export const apontamentoInsumoController = {
