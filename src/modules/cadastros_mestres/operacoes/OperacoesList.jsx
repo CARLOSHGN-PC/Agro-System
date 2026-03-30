@@ -180,8 +180,10 @@ export default function OperacoesList() {
 
   const filteredOperacoes = operacoes.filter(op => {
       const term = searchTerm.toLowerCase();
-      return (op.cdOperacao && String(op.cdOperacao).toLowerCase().includes(term)) ||
-             (op.deOperacao && String(op.deOperacao).toLowerCase().includes(term)) ||
+      const cd = op.cdOperacao || op.cd0peracao || '';
+      const de = op.deOperacao || op.de0peracao || '';
+      return (cd && String(cd).toLowerCase().includes(term)) ||
+             (de && String(de).toLowerCase().includes(term)) ||
              (op.cdCcusto && String(op.cdCcusto).toLowerCase().includes(term)) ||
              (op.deCcusto && String(op.deCcusto).toLowerCase().includes(term));
   });
@@ -267,8 +269,8 @@ export default function OperacoesList() {
                         <tr key={op.id} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                             <td className="px-6 py-4 font-mono text-white/80">{op.cdCcusto || '-'}</td>
                             <td className="px-6 py-4 text-white/70">{op.deCcusto || '-'}</td>
-                            <td className="px-6 py-4 font-mono font-medium text-white">{op.cdOperacao || '-'}</td>
-                            <td className="px-6 py-4 font-medium text-white">{op.deOperacao || '-'}</td>
+                            <td className="px-6 py-4 font-mono font-medium text-white">{op.cdOperacao || op.cd0peracao || '-'}</td>
+                            <td className="px-6 py-4 font-medium text-white">{op.deOperacao || op.de0peracao || '-'}</td>
                             <td className="px-6 py-4 text-center text-white/70">{op.unidade || '-'}</td>
                             <td className="px-6 py-4 text-white/70">{op.tipoOperacao || '-'}</td>
                             <td className="px-6 py-4">

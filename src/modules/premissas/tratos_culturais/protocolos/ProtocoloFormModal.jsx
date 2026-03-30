@@ -194,21 +194,35 @@ export default function ProtocoloFormModal({ protocoloId, onClose, onSaveSuccess
                                 <div key={op.id} className={`flex flex-col sm:flex-row gap-3 bg-black/40 border p-3 rounded-xl items-center ${op.status === 'INATIVO' ? 'border-red-500/20 opacity-60' : 'border-white/10'}`}>
                                     <div className="flex-1 w-full">
                                         <select
-                                            value={op.operacaoId || op.nome}
+                                            value={op.operacaoId}
                                             onChange={(e) => {
                                                 const val = e.target.value;
                                                 updateOperacao(index, 'operacaoId', val);
                                                 const selectedOp = operacoesDisponiveis.find(o => o.id === val);
-                                                if (selectedOp) updateOperacao(index, 'nome', `${selectedOp.cdOperacao} - ${selectedOp.deOperacao}`);
+                                                if (selectedOp) {
+                                                    const cd = selectedOp.cdOperacao || selectedOp.cd0peracao || '';
+                                                    const de = selectedOp.deOperacao || selectedOp.de0peracao || '';
+                                                    updateOperacao(index, 'nome', `${cd} - ${de}`);
+                                                } else {
+                                                    updateOperacao(index, 'nome', '');
+                                                }
                                             }}
                                             className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-gold appearance-none"
                                         >
                                             <option value="">Selecione a Operação...</option>
-                                            {operacoesDisponiveis.map(o => (
-                                                <option key={o.id} value={o.id}>
-                                                    {o.cdOperacao} - {o.deOperacao}
-                                                </option>
-                                            ))}
+                                            {operacoesDisponiveis.map(o => {
+                                                // Verifica se a operação já foi selecionada em outra linha do formulário
+                                                const isAlreadySelected = operacoes.some((otherOp, otherIndex) => otherIndex !== index && otherOp.operacaoId === o.id);
+                                                if (isAlreadySelected) return null;
+
+                                                const cd = o.cdOperacao || o.cd0peracao || '';
+                                                const de = o.deOperacao || o.de0peracao || '';
+                                                return (
+                                                    <option key={o.id} value={o.id}>
+                                                        {cd} - {de}
+                                                    </option>
+                                                );
+                                            })}
                                         </select>
                                     </div>
                                     <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-end">
